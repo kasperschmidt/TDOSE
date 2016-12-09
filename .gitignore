@@ -4,3 +4,7 @@
 .idea/.name
 
 .idea/TDOSE.iml
+
+*.pyc
+
+tdose_setup_template.txt
