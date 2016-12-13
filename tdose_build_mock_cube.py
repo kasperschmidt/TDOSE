@@ -156,7 +156,7 @@ def gen_source_cube(position,scale,sourcetype,spectype,cube_dim=[10,60,30],verbo
         stdy            = float(sourcetype.split('_')[2])
         angle           = float(sourcetype.split('_')[3])
         cov             = tu.build_2D_cov_matrix(stdx,stdy,angle,verbose=verbose)
-        source_centered = tbmc.gen_2Dgauss(cube_dim[1:],cov,scale,show2Dgauss=showsourceimgs,verbose=verbose)
+        source_centered = tu.gen_2Dgauss(cube_dim[1:],cov,scale,show2Dgauss=showsourceimgs,verbose=verbose)
     else:
         sys.exit(' ---> sourcetype="'+sourcetype+'" is not valid in call to mock_cube_sources.gen_source_cube() ')
 
@@ -213,46 +213,6 @@ def gen_source_cube(position,scale,sourcetype,spectype,cube_dim=[10,60,30],verbo
 
 
     return sourcecube_out
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def gen_2Dgauss(size,cov,scale,verbose=True,show2Dgauss=False):
-    """
-    Generating a 2D gaussian with specified parameters
-
-    --- INPUT ---
-    size    The dimensions of the array to return. Expects [y-size,x-size].
-            The 2D gauss will be positioned in the center of a (+/-x-size/2., +/-y-size/2) sized array
-    cov     Covariance matrix of gaussian, i.e., variances and rotation
-            Can be build with cov = tdose_utilities.build_2D_cov_matrix(stdx,stdy,angle)
-
-    --- EXAMPLE OF USE ---
-    import tdose_utilities as tu
-    import tdose_build_mock_cube as tbmc
-    covmatrix   = tu.build_2D_cov_matrix(4,1,5)
-    gauss2Dimg  = tbmc.gen_2Dgauss([20,40],covmatrix,5,show2Dgauss=True)
-
-    covmatrix   = tu.build_2D_cov_matrix(4,1,0)
-    gauss2Dimg  = tbmc.gen_2Dgauss([20,40],covmatrix,25,show2Dgauss=True)
-
-    """
-    if verbose: print ' - Generating multivariate_normal object for generating 2D gauss'
-    mvn = multivariate_normal([0, 0], cov)
-
-    if verbose: print ' - Setting up grid to populate with 2D gauss PDF'
-    x, y = np.mgrid[-np.round(size[0]/2.):np.round(size[0]/2.):1.0, -np.round(size[1]/2.):np.round(size[1]/2.):1.0]
-    pos = np.zeros(x.shape + (2,))
-    pos[:, :, 0] = x; pos[:, :, 1] = y
-    gauss2D = mvn.pdf(pos)
-
-    if verbose: print ' - Scaling 2D gaussian by a factor '+str(scale)
-    gauss2D = gauss2D*scale
-
-    if show2Dgauss:
-        if verbose: print ' - Displaying resulting image of 2D gaussian'
-        plt.imshow(gauss2D,interpolation='none')
-        plt.title('Generated 2D Gauss')
-        plt.show()
-
-    return gauss2D
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_spectrum(size,mean,std,scale,verbose=True):
     """

@@ -63,6 +63,45 @@ def gen_noisy_cube(cube,type='poisson',gauss_std=0.5,verbose=True):
 
     return cube_with_noise
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_2Dgauss(size,cov,scale,verbose=True,show2Dgauss=False):
+    """
+    Generating a 2D gaussian with specified parameters
+
+    --- INPUT ---
+    size    The dimensions of the array to return. Expects [y-size,x-size].
+            The 2D gauss will be positioned in the center of a (+/-x-size/2., +/-y-size/2) sized array
+    cov     Covariance matrix of gaussian, i.e., variances and rotation
+            Can be build with cov = build_2D_cov_matrix(stdx,stdy,angle)
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    covmatrix   = tu.build_2D_cov_matrix(4,1,5)
+    gauss2Dimg  = tu.gen_2Dgauss([20,40],covmatrix,5,show2Dgauss=True)
+
+    covmatrix   = tu.build_2D_cov_matrix(4,1,0)
+    gauss2Dimg  = tu.gen_2Dgauss([20,40],covmatrix,25,show2Dgauss=True)
+
+    """
+    if verbose: print ' - Generating multivariate_normal object for generating 2D gauss'
+    mvn = multivariate_normal([0, 0], cov)
+
+    if verbose: print ' - Setting up grid to populate with 2D gauss PDF'
+    x, y = np.mgrid[-np.round(size[0]/2.):np.round(size[0]/2.):1.0, -np.round(size[1]/2.):np.round(size[1]/2.):1.0]
+    pos = np.zeros(x.shape + (2,))
+    pos[:, :, 0] = x; pos[:, :, 1] = y
+    gauss2D = mvn.pdf(pos)
+
+    if verbose: print ' - Scaling 2D gaussian by a factor '+str(scale)
+    gauss2D = gauss2D*scale
+
+    if show2Dgauss:
+        if verbose: print ' - Displaying resulting image of 2D gaussian'
+        plt.imshow(gauss2D,interpolation='none')
+        plt.title('Generated 2D Gauss')
+        plt.show()
+
+    return gauss2D
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def plot_matrix_array():
     return None
 
