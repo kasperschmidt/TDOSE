@@ -4,6 +4,7 @@ import os
 import sys
 import pyfits
 import scipy.ndimage
+from scipy.stats import multivariate_normal
 import matplotlib.pylab as plt
 import pdb
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -101,6 +102,47 @@ def gen_2Dgauss(size,cov,scale,verbose=True,show2Dgauss=False):
         plt.show()
 
     return gauss2D
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def roll_2Dprofile(profile,position,padvalue=0.0,showprofiles=False):
+    """
+    Move 2D profile to given psotion in array by rolling it in x and y.
+
+    --- INPUT ---
+    psotion      position to move center of image (profile) to:  [ypos,xpos]
+
+    --- EXAMPLE OF USE ---
+    tu.roll_2Dprofile(gauss2D,)
+
+    """
+    profile_dim = profile.shape
+
+    yroll = np.int(position[0]-profile_dim[0]/2.)
+    xroll = np.int(position[1]-profile_dim[1]/2.)
+
+    profile_shifted = np.roll(np.roll(profile,yroll,axis=0),xroll,axis=1)
+
+    if showprofiles:
+        vmaxval = np.max(profile_shifted)
+        plt.imshow(profile_shifted,interpolation='none',vmin=-vmaxval, vmax=vmaxval)
+        plt.title('Positioned Source')
+        plt.show()
+
+    if yroll < 0:
+        profile_shifted[yroll:,:] = padvalue
+    else:
+        profile_shifted[:yroll,:] = padvalue
+
+    if xroll < 0:
+        profile_shifted[:,xroll:] = padvalue
+    else:
+        profile_shifted[:,:xroll] = padvalue
+
+    if showprofiles:
+        plt.imshow(profile_shifted,interpolation='none',vmin=-vmaxval, vmax=vmaxval)
+        plt.title('Positioned Source with 0s inserted')
+        plt.show()
+
+    return profile_shifted
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def plot_matrix_array():
     return None

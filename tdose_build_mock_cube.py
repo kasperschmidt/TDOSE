@@ -3,7 +3,6 @@ import numpy as np
 import os
 import sys
 import pyfits
-from scipy.stats import multivariate_normal
 import matplotlib.pylab as plt
 import pdb
 import tdose_utilities as tu
@@ -71,7 +70,8 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
         fluxscale  = sourcedat[fluxscale_col][oo]
         sourcetype = sourcedat[sourcetype_col][oo]
         spectype   = sourcedat[spectype_col][oo]
-        sourcecube = tbmc.gen_source_cube([ypos,xpos],fluxscale,sourcetype,spectype,cube_dim=cube_dim,verbose=False)
+        sourcecube = tbmc.gen_source_cube([ypos,xpos],fluxscale,sourcetype,spectype,cube_dim=cube_dim,
+                                          verbose=False,showsourceimgs=False)
 
         outputcube = outputcube + sourcecube
 
@@ -162,31 +162,7 @@ def gen_source_cube(position,scale,sourcetype,spectype,cube_dim=[10,60,30],verbo
 
     if verbose: print ' - Positioning source at requested pixel position (x,y) = ('+\
                       str(position[1])+','+str(position[0])+') in output cube'
-    yroll = np.int(position[0]-cube_dim[1]/2.)
-    xroll = np.int(position[1]-cube_dim[2]/2.)
-
-    source_positioned = np.roll(np.roll(source_centered,yroll,axis=0),xroll,axis=1)
-
-    if showsourceimgs:
-        vmaxval = np.max(source_positioned)
-        plt.imshow(source_positioned,interpolation='none',vmin=-vmaxval, vmax=vmaxval)
-        plt.title('Positioned Source')
-        plt.show()
-
-    if yroll < 0:
-        source_positioned[yroll:,:] = 0.0
-    else:
-        source_positioned[:yroll,:] = 0.0
-
-    if xroll < 0:
-        source_positioned[:,xroll:] = 0.0
-    else:
-        source_positioned[:,:xroll] = 0.0
-
-    if showsourceimgs:
-        plt.imshow(source_positioned,interpolation='none',vmin=-vmaxval, vmax=vmaxval)
-        plt.title('Positioned Source with 0s inserted')
-        plt.show()
+    source_positioned = tu.roll_2Dprofile(source_centered,position,showprofiles=showsourceimgs)
 
     if verbose: print ' - Assemble flat spectrum cube with z-dimension '+str(cube_dim[0])
     sourcecube = np.stack([source_positioned]*cube_dim[0])
@@ -207,6 +183,7 @@ def gen_source_cube(position,scale,sourcetype,spectype,cube_dim=[10,60,30],verbo
         Nlayers = 4
         layers  = np.floor(np.linspace(0,cube_dim[0]-1,Nlayers)).astype(int)
         for layer in layers:
+            vmaxval = np.max(source_centered)
             plt.imshow(sourcecube_out[layer,:,:],interpolation='none',vmin=-vmaxval, vmax=vmaxval)
             plt.title('Cube layer (z-slice) '+str(layer))
             plt.show()
