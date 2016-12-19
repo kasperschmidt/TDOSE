@@ -1,6 +1,7 @@
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 import numpy as np
 import os
+import datetime
 import sys
 import pyfits
 import scipy.ndimage
@@ -143,6 +144,23 @@ def roll_2Dprofile(profile,position,padvalue=0.0,showprofiles=False):
         plt.show()
 
     return profile_shifted
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def get_now_string():
+    """
+    Retruning a string containing a formated version of the current data and time
+    """
+    nowstr  = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    return nowstr
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_gridcomponents(imgsize):
+    """
+    Generate grid compoents, i.e. x and y indecese for a given image size
+    """
+    x = np.linspace(0, imgsize[1]-1, imgsize[1])
+    y = np.linspace(0, imgsize[0]-1, imgsize[0])
+    x,y = np.meshgrid(x, y)
+    return x,y
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def plot_matrix_array():
     return None
