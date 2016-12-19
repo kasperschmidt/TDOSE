@@ -44,8 +44,8 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
 
     --- EXAMPLE OF USE ---
     import tdose_build_mock_cube as tbmc
-    sourcecat  = '/Users/kschmidt/work/TDOSE/mock_cube_sourcecat161213.fits'
-    outputcube = tbmc.build_cube(sourcecat,cube_dim=[100,200,150],clobber=True,noisetype='gauss',noise_gauss_std=0.03)
+    sourcecat  = '/Users/kschmidt/work/TDOSE/mock_cube_sourcecat161213_all.fits'
+    outputcube = tbmc.build_cube(sourcecat,cube_dim=[100,200,150],clobber=False,noisetype='gauss',noise_gauss_std=0.03)
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
