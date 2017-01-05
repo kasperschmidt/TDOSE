@@ -11,7 +11,9 @@ import tdose_build_mock_cube as tbmc
 def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
                xpos_col='xpos',ypos_col='ypos',sourcetype_col='sourcetype',
                spectype_col='spectype',fluxscale_col='fluxscale',
-               noisetype=None,noise_gauss_std=2.0,outputhdr=None,clobber=False,verbose=True):
+               noisetype=None,noise_gauss_std=2.0,
+               psf=None,psf_param=[],psf_fft=False,
+               outputhdr=None,clobber=False,verbose=True):
     """
     Put together cube of dimensions [x,y,z] based on source catalog.
 
@@ -38,6 +40,9 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
     noisetype        To add noise to output cube, defune type of noise with this keyword.
                      For Gaussian noise use noise_gauss_std to define the std of the Guassian PDF
     noise_gauss_std  The standard deviation of the Gaussian PDF used to generate Gaussian noise on cube
+    psf              The PSF to convolve cube with in each wavelength layer.
+    psf_param        The parameters of the PSF convolution kernel(s). See tdose_utilities.gen_psfed_cube() for details
+    psf_fft          If true the PSF convolution wil be performed in Fourier space
     outputhdr        use a specific hdr including wcs strucutre etc provide it here.
     clobber          Clobber=True overwrites output fits file if it already exists
     verbose          Toggle verbosity
@@ -74,6 +79,12 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
                                           verbose=False,showsourceimgs=False)
 
         outputcube = outputcube + sourcecube
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if psf != None:
+        if verbose: ' - Convolving mock cube with PSF'
+        outputcube = tu.gen_psfed_cube(outputcube,type=psf,type_param=psf_param,
+                                       use_fftconvolution=psf_fft,verbose=verbose)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if noisetype != None:
