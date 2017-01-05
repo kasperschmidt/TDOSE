@@ -97,7 +97,7 @@ def gen_psfed_cube(cube,type='gauss',type_param=[0.5,1.0],use_fftconvolution=Fal
     """
     if verbose: print ' - Applying a '+type+' PSF to data cube'
     Nparam  = len(type_param)
-    Nlayers = cube.shape[-1]
+    Nlayers = cube.shape[0]
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if type == 'gauss':
@@ -160,14 +160,14 @@ def perform_2Dconvolution(cube,kernels,use_fftconvolution=False,verbose=True):
     csh = cube.shape
     cube_convolved = np.zeros(csh)
 
-    for zz in xrange(csh[2]): # looping over wavelength layers of cube
-        layer = cube[:,:,zz]
+    for zz in xrange(csh[0]): # looping over wavelength layers of cube
+        layer = cube[zz,:,:]
         if use_fftconvolution:
-            layer_convolved = ac.convolve_fft(layer, kernels[zz], boundary='extend')
+            layer_convolved = ac.convolve_fft(layer, kernels[zz], boundary='fill')
         else:
-            layer_convolved = ac.convolve(layer, kernels[zz], boundary='extend')
+            layer_convolved = ac.convolve(layer, kernels[zz], boundary='fill')
 
-        cube_convolved[:,:,zz] = layer_convolved
+        cube_convolved[zz,:,:] = layer_convolved
 
     return cube_convolved
 
