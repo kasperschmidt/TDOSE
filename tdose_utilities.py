@@ -5,6 +5,8 @@ import datetime
 import sys
 import pyfits
 import scipy.ndimage
+import tdose_utilities as tu
+import astropy.convolution as ac # convolve, convolve_fft, Moffat2DKernel, Gaussian2DKernel
 from scipy.stats import multivariate_normal
 import matplotlib.pylab as plt
 import pdb
@@ -42,7 +44,7 @@ def gen_noisy_cube(cube,type='poisson',gauss_std=0.5,verbose=True):
     Generate noisy cube based on input cube.
 
     --- INPUT ---
-    cube
+    cube        Data cube to be smoothed
     type        Type of noise to generate
                   poisson    Generates poissonian (integer) noise
                   gauss      Generates gaussian noise for a gaussian with standard deviation gauss_std=0.5
@@ -51,7 +53,7 @@ def gen_noisy_cube(cube,type='poisson',gauss_std=0.5,verbose=True):
 
     --- EXAMPLE OF USE ---
     import tdose_utilities as tu
-    datacube = np.ones(([3,3,3])); cube[0,1,1]=5; cube[1,1,1]=6; cube[2,1,1]=8
+    datacube        = np.ones(([3,3,3])); datacube[0,1,1]=5; datacube[1,1,1]=6; datacube[2,1,1]=8
     cube_with_noise = tu.gen_noisy_cube(datacube,type='gauss',gauss_std='0.5')
 
     """
@@ -64,6 +66,111 @@ def gen_noisy_cube(cube,type='poisson',gauss_std=0.5,verbose=True):
         sys.exit(' ---> type="'+type+'" is not valid in call to mock_cube_sources.generate_cube_noise() ')
 
     return cube_with_noise
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_psfed_cube(cube,type='gauss',type_param=[0.5,1.0],use_fftconvolution=False,verbose=True):
+    """
+    Smooth cube with a 2D kernel provided by 'type', i.e., applying a model PSF smoothing to cube
+
+    --- INPUT ---
+    cube        Data cube to be smoothed
+    type        Type of smoothing kernel to apply
+                  gauss      Use 2D gaussian smoothing kernel
+                             type_param expected:   [stdev,(stdev_wave_scale)]
+                  moffat     Use a 2D moffat profile to represent the PSF
+                             type_param expected:   [gamma,alpha,(gamma_wave_scale,alpha_wave_scale)]
+
+                NB: If *wave_scale inputs are provided a list of scales to apply at each wavelength layer
+                    (z-direction) of data cube is expected, hence, adding a wavelength dependence to the kernels.
+
+
+    type_param  List of parameters for the smoothing kernel.
+                For expected paramters see notes in description of "type" keyword above.
+    verbose     Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    datacube      = np.ones(([3,3,3])); datacube[0,1,1]=5; datacube[1,1,1]=6; datacube[2,1,1]=8
+    cube_smoothed = tu.gen_psfed_cube(datacube,type='gauss',type_param=[10.0,[1.1,1.3,1.5]])
+
+    --- EXAMPLE OF USE ---
+
+    """
+    if verbose: print ' - Applying a '+type+' PSF to data cube'
+    Nparam  = len(type_param)
+    Nlayers = cube.shape[-1]
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if type == 'gauss':
+        if Nparam == 1:
+            if verbose: print '   No wavelength dependence; duplicating kernel for all layers'
+            kernel  = ac.Gaussian2DKernel(type_param[0])
+            kernels = [kernel]*Nlayers
+        elif Nparam == 2:
+            if verbose: print '   Wavelength dependence; looping over layers to generate kernels'
+            if Nlayers != len(type_param[1]):
+                sys.exit(' ---> The number of wavelength scalings provided ('+str(len(type_param[1]))+
+                         ') is different from the number of layers in cube ('+str(Nlayers)+')')
+            kernels = []
+            for ll in xrange(Nlayers):
+                kernel  = ac.Gaussian2DKernel(type_param[0]*type_param[1][ll])
+                kernels.append(kernel)
+        else:
+            sys.exit(' ---> Invalid number of paramters provided ('+str(Nparam)+')')
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    elif type == 'moffat':
+        if Nparam == 2:
+            if verbose: print '   No wavelength dependence; duplicating kernel for all layers'
+            kernel  = ac.Moffat2DKernel(type_param[0],type_param[1])
+            kernels = [kernel]*Nlayers
+        elif Nparam == 4:
+            if verbose: print '   Wavelength dependence; looping over layers to generate kernels'
+            if (Nlayers != len(type_param[2])) or (Nlayers != len(type_param[3])):
+                sys.exit(' ---> The number of wavelength scalings provided ('+str(len(type_param[2]))+
+                         ' and '+str(len(type_param[3]))+
+                         ') are different from the number of layers in cube ('+str(Nlayers)+')')
+            kernels = []
+            for ll in xrange(Nlayers):
+                kernel  = ac.Moffat2DKernel(type_param[0]*type_param[2][ll],type_param[1]*type_param[3][ll])
+                kernels.append(kernel)
+        else:
+            sys.exit(' ---> Invalid number of paramters provided ('+str(Nparam)+')')
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    else:
+        sys.exit(' ---> type="'+type+'" is not valid in call to mock_cube_sources.gen_smoothed_cube() ')
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    if verbose: print ' - Applying convolution kernel ('+type+') to each wavelength layer '
+    cube_psfed = tu.perform_2Dconvolution(cube,kernels,use_fftconvolution=use_fftconvolution,verbose=True)
+
+    return cube_psfed
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def perform_2Dconvolution(cube,kernels,use_fftconvolution=False,verbose=True):
+    """
+    Perform 2D convolution in data cube layer by layer
+
+    --- INPUT ---
+    cube                 Data cube to convolve
+    kernels              List of (astropy) kernels to apply on each (z/wavelengt)layer of the cube
+    use_fftconvolution   To convolve in FFT space set this keyword to True
+
+    --- EXAMPLE OF USE ---
+    # see tdose_utilities.gen_psfed_cube()
+
+    """
+    csh = cube.shape
+    cube_convolved = np.zeros(csh)
+
+    for zz in xrange(csh[2]): # looping over wavelength layers of cube
+        layer = cube[:,:,zz]
+        if use_fftconvolution:
+            layer_convolved = ac.convolve_fft(layer, kernels[zz], boundary='extend')
+        else:
+            layer_convolved = ac.convolve(layer, kernels[zz], boundary='extend')
+
+        cube_convolved[:,:,zz] = layer_convolved
+
+    return cube_convolved
+
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_2Dgauss(size,cov,scale,verbose=True,show2Dgauss=False):
     """
