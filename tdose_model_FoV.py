@@ -69,9 +69,10 @@ def save_modelimage(outname,paramlist,imgsize,param_init=False,clobber=False,out
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Saving generated image to '+outname
+    hduimg = pyfits.PrimaryHDU(modelimg)       # creating default fits header
     if outputhdr == None:
         if verbose: print ' - No header provided so will generate one '
-        hduimg = pyfits.PrimaryHDU(modelimg)       # creating default fits header
+
 
         # writing hdrkeys:    '---KEY--',                      '----------------MAX LENGTH COMMENT-------------'
         hduimg.header.append(('BUNIT   '                      ,'(10**(-20)*erg/s/cm**2/Angstrom)**2'),end=True)
@@ -91,7 +92,7 @@ def save_modelimage(outname,paramlist,imgsize,param_init=False,clobber=False,out
         hduimg.header.append(('CRVAL1  ',          53.1078417 ,' '),end=True)
         hduimg.header.append(('CRVAL2  ',         -27.8267356 ,' '),end=True)
     else:
-        hduimg = outputhdr
+        hduimg.header = outputhdr
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Nobj = int(len(paramlist)/6.0)
     if verbose: print ' - Adding parameters of '+str(Nobj)+' objects used to generate model to header '

@@ -93,11 +93,9 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Saving generated mock cube to '+outname
+    hducube = pyfits.PrimaryHDU(outputcube)       # creating default fits header
     if outputhdr == None:
         if verbose: print ' - No header provided so will generate one '
-
-        hducube = pyfits.PrimaryHDU(outputcube)       # creating default fits header
-
         # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
         hducube.header.append(('BUNIT  '                      ,'(10**(-20)*erg/s/cm**2/Angstrom)**2'),end=True)
         hducube.header.append(('OBJECT '                      ,'mock_cube'),end=True)
@@ -125,7 +123,7 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
         hducube.header.append(('CD3_1  ',                  0. ,' '),end=True)
         hducube.header.append(('CD3_2  ',                  0. ,' '),end=True)
     else:
-        hducube = outputhdr
+        hducube.header = outputhdr
 
     hdulist = pyfits.HDUList([hducube])       # turn header into to hdulist
     hdulist.writeto(outname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
