@@ -269,6 +269,46 @@ def gen_gridcomponents(imgsize):
     x,y = np.meshgrid(x, y)
     return x,y
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def analytic_convolution_gaussian(mu1,covar1,mu2,covar2):
+    """
+    The analytic vconvolution of two Gaussians is simply the sum of the two mean vectors
+    and the two convariance matrixes
+
+    """
+    muconv    = mu1+mu2
+    covarconv = covar1+covar2
+    return muconv, covarconv
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def maxlikelihood_multivariateguass(datapoints,mean,covar):
+    """
+    Return the mean vector and co-variance matrix for the analytic maximum likelihood estimate of
+    a multivariate gaussian distribution given a set of datapoints from the distribution
+    See https://www.cs.cmu.edu/~epxing/Class/10701-08s/recitation/gaussian.pdf
+
+    (this does not match the scale, i.e., the amplitude of the distribution. For this a Chi2 estimate is needed)
+
+    --- INPUT ---
+
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    std       = np.array([3,1])
+    covmatrix = tu.build_2D_cov_matrix(mean[1],mean[0],35)
+    mean      = np.array([120,100])
+    dataimg   = pyfits.open('/Users/kschmidt/work/TDOSE/mock_cube_sourcecat161213_oneobj.fits')[0].data[0,:,:]
+
+    MLmean, MLcovar = maxlikelihood_multivariateguass(dataimg,mean,covmatrix)
+
+    """
+    datapoints = data.ravel()
+    Npix       = len(datapoints)
+
+    MLmean  = 1.0/Npix * np.sum( datapoints )
+    MLcovar = 1.0/Npix * np.sum( (datapoints-mean) * np.transpose(datapoints-mean) )
+
+    return MLmean, MLcovar
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def plot_matrix_array():
     return None
 
