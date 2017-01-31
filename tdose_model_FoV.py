@@ -12,7 +12,8 @@ import tdose_model_FoV as tmf
 import pdb
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,
-                  fluxscale='fluxscale',show_residualimg=False,generateimage=False,clobber=False,verbose=True):
+                  fluxscale='fluxscale',show_residualimg=False,generateimage=False,optimizer='curve_fit',
+                  clobber=False,verbose=True):
     """
     model
 
@@ -42,8 +43,10 @@ def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigx
                                      sigysigxangle=sigysigxangle,fluxscale=fluxscale,verbose=verbose)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    fit_output  = tmf.model_objects_gauss(param_init,dataimg,verbose=True,show_residualimg=show_residualimg)
+    fit_output  = tmf.model_objects_gauss(param_init,dataimg,optimizer=optimizer,
+                                          verbose=verbose,show_residualimg=show_residualimg)
 
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if type(generateimage) == str:
         tmf.save_modelimage(generateimage,fit_output[0],dataimg.shape,param_init=param_init,
                             verbose=verbose,clobber=clobber)
