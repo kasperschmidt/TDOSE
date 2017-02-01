@@ -164,8 +164,18 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
         hduscales.header.append(('OBJECT  '                      ,' layer_scales'),end=True)
         hduscales.header.append(('CRPIX1  ',                   99,' '),end=True)
         hduscales.header.append(('CRVAL1  ',                   99,' '),end=True)
+        hduscales.header.append(('CDELT1  ',                 1.25,' '),end=True)
+        hduscales.header.append(('CUNIT1  ', 'Angstrom',' '),end=True)
+        hduscales.header.append(('CTYPE1  ', 'WAVE    ',' '),end=True)
+        hduscales.header.append(('CRPIX2  ',                  0.0,' '),end=True)
+        hduscales.header.append(('CRVAL2  ',                    0,' '),end=True)
+        hduscales.header.append(('CDELT2  ',                  1.0,' '),end=True)
+        hduscales.header.append(('CUNIT2  ', 'Number  ',' '),end=True)
+        hduscales.header.append(('CTYPE2  ', 'SOURCE  ',' '),end=True)
+
         hduscales.header['CRPIX1'] = hducube.header['CRPIX3']
         hduscales.header['CRVAL1'] = hducube.header['CRVAL3']
+        hduscales.header['CDELT1'] = hducube.header['CD3_3']
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         hdulist = pyfits.HDUList([hducube,hduscales])       # turn header into to hdulist
@@ -394,7 +404,6 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
 
                 mu_obj               = params[ss][0:2]
                 cov_obj              = tu.build_2D_cov_matrix(params[ss][4],params[ss][3],params[ss][5],verbose=False)
-                sourcescale          = [params[ss][2]]
                 mu_conv, cov_conv    = tu.analytic_convolution_gaussian(mu_obj,cov_obj,mu_psf,cov_psf)
                 layer_img            = tmc.gen_image(cubeshape[1:],np.asarray([mu_conv]),np.asarray([cov_conv]),
                                                      sourcescale=[1.0],verbose=False)
