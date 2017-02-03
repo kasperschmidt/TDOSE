@@ -35,12 +35,12 @@ def remove_object(datacube,sourcemodelcube,objects=[1],remove=True,dataext=0,sou
     Nmodels         = sourcemodel.shape[0]
     models          = np.arange(Nmodels)
 
-    if verbose: print ' - Check that all objects indicated are present in source model cube '
+    if verbose: print ' - Check that all objects indicated are present in source model cube'
     objects  = np.asarray(objects)
 
     maxobj = np.max(np.abs(objects))
-    if maxobj > Nmodels:
-        sys.exit(' ---> Object model "'+str(maxobj)+'" is not included in source model cube ')
+    if maxobj >= Nmodels:
+        sys.exit(' ---> Object model "'+str(maxobj)+'" is not included in source model cube (models start at 0) ')
     else:
         if verbose: print '   All object models appear to be included in the '+str(Nmodels)+' source models found in cube'
 
