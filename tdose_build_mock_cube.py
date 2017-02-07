@@ -80,22 +80,26 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
 
         outputcube = outputcube + sourcecube
 
+    cleancube      = outputcube.copy()
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if psf != None:
         if verbose: ' - Convolving mock cube with PSF'
         outputcube = tu.gen_psfed_cube(outputcube,type=psf,type_param=psf_param,
                                        use_fftconvolution=psf_fft,verbose=verbose)
-
+        cleanpsfcube   = outputcube
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if noisetype != None:
         if verbose: ' - Adding noise to mock cube'
-        outputcube = tu.gen_noisy_cube(outputcube,type=noisetype,gauss_std=noise_gauss_std,verbose=verbose)
+        nonoisecube = outputcube.copy()
+        outputcube  = tu.gen_noisy_cube(outputcube,type=noisetype,gauss_std=noise_gauss_std,verbose=verbose)
+        noisecube   = outputcube - nonoisecube
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Saving generated mock cube to '+outname
+    if verbose: print '   Create primary extension to contain outputcube'
     hducube = pyfits.PrimaryHDU(outputcube)       # creating default fits header
     if outputhdr == None:
-        if verbose: print ' - No header provided so will generate one '
+        if verbose: print '   No header provided so will generate one'
         # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
         hducube.header.append(('BUNIT  '                      ,'(10**(-20)*erg/s/cm**2/Angstrom)**2'),end=True)
         hducube.header.append(('OBJECT '                      ,'mock_cube'),end=True)
@@ -125,9 +129,37 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
     else:
         hducube.header = outputhdr
 
-    hdulist = pyfits.HDUList([hducube])       # turn header into to hdulist
-    hdulist.writeto(outname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+    hdustolist = [hducube]
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print '   Add clean version of cube to extension               CLEAN'
+    hduclean        = pyfits.ImageHDU(cleancube)
+    for hdrkey in hducube.header.keys():
+        if not hdrkey in hducube.header.keys():
+            hduclean.header.append((hdrkey,hducube.header[hdrkey],hducube.header.comments[hdrkey]),end=True)
+    hduclean.header.append(('EXTNAME ','CLEAN'            ,'cube without PSF and NOISE (if applied)'),end=True)
+    hdustolist.append(hduclean)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if psf != None:
+        if verbose: print '   Add clean PSF cube to extension                      CLEANPSF'
+        hducleanpsf        = pyfits.ImageHDU(cleanpsfcube)
+        for hdrkey in hducube.header.keys():
+            if not hdrkey in hducube.header.keys():
+                hducleanpsf.header.append((hdrkey,hducube.header[hdrkey],hducube.header.comments[hdrkey]),end=True)
+        hducleanpsf.header.append(('EXTNAME ','CLEANPSF'            ,'cube containing noise (sqrt(variance))'),end=True)
+        hdustolist.append(hducleanpsf)
 
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if noisetype != None:
+        if verbose: print '   Add noise cube to extension                          NOISE'
+        hdunoise        = pyfits.ImageHDU(noisecube)
+        for hdrkey in hducube.header.keys():
+            if not hdrkey in hducube.header.keys():
+                hdunoise.header.append((hdrkey,hducube.header[hdrkey],hducube.header.comments[hdrkey]),end=True)
+        hdunoise.header.append(('EXTNAME ','NOISE'            ,'cube containing noise (sqrt(variance))'),end=True)
+        hdustolist.append(hdunoise)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    hdulist = pyfits.HDUList(hdustolist)       # turn header into to hdulist
+    hdulist.writeto(outname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return outname
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
