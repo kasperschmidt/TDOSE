@@ -82,13 +82,13 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
 
     cleancube      = outputcube.copy()
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if psf != None:
+    if psf is not None:
         if verbose: ' - Convolving mock cube with PSF'
         outputcube = tu.gen_psfed_cube(outputcube,type=psf,type_param=psf_param,
                                        use_fftconvolution=psf_fft,verbose=verbose)
         cleanpsfcube   = outputcube
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if noisetype != None:
+    if noisetype is not None:
         if verbose: ' - Adding noise to mock cube'
         nonoisecube = outputcube.copy()
         outputcube  = tu.gen_noisy_cube(outputcube,type=noisetype,gauss_std=noise_gauss_std,verbose=verbose)
@@ -139,7 +139,7 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
     hduclean.header.append(('EXTNAME ','CLEAN'            ,'cube without PSF and NOISE (if applied)'),end=True)
     hdustolist.append(hduclean)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if psf != None:
+    if psf is not None:
         if verbose: print '   Add clean PSF cube to extension                      CLEANPSF'
         hducleanpsf        = pyfits.ImageHDU(cleanpsfcube)
         for hdrkey in hducube.header.keys():
@@ -149,7 +149,7 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
         hdustolist.append(hducleanpsf)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if noisetype != None:
+    if noisetype is not None:
         if verbose: print '   Add noise cube to extension                          NOISE'
         hdunoise        = pyfits.ImageHDU(noisecube)
         for hdrkey in hducube.header.keys():
