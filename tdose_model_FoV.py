@@ -11,7 +11,7 @@ import matplotlib.pylab as plt
 import tdose_model_FoV as tmf
 import pdb
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,
+def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,datanoise=None,
                   fluxscale='fluxscale',show_residualimg=False,generateimage=False,optimizer='curve_fit',
                   clobber=False,verbose=True):
     """
@@ -34,16 +34,16 @@ def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigx
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Loading source catalog info to build inital guess of paramters for model fit'
     if verbose: print '   Will use x position, y position,',
-    if fluxscale != None:
+    if fluxscale is None:
         if verbose: print '   fluxscale',
-    if fluxscale != None:
+    if sigysigxangle is not None:
         if verbose: print '   sigysigxangle',
     if verbose: print ' in initial guess'
     param_init   = tmf.gen_paramlist(sourcecatalog,xpos_col=xpos_col,ypos_col=ypos_col,
                                      sigysigxangle=sigysigxangle,fluxscale=fluxscale,verbose=verbose)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    fit_output  = tmf.model_objects_gauss(param_init,dataimg,optimizer=optimizer,
+    fit_output  = tmf.model_objects_gauss(param_init,dataimg,optimizer=optimizer,datanoise=datanoise,
                                           verbose=verbose,show_residualimg=show_residualimg)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -52,6 +52,36 @@ def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigx
                             verbose=verbose,clobber=clobber)
         tmf.save_modelimage(generateimage.replace('.fits','_initial.fits'),param_init,dataimg.shape,param_init=False,
                             verbose=verbose,clobber=clobber)
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Storing fitted source paramters as fits table and returning output'
+    tablename = generateimage.replace('.fits','_objparam.fits')
+
+    objnumbers = np.arange(len(fit_output[0])/6)+1
+    c01 = pyfits.Column(name='obj',            format='D', unit='',       array=objnumbers)
+    c02 = pyfits.Column(name='xpos',           format='D', unit='PIXELS', array=fit_output[0][0::6])
+    c03 = pyfits.Column(name='ypos',           format='D', unit='PIXELS', array=fit_output[0][1::6])
+    c04 = pyfits.Column(name='fluxscale',      format='D', unit='',       array=fit_output[0][2::6])
+    c05 = pyfits.Column(name='xsigma',         format='D', unit='PIXELS', array=fit_output[0][3::6])
+    c06 = pyfits.Column(name='ysigma',         format='D', unit='PIXELS', array=fit_output[0][4::6])
+    c07 = pyfits.Column(name='angle',          format='D', unit='DEGREES',array=fit_output[0][5::6])
+    c08 = pyfits.Column(name='xpos_init',      format='D', unit='PIXELS', array=param_init[0::6])
+    c09 = pyfits.Column(name='ypos_init',      format='D', unit='PIXELS', array=param_init[1::6])
+    c10 = pyfits.Column(name='fluxscale_init', format='D', unit='',       array=param_init[2::6])
+    c11 = pyfits.Column(name='xsigma_init',    format='D', unit='PIXELS', array=param_init[3::6])
+    c12 = pyfits.Column(name='ysigma_init',    format='D', unit='PIXELS', array=param_init[4::6])
+    c13 = pyfits.Column(name='angle_init',     format='D', unit='DEGREES',array=param_init[5::6])
+
+    coldefs = pyfits.ColDefs([c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11,c12,c13])
+
+    th = pyfits.new_table(coldefs) # creating default header
+
+    # writing hdrkeys:'---KEY--',                             '----------------MAX LENGTH COMMENT-------------'
+    #th.header.append(('ATRACE  ' , 1.00                      ,'Factor to scale trace to total flux'),end=True)
+    #th.header.append(('RA      ' , spec2D[0].header['RA']    ,'Target R.A.'),end=True)
+
+    tbHDU  = pyfits.new_table(coldefs, header=th.header)
+    tbHDU.writeto(tablename, clobber=clobber)
 
     return param_init, fit_output
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -156,7 +186,7 @@ def gen_paramlist(sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=No
         xpos       = sourcedat[xpos_col][oo]
         ypos       = sourcedat[ypos_col][oo]
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if fluxscale != None:
+        if fluxscale is not None:
             if type(fluxscale) == np.ndarray:
                 fs = fluxscale[oo]
             elif type(fluxscale) == str:
@@ -164,7 +194,7 @@ def gen_paramlist(sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=No
         else:
             fs = 1.0
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if sigysigxangle != None:
+        if sigysigxangle is not None:
             if type(fluxscale) == np.ndarray:
                 sigy  = sigysigxangle[oo,0]
                 sigx  = sigysigxangle[oo,1]
@@ -184,7 +214,7 @@ def gen_paramlist(sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=No
     paramlist_arr = np.asarray(paramlist)
     return paramlist_arr
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',show_residualimg=True,verbose=True):
+def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',datanoise=None,show_residualimg=True,verbose=True):
     """
     Optimize residual between model (multiple Gaussians) and data with least squares in 2D
 
@@ -196,6 +226,9 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',show_residual
                                   Tries to optimize the residual function
                       curve_fit   scipy.optimize.curve_fit()
                                   Tries to optimize using the model function
+    datanoise     Image of sigmas, i.e., sqrt(variance) to use as weights when optimizing fit
+                  using curve_fit
+    verbose       Toggle verbosity
 
     --- EXAMPLE OF USE ---
     import tdose_model_FoV as tmf
@@ -215,8 +248,12 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',show_residual
     elif optimizer == 'curve_fit':
         imgsize      = dataimage.shape
         xgrid, ygrid = tu.gen_gridcomponents(imgsize)
+        if datanoise is not None:
+            sigma = datanoise.ravel()
+        else:
+            sigma = datanoise
         param_optimized, param_cov = opt.curve_fit(tmf.curve_fit_function_wrapper, (xgrid, ygrid),
-                                                   dataimage.ravel(), p0 = param_init)
+                                                   dataimage.ravel(), p0 = param_init, sigma=sigma)
 
         output = param_optimized, param_cov
     else:
@@ -285,7 +322,7 @@ def residual_multigauss(param, dataimage, nonfinite = 0.0, ravelresidual=True, s
         plt.title('Resdiaul (= model - data) image')
         plt.show()
 
-    if nonfinite != None:
+    if nonfinite is not None:
         residualimg[~np.isfinite(residualimg)] = 0.0
 
     if ravelresidual:
