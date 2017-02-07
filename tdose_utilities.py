@@ -309,6 +309,35 @@ def maxlikelihood_multivariateguass(datapoints,mean,covar):
 
     return MLmean, MLcovar
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def build_paramarray(fitstable,verbose=True):
+    """
+    Build parameter array (list) expected by tdose_model_cube.gen_fullmodel()
+    based on output parameter fits file from tdose_model_FoV.gen_fullmodel()
+
+    --- INPUT ---
+    fitstable       fits table containing the fitted and intial source parameters
+                    outputted by tdose_model_FoV.gen_fullmodel()
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    path = '/Users/kschmidt/work/TDOSE/'
+    file = 'mock_cube_sourcecat161213_all_tdose_mock_cube_NOISEgauss_v170207_modelimage_nosigma_objparam.fits'
+    paramarray = tu.build_paramarray(path+file,verbose=True)
+    """
+    tabdat     = pyfits.open(fitstable)[1].data
+    Nobj       = len(tabdat['obj'])
+    paramarray = np.zeros([Nobj*6])
+
+    for oo in xrange(Nobj):
+        paramarray[oo*6+0] = tabdat['xpos'][oo]
+        paramarray[oo*6+1] = tabdat['ypos'][oo]
+        paramarray[oo*6+2] = tabdat['fluxscale'][oo]
+        paramarray[oo*6+3] = tabdat['xsigma'][oo]
+        paramarray[oo*6+4] = tabdat['ysigma'][oo]
+        paramarray[oo*6+5] = tabdat['angle'][oo]
+
+    return paramarray
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def plot_matrix_array():
     return None
 
