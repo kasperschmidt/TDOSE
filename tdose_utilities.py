@@ -39,6 +39,17 @@ def build_2D_cov_matrix(sigmax,sigmay,angle,verbose=True):
 
     return cov_rot
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def normalize_2D_cov_matrix(covmatrix,verbose=True):
+    """
+    Calculate the normalization foctor for a multivariate gaussian from it's covariance matrix
+    However, not that gaussian returned by tu.gen_2Dgauss() is normalized for scale=1
+
+    """
+    detcov  = np.linalg.det(covmatrix)
+    normfac = 1.0 / (2.0 * np.pi * np.sqrt(detcov) )
+
+    return normfac
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_noisy_cube(cube,type='poisson',gauss_std=0.5,verbose=True):
     """
     Generate noisy cube based on input cube.
@@ -181,14 +192,20 @@ def gen_2Dgauss(size,cov,scale,verbose=True,show2Dgauss=False):
             The 2D gauss will be positioned in the center of a (+/-x-size/2., +/-y-size/2) sized array
     cov     Covariance matrix of gaussian, i.e., variances and rotation
             Can be build with cov = build_2D_cov_matrix(stdx,stdy,angle)
+    scale   Scaling the 2D gaussian. By default scale = 1 returns normalized 2D Gaussian.
+            I.e.,  np.trapz(np.trapz(gauss2D,axis=0),axis=0) = 1
 
     --- EXAMPLE OF USE ---
     import tdose_utilities as tu
     covmatrix   = tu.build_2D_cov_matrix(4,1,5)
     gauss2Dimg  = tu.gen_2Dgauss([20,40],covmatrix,5,show2Dgauss=True)
 
-    covmatrix   = tu.build_2D_cov_matrix(4,1,0)
-    gauss2Dimg  = tu.gen_2Dgauss([20,40],covmatrix,25,show2Dgauss=True)
+    sigmax          = 3.2
+    sigmay          = 1.5
+    covmatrix       = tu.build_2D_cov_matrix(sigmax,sigmay,0)
+    scale           = 1 # returns normalized gaussian
+    Nsigwidth       = 15
+    gauss2DimgNorm  = tu.gen_2Dgauss([sigmay*Nsigwidth,sigmax*Nsigwidth],covmatrix,scale,show2Dgauss=True)
 
     """
     if verbose: print ' - Generating multivariate_normal object for generating 2D gauss'
@@ -337,6 +354,10 @@ def build_paramarray(fitstable,verbose=True):
         paramarray[oo*6+5] = tabdat['angle'][oo]
 
     return paramarray
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def extract_subcube(datacube,xpos,ypos,pixsize,imgfile=None,verbose=True):
+    return None
+
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def plot_matrix_array():
     return None
