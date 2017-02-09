@@ -104,6 +104,12 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                 output_layer   = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
                                                sourcescale=scales,verbose=loopverbose)
                 output_scales  = scales
+
+                # Instead of curve_fit above, this optimization should be possible to replace by matrix inversion...
+                # solve   A^T A f = A^T d   where  A represents the 4D source model cube (Nobj,Nxpix,Nypix,Nlambda),
+                #                                  f the 3D fluxes    (Nobj,Npix,Nlambda) and
+                #                                  d is the data cube (Nxpix,Nypix,Nlambda)
+
             else:
                 if loopverbose: print ' - Optimize flux scaling of full image numerically '
                 layer_img      = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
@@ -216,8 +222,6 @@ def optimize_source_scale_gauss(img_data,img_std,mu_objs,cov_objs,optimizer='cur
                                                curve_fit_fct_wrapper_sourcefit((xgrid, ygrid),mu_objs,cov_objs,*scales),
                                                (xgrid, ygrid),
                                                img_data.ravel(), p0 = scales_initial_guess, sigma=img_std.ravel() )
-
-
 
         output = scale_best, scale_cov
     else:
