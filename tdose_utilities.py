@@ -3,6 +3,11 @@ import numpy as np
 import os
 import datetime
 import sys
+from astropy import wcs
+from astropy import units
+from astropy.coordinates import SkyCoord
+from astropy.wcs.utils import pixel_to_skycoord
+from astropy.nddata import Cutout2D
 import pyfits
 import scipy.ndimage
 import tdose_utilities as tu
@@ -355,9 +360,193 @@ def build_paramarray(fitstable,verbose=True):
 
     return paramarray
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def extract_subcube(datacube,xpos,ypos,pixsize,imgfile=None,verbose=True):
-    return None
+def WCS3DtoWCS2D(wcs3d,verbose=True):
+    """
+    Removing the wavelength component of a WCS object, i.e., turning converting
+    the WCS from 3D (lambda,ra,dec) to 2D (ra,dec)
+    """
+    hdr3D = wcs3d.to_header()
+    for key in hdr3D.keys():
+        if '3' in key:
+            del hdr3D[key]
 
+    hdr3D['WCSAXES'] = 2
+    wcs2d = wcs.WCS(hdr3D)
+
+    return wcs2d
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
+                    clobber=False,imgfiles=None,imgexts=None,verbose=True):
+    """
+    Function for cropping/extracting sub data cube (and potentially corresponding image)
+
+    --- INPUT ---
+    cubefile       Data cube to extract sub-cube from
+    ra             The right ascension of center of sub-cube
+    dec            The declination of the center of the sub-cube
+    cutoutsize     RA and Dec size of cutout (in arc sec).
+    outname        Name of file to save extracted sub-cube to
+    clobber        If true existing fits image will be overwritten
+    imgfiles       List of file names to extract sub-images for corresponding to sub-cube's spacial extent
+                   Will save images to same directory as sub-cub outname
+    verbose        Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    cubefile    = '/Users/kschmidt/work/TDOSE/musecubetestdata/candels-cdfs-15/DATACUBE_candels-cdfs-15_v1.0.fits'
+    imgfile     = '/Users/kschmidt/work/images_MAST/hlsp_candels_hst_wfc3_gs-tot_f125w_v1.0_drz.fits'
+    ra          = 53.12437322
+    dec         = -27.85161087
+    cutoutsize  = [10,7]
+    outname     = '/Users/kschmidt/work/TDOSE/musecubetestdata/DATACUBE_candels-cdfs-15_v1p0_cutout_MUSEWide11503085_'+str(cutoutsize[0])+'x'+str(cutoutsize[1])+'arcsec.fits'
+    cutouts     = tu.extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],clobber=True,imgfiles=[imgfile],imgexts=[0])
+
+    """
+    if verbose: print ' - Extracting sub data cube from :\n   '+cubefile
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if os.path.isfile(outname) & (clobber == False):
+        sys.exit(outname+' already exists and clobber=False ')
+    skyc      = SkyCoord(ra, dec, frame='icrs', unit=(units.deg,units.deg))
+    size      = units.Quantity((  cutoutsize[1], cutoutsize[0]), units.arcsec)
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    Ncubes    = len(cubeext)
+    hdrs_all  = []
+    for cc, cx in enumerate(cubeext):
+        if verbose: print '\n - Cutting out wavelength layes of cube in extension '+cx
+        cubedata = pyfits.open(cubefile)[cx].data
+        cubehdr  = pyfits.open(cubefile)[cx].header
+        Nlayers  = cubedata.shape[0]
+
+        if verbose: print ' - Removing comments and history as well as "section title entries" ' \
+                          'from fits header as "newline" is non-ascii character'
+        striphdr = cubehdr.copy()
+        del striphdr['COMMENT']
+        del striphdr['HISTORY']
+        for key in striphdr.keys():
+            if key == '':
+                del striphdr[key]
+        cubewcs    = wcs.WCS(striphdr)
+        cubewcs_2D = tu.WCS3DtoWCS2D(cubewcs.copy())
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        if verbose: print ' - Extracting sub-image in eachlayer'
+        for ll in xrange(Nlayers):
+            if verbose:
+                infostr = '   cutting out from layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % Nlayers)
+                sys.stdout.write("%s\r" % infostr)
+                sys.stdout.flush()
+
+            cutout_layer  = Cutout2D(cubedata[ll,:,:], skyc, size, wcs=cubewcs_2D)
+
+            if ll == 0:
+                cutout_cube = np.zeros([Nlayers,cutout_layer.data.shape[0],cutout_layer.data.shape[1]])
+                for key in cutout_layer.wcs.to_header().keys():
+                    striphdr[key] = cutout_layer.wcs.to_header()[key]
+                hdrs_all.append(striphdr)
+
+            cutout_cube[ll,:,:] = cutout_layer.data
+
+        if cc == 0:
+            cutouts = [cutout_cube]
+        else:
+            cutouts.append(cutout_cube)
+
+        if verbose: print '\n   done'
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Saving sub-cubes to '+outname
+    hducube = pyfits.PrimaryHDU()  # creating default fits header
+    hdulist = [hducube]
+
+    for cc, cx in enumerate(cubeext):
+        if verbose: print '   Add clean version of cube to extension               '+cx
+        hducutout        = pyfits.ImageHDU(cutouts[cc])
+        for key in hdrs_all[cc]:
+            if not key in hducutout.header.keys():
+                hducutout.header.append((key,hdrs_all[cc][key],hdrs_all[cc][key]),end=True)
+
+        hducutout.header.append(('EXTNAME ',cx            ,''),end=True)
+        hdulist.append(hducutout)
+
+    hdulist = pyfits.HDUList(hdulist)       # turn header into to hdulist
+    hdulist.writeto(outname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if imgfiles is not None:
+        Nimg = len(imgfiles)
+        if verbose: print ' - Extracting images corresponding to cube from '+str(Nimg)+' images in imgfiles provided:\n'
+        if imgexts is None:
+            imgexts = [0]*Nimg
+
+        for ii, imgfile in enumerate(imgfiles):
+            imgname = imgfile.split('/')[-1]
+            outname = outname.replace('.fits','_CUTOUT'+str(cutoutsize[0])+'x'+str(cutoutsize[1])+'arcsec_From_'+imgname)
+            cutout  = tu.extract_subimage(imgfile,ra,dec,cutoutsize,outname=outname,
+                                          imgext=imgexts[ii],clobber=clobber,verbose=verbose)
+
+    return cutouts
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def extract_subimage(imgfile,ra,dec,cutoutsize,outname=None,clobber=False,imgext=0,verbose=True):
+    """
+    Crop a fits image and save the extract subimage to file
+
+    --- INPUT ---
+    imgfile        File name to extract sub-image from
+    ra             The right ascension of center of sub-image
+    dec            The declination of the center of the sub-image
+    cutoutsize     RA and Dec size of cutout (in arc sec).
+    outname        Name of file to save extracted sub-image to; if None the cutout will just be returned
+    clobber        If true existing fits image will be overwritten
+    imgext         Image fits extension
+    verbose        Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    imgfile     = '/Users/kschmidt/work/images_MAST/hlsp_candels_hst_wfc3_gs-tot_f125w_v1.0_drz.fits'
+    ra          = 53.12437322
+    dec         = -27.85161087
+    cutoutsize  = [15,30]
+    outname     = '/Users/kschmidt/work/TDOSE/hlsp_candels_hst_wfc3_gs-tot_f125w_v1.0_drz_MUSEWide11503085_'+str(cutoutsize[0])+'X'+str(cutoutsize[1])+'arcseccut.fits'
+    cutout      = tu.extract_subimage(imgfile,ra,dec,cutoutsize,outname=outname,clobber=False)
+
+    """
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Will extract '+str(cutoutsize[0])+'X'+str(cutoutsize[1])+\
+                      ' arcsec subimage centered on ra,dec='+str(ra)+','+str(dec)+' from:\n   '+imgfile
+
+    imgdata  = pyfits.open(imgfile)[imgext].data
+    imghdr   = pyfits.open(imgfile)[imgext].header
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Removing comments and history as well as "section title entries" ' \
+                      'from fits header as "newline" is non-ascii character'
+    striphdr = imghdr.copy()
+    del striphdr['COMMENT']
+    del striphdr['HISTORY']
+    for key in striphdr.keys():
+        if key == '':
+            del striphdr[key]
+
+    imgwcs  = wcs.WCS(striphdr)
+    skyc    = SkyCoord(ra, dec, frame='icrs', unit=(units.deg,units.deg))
+    size    = units.Quantity((  cutoutsize[1], cutoutsize[0]), units.arcsec)
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Cutting out data and updating WCS info'
+    cutout  = Cutout2D(imgdata, skyc, size, wcs=imgwcs)
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if outname is not None:
+        cuthdr  = cutout.wcs.to_header()
+        if verbose: print ' - Update fits header and save file to \n   '+outname
+        imghdrkeys = imghdr.keys()
+        for key in cuthdr.keys():
+            if key in imghdrkeys:
+                imghdr[key] = cuthdr[key]
+
+        hdulist = pyfits.PrimaryHDU(data=cutout.data,header=imghdr)
+        hdulist.writeto(outname,clobber=clobber)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    return cutout
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def plot_matrix_array():
     return None
