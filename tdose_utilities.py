@@ -217,7 +217,7 @@ def gen_2Dgauss(size,cov,scale,verbose=True,show2Dgauss=False):
     mvn = multivariate_normal([0, 0], cov)
 
     if verbose: print ' - Setting up grid to populate with 2D gauss PDF'
-    x, y = np.mgrid[-np.round(size[0]/2.):np.round(size[0]/2.):1.0, -np.round(size[1]/2.):np.round(size[1]/2.):1.0]
+    x, y = np.mgrid[-np.ceil(size[0]/2.):np.floor(size[0]/2.):1.0, -np.ceil(size[1]/2.):np.floor(size[1]/2.):1.0]
     pos = np.zeros(x.shape + (2,))
     pos[:, :, 0] = x; pos[:, :, 1] = y
     gauss2D = mvn.pdf(pos)
