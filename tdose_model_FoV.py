@@ -41,7 +41,6 @@ def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigx
     if verbose: print ' in initial guess'
     param_init   = tmf.gen_paramlist(sourcecatalog,xpos_col=xpos_col,ypos_col=ypos_col,
                                      sigysigxangle=sigysigxangle,fluxscale=fluxscale,verbose=verbose)
-
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     fit_output  = tmf.model_objects_gauss(param_init,dataimg,optimizer=optimizer,datanoise=datanoise,
                                           verbose=verbose,show_residualimg=show_residualimg)
@@ -59,11 +58,11 @@ def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigx
 
     objnumbers = np.arange(len(fit_output[0])/6)+1
     c01 = pyfits.Column(name='obj',            format='D', unit='',       array=objnumbers)
-    c02 = pyfits.Column(name='xpos',           format='D', unit='PIXELS', array=fit_output[0][0::6])
-    c03 = pyfits.Column(name='ypos',           format='D', unit='PIXELS', array=fit_output[0][1::6])
+    c02 = pyfits.Column(name='xpos',           format='D', unit='PIXELS', array=fit_output[0][1::6])
+    c03 = pyfits.Column(name='ypos',           format='D', unit='PIXELS', array=fit_output[0][0::6])
     c04 = pyfits.Column(name='fluxscale',      format='D', unit='',       array=fit_output[0][2::6])
-    c05 = pyfits.Column(name='xsigma',         format='D', unit='PIXELS', array=fit_output[0][3::6])
-    c06 = pyfits.Column(name='ysigma',         format='D', unit='PIXELS', array=fit_output[0][4::6])
+    c05 = pyfits.Column(name='xsigma',         format='D', unit='PIXELS', array=fit_output[0][4::6])
+    c06 = pyfits.Column(name='ysigma',         format='D', unit='PIXELS', array=fit_output[0][3::6])
     c07 = pyfits.Column(name='angle',          format='D', unit='DEGREES',array=fit_output[0][5::6])
     c08 = pyfits.Column(name='xpos_init',      format='D', unit='PIXELS', array=param_init[0::6])
     c09 = pyfits.Column(name='ypos_init',      format='D', unit='PIXELS', array=param_init[1::6])
@@ -99,11 +98,9 @@ def save_modelimage(outname,paramlist,imgsize,param_init=False,clobber=False,out
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Saving generated image to '+outname
-    hduimg = pyfits.PrimaryHDU(modelimg)       # creating default fits header
     if outputhdr is None:
+        hduimg = pyfits.PrimaryHDU(modelimg)       # creating default fits header
         if verbose: print ' - No header provided so will generate one '
-
-
         # writing hdrkeys:    '---KEY--',                      '----------------MAX LENGTH COMMENT-------------'
         hduimg.header.append(('BUNIT   '                      ,'(10**(-20)*erg/s/cm**2/Angstrom)**2'),end=True)
         hduimg.header.append(('OBJECT  '                      ,'model image'),end=True)
@@ -122,7 +119,7 @@ def save_modelimage(outname,paramlist,imgsize,param_init=False,clobber=False,out
         hduimg.header.append(('CRVAL1  ',          53.1078417 ,' '),end=True)
         hduimg.header.append(('CRVAL2  ',         -27.8267356 ,' '),end=True)
     else:
-        hduimg.header = outputhdr
+        hduimg = pyfits.PrimaryHDU(modelimg,header=outputhdr)       # creating default fits header
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Nobj = int(len(paramlist)/6.0)
     if verbose: print ' - Adding parameters of '+str(Nobj)+' objects used to generate model to header '
@@ -261,7 +258,7 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',datanoise=Non
             output = param_optimized, param_cov
         except:
             print ' WARNING: Curve_fit failed (using "maximum function call" of '+str(maxfctcalls)+\
-                  ') so returning param_init; i.e. the intiial guess of the paremeters'
+                  ') so returning param_init; i.e. the intiial guess of the parameters'
             output = param_init, None
 
     else:
