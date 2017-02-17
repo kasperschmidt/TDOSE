@@ -246,9 +246,8 @@ def roll_2Dprofile(profile,position,padvalue=0.0,showprofiles=False):
     """
     profile_dim = profile.shape
 
-    yroll = np.int(position[0]-profile_dim[0]/2.)
-    xroll = np.int(position[1]-profile_dim[1]/2.)
-
+    yroll = np.int(np.round(position[0]-profile_dim[0]/2.))
+    xroll = np.int(np.round(position[1]-profile_dim[1]/2.))
     profile_shifted = np.roll(np.roll(profile,yroll,axis=0),xroll,axis=1)
 
     if showprofiles:
@@ -354,19 +353,18 @@ def convert_paramarray(paramarray,hdr,hdr_new,verbose=True):
     scale_out = wcs.utils.proj_plane_pixel_scales(wcs_out)*3600.0  # pix scale in arcsec
 
     for oo in xrange(Nobj):
-        xpix      = paramarray[oo*6+0]
-        ypix      = paramarray[oo*6+1]
+        ypix      = paramarray[oo*6+0]-1.
+        xpix      = paramarray[oo*6+1]-1.
         skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcs_in)
-        pixcoord  = wcs.utils.skycoord_to_pixel(skycoord,wcs_out)
-
-        paramconv[oo*6+0] = pixcoord[0]
-        paramconv[oo*6+1] = pixcoord[1]
+        pixcoord  = wcs.utils.skycoord_to_pixel(skycoord,wcs_out)# + np.array([1,1])
+        paramconv[oo*6+0] = pixcoord[1]+1
+        paramconv[oo*6+1] = pixcoord[0]+1
         paramconv[oo*6+2] = paramarray[oo*6+2]
         paramconv[oo*6+3] = paramarray[oo*6+3]*scale_in[0]/scale_out[0]
         paramconv[oo*6+4] = paramarray[oo*6+4]*scale_in[1]/scale_out[1]
         paramconv[oo*6+5] = paramarray[oo*6+5]
 
-    return paramarray
+    return paramconv
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def build_paramarray(fitstable,verbose=True):
     """
@@ -388,11 +386,11 @@ def build_paramarray(fitstable,verbose=True):
     paramarray = np.zeros([Nobj*6])
 
     for oo in xrange(Nobj):
-        paramarray[oo*6+0] = tabdat['xpos'][oo]
-        paramarray[oo*6+1] = tabdat['ypos'][oo]
+        paramarray[oo*6+0] = tabdat['ypos'][oo]
+        paramarray[oo*6+1] = tabdat['xpos'][oo]
         paramarray[oo*6+2] = tabdat['fluxscale'][oo]
-        paramarray[oo*6+3] = tabdat['xsigma'][oo]
-        paramarray[oo*6+4] = tabdat['ysigma'][oo]
+        paramarray[oo*6+3] = tabdat['ysigma'][oo]
+        paramarray[oo*6+4] = tabdat['xsigma'][oo]
         paramarray[oo*6+5] = tabdat['angle'][oo]
 
     return paramarray
@@ -584,6 +582,51 @@ def strip_header(header,verbose=True):
         if key == '':
             del header[key]
     return header
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,textlist=None,fontsize=12,
+                    clobber=False,verbose=True):
+    """
+    Generate a basic DS9 region file based on a model parameters file.
+
+    """
+    if verbose: print ' - Generating DS9 region file from model paramter file'
+    paramarray = tu.build_paramarray(fitstable,verbose=True)
+    Nobj       = len(paramarray)/6
+    scale      = wcs.utils.proj_plane_pixel_scales(wcsinfo)*3600.0   # pix scale in arcsec
+
+    if not clobber:
+        if os.path.isfile(outputfile):
+            sys.exit(' ---> File already exists and clobber = False')
+    fout = open(outputfile,'w')
+    fout.write("# Region file format: DS9 version 4.1 \nfk5\n")
+
+    if textlist is None:
+        textstrings = pyfits.open(fitstable)[1].data['obj'].astype(str)
+    else:
+        textstrings = pyfits.open(fitstable)[1].data['obj'].astype(str)
+        for tt, obj in enumerate(textstrings):
+            textstrings[tt] = obj+': '+textlist[tt]
+
+    if verbose: print ' - Converting to wcs coordinates'
+    for oo in xrange(Nobj):
+        ypix      = paramarray[oo*6+0]
+        xpix      = paramarray[oo*6+1]
+        skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcsinfo)
+        dec       = skycoord.dec.value
+        ra        = skycoord.ra.value
+        fluxscale = paramarray[oo*6+2]
+        sigmay    = paramarray[oo*6+3]*scale[0]/3600.0
+        sigmax    = (paramarray[oo*6+4]*scale[1]*np.cos(np.deg2rad(dec)))/3600.0
+        angle     = paramarray[oo*6+5]
+        string = 'ellipse('+str(ra)+','+str(dec)+','+str(Nsigma*sigmax)+','+str(Nsigma*sigmay)+','+str(angle)+') '
+
+        string = string+' # color='+color+' width='+str(width)+\
+                 ' font="times '+str(fontsize)+' bold roman" text={'+textstrings[oo]+'}'
+
+        fout.write(string+' \n')
+
+    fout.close()
+    if verbose: print ' - Saved region file to '+outputfile
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def plot_matrix_array():
     return None
