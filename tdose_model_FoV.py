@@ -13,7 +13,7 @@ import pdb
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,datanoise=None,
                   fluxscale='fluxscale',show_residualimg=False,generateimage=False,optimizer='curve_fit',
-                  clobber=False,verbose=True):
+                  clobber=False,verbose=True,outputhdr=None):
     """
     model
 
@@ -34,10 +34,10 @@ def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigx
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Loading source catalog info to build inital guess of paramters for model fit'
     if verbose: print '   Will use x position, y position,',
-    if fluxscale is None:
-        if verbose: print '   fluxscale',
+    if fluxscale is not None:
+        if verbose: print ' fluxscale',
     if sigysigxangle is not None:
-        if verbose: print '   sigysigxangle',
+        if verbose: print ' sigysigxangle',
     if verbose: print ' in initial guess'
     param_init   = tmf.gen_paramlist(sourcecatalog,xpos_col=xpos_col,ypos_col=ypos_col,
                                      sigysigxangle=sigysigxangle,fluxscale=fluxscale,verbose=verbose)
@@ -49,9 +49,9 @@ def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigx
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if type(generateimage) == str:
         tmf.save_modelimage(generateimage,fit_output[0],dataimg.shape,param_init=param_init,
-                            verbose=verbose,clobber=clobber)
+                            verbose=verbose,clobber=clobber,outputhdr=outputhdr)
         tmf.save_modelimage(generateimage.replace('.fits','_initial.fits'),param_init,dataimg.shape,param_init=False,
-                            verbose=verbose,clobber=clobber)
+                            verbose=verbose,clobber=clobber,outputhdr=outputhdr)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Storing fitted source paramters as fits table and returning output'
@@ -100,7 +100,7 @@ def save_modelimage(outname,paramlist,imgsize,param_init=False,clobber=False,out
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Saving generated image to '+outname
     hduimg = pyfits.PrimaryHDU(modelimg)       # creating default fits header
-    if outputhdr == None:
+    if outputhdr is None:
         if verbose: print ' - No header provided so will generate one '
 
 
@@ -252,10 +252,18 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',datanoise=Non
             sigma = datanoise.ravel()
         else:
             sigma = datanoise
-        param_optimized, param_cov = opt.curve_fit(tmf.curve_fit_function_wrapper, (xgrid, ygrid),
-                                                   dataimage.ravel(), p0 = param_init, sigma=sigma)
 
-        output = param_optimized, param_cov
+        maxfctcalls = 30000
+        try:
+            param_optimized, param_cov = opt.curve_fit(tmf.curve_fit_function_wrapper, (xgrid, ygrid),
+                                                       dataimage.ravel(), p0 = param_init, sigma=sigma,
+                                                       maxfev=maxfctcalls)
+            output = param_optimized, param_cov
+        except:
+            print ' WARNING: Curve_fit failed (using "maximum function call" of '+str(maxfctcalls)+\
+                  ') so returning param_init; i.e. the intiial guess of the paremeters'
+            output = param_init, None
+
     else:
         sys.exit(' ---> Invalid optimizer ('+optimizer+') chose in model_objects_gauss()')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
