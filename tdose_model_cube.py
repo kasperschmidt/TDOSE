@@ -11,10 +11,11 @@ import matplotlib as mpl
 import matplotlib.pylab as plt
 import tdose_model_FoV as tmf
 import pdb
+import warnings
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='gauss',fit_source_scales=True,
                   noisecube='None',save_modelcube=True,cubename='tdose_model_cube_output_RENAME.fits',clobber=True,
-                  outputhdr='None',verbose=True):
+                  outputhdr='None',model_layers=None,verbose=True):
     """
     Generate full model of data cube
 
@@ -40,6 +41,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
     cubename           Name of fits file to save model cube to
     clobber            If true any existing fits file will be overwritten
     outputhdr          Header to use for output fits file. If none provided a default header will be used.
+    model_layers       Proivde array of layer number (starting from 0) to model if full cube should not be modelled
     verbose            Toggle verbosity
 
     --- EXAMPLE OF USE ---
@@ -74,7 +76,13 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
         if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
         loopverbose = False
-        for ll in xrange(datashape[0]):
+
+        if model_layers is None:
+            layerlist = np.arange(datashape[0])
+        else:
+            layerlist = np.asarray(model_layers).astype(int)
+
+        for ll in layerlist:
             if verbose:
                 infostr = '   Matching layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % datashape[0])+''
                 sys.stdout.write("%s\r" % infostr)
@@ -129,8 +137,8 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
     if save_modelcube:
         if verbose: print ' - Saving model cube to \n   '+cubename
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        hducube = pyfits.PrimaryHDU(model_cube_out)       # default HDU with default minimal header
         if outputhdr == 'None':
+            hducube = pyfits.PrimaryHDU(model_cube_out)       # default HDU with default minimal header
             if verbose: print ' - No header provided so will generate one '
             # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
             hducube.header.append(('BUNIT  '                      ,'(10**(-20)*erg/s/cm**2/Angstrom)**2'),end=True)
@@ -158,10 +166,17 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
             hducube.header.append(('CD2_3  ',                  0. ,' '),end=True)
             hducube.header.append(('CD3_1  ',                  0. ,' '),end=True)
             hducube.header.append(('CD3_2  ',                  0. ,' '),end=True)
+
+            hdus = [hducube]
         else:
             if verbose: print ' - Using header provided with "outputhdr" for output fits file '
-            hducube.header = outputhdr
-
+            if 'XTENSION' in outputhdr.keys():
+                hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
+                hducube        = pyfits.ImageHDU(model_cube_out,header=outputhdr)
+                hdus           = [hduprim,hducube]
+            else:
+                hducube = pyfits.PrimaryHDU(model_cube_out,header=outputhdr)
+                hdus           = [hducube]
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         hduscales = pyfits.ImageHDU(layer_scales)       # default HDU with default minimal header
         # writing hdrkeys:       '---KEY--',                      '----------------MAX LENGTH COMMENT-------------'
@@ -182,9 +197,9 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
         hduscales.header['CRPIX1'] = hducube.header['CRPIX3']
         hduscales.header['CRVAL1'] = hducube.header['CRVAL3']
         hduscales.header['CDELT1'] = hducube.header['CD3_3']
-
+        hdus.append(hduscales)
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        hdulist = pyfits.HDUList([hducube,hduscales])       # turn header into to hdulist
+        hdulist = pyfits.HDUList(hdus)       # turn header into to hdulist
         hdulist.writeto(cubename,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
 
     return model_cube_out, layer_scales
@@ -218,10 +233,12 @@ def optimize_source_scale_gauss(img_data,img_std,mu_objs,cov_objs,optimizer='cur
         scales_initial_guess   = np.ones(mu_objs.shape[0])
         imgsize                = img_data.shape
         xgrid, ygrid           = tu.gen_gridcomponents(imgsize)
-        scale_best, scale_cov  = opt.curve_fit(lambda (xgrid, ygrid), *scales:
-                                               curve_fit_fct_wrapper_sourcefit((xgrid, ygrid),mu_objs,cov_objs,*scales),
-                                               (xgrid, ygrid),
-                                               img_data.ravel(), p0 = scales_initial_guess, sigma=img_std.ravel() )
+        with warnings.catch_warnings():
+            #warnings.simplefilter("ignore")
+            scale_best, scale_cov  = opt.curve_fit(lambda (xgrid, ygrid), *scales:
+                                                   curve_fit_fct_wrapper_sourcefit((xgrid, ygrid),mu_objs,
+                                                                                   cov_objs,*scales),(xgrid, ygrid),
+                                                   img_data.ravel(), p0 = scales_initial_guess, sigma=img_std.ravel() )
 
         output = scale_best, scale_cov
     else:
