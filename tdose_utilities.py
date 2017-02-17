@@ -331,6 +331,43 @@ def maxlikelihood_multivariateguass(datapoints,mean,covar):
 
     return MLmean, MLcovar
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def convert_paramarray(paramarray,hdr,hdr_new,verbose=True):
+    """
+    Function to convert the pixel-based paramter array from one wcs frame to another
+
+    --- INFO ---
+    paramarray    Paramter array (e.g., loaded with build_paramarray)
+    hdr           Header (wcs) information the parameter array referes to
+    hdr_new       The header (wcs) information to us for transforming parameters to new reference frame
+
+    """
+    paramconv = np.zeros(paramarray.shape)
+
+    wcs_in  = wcs.WCS(tu.strip_header(hdr.copy()))
+    wcs_out = wcs.WCS(tu.strip_header(hdr_new.copy()))
+
+    if wcs_out.to_header()['WCSAXES'] == 3:
+        wcs_out = tu.WCS3DtoWCS2D(wcs_out)
+
+    Nobj      = len(paramarray)/6
+    scale_in  = wcs.utils.proj_plane_pixel_scales(wcs_in)*3600.0   # pix scale in arcsec
+    scale_out = wcs.utils.proj_plane_pixel_scales(wcs_out)*3600.0  # pix scale in arcsec
+
+    for oo in xrange(Nobj):
+        xpix      = paramarray[oo*6+0]
+        ypix      = paramarray[oo*6+1]
+        skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcs_in)
+        pixcoord  = wcs.utils.skycoord_to_pixel(skycoord,wcs_out)
+
+        paramconv[oo*6+0] = pixcoord[0]
+        paramconv[oo*6+1] = pixcoord[1]
+        paramconv[oo*6+2] = paramarray[oo*6+2]
+        paramconv[oo*6+3] = paramarray[oo*6+3]*scale_in[0]/scale_out[0]
+        paramconv[oo*6+4] = paramarray[oo*6+4]*scale_in[1]/scale_out[1]
+        paramconv[oo*6+5] = paramarray[oo*6+5]
+
+    return paramarray
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def build_paramarray(fitstable,verbose=True):
     """
     Build parameter array (list) expected by tdose_model_cube.gen_fullmodel()
@@ -419,12 +456,7 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
 
         if verbose: print ' - Removing comments and history as well as "section title entries" ' \
                           'from fits header as "newline" is non-ascii character'
-        striphdr = cubehdr.copy()
-        del striphdr['COMMENT']
-        del striphdr['HISTORY']
-        for key in striphdr.keys():
-            if key == '':
-                del striphdr[key]
+        striphdr   = tu.strip_header(cubehdr.copy())
         cubewcs    = wcs.WCS(striphdr)
         cubewcs_2D = tu.WCS3DtoWCS2D(cubewcs.copy())
 
@@ -519,16 +551,10 @@ def extract_subimage(imgfile,ra,dec,cutoutsize,outname=None,clobber=False,imgext
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Removing comments and history as well as "section title entries" ' \
                       'from fits header as "newline" is non-ascii character'
-    striphdr = imghdr.copy()
-    del striphdr['COMMENT']
-    del striphdr['HISTORY']
-    for key in striphdr.keys():
-        if key == '':
-            del striphdr[key]
-
-    imgwcs  = wcs.WCS(striphdr)
-    skyc    = SkyCoord(ra, dec, frame='icrs', unit=(units.deg,units.deg))
-    size    = units.Quantity((  cutoutsize[1], cutoutsize[0]), units.arcsec)
+    striphdr = tu.strip_header(imghdr.copy())
+    imgwcs   = wcs.WCS(striphdr)
+    skyc     = SkyCoord(ra, dec, frame='icrs', unit=(units.deg,units.deg))
+    size     = units.Quantity((  cutoutsize[1], cutoutsize[0]), units.arcsec)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Cutting out data and updating WCS info'
@@ -547,6 +573,17 @@ def extract_subimage(imgfile,ra,dec,cutoutsize,outname=None,clobber=False,imgext
         hdulist.writeto(outname,clobber=clobber)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return cutout
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def strip_header(header,verbose=True):
+    """
+    Removing all COMMENT, "TITLE" and HISTORY parameters in a fits header to avoid non-ascii characters
+    """
+    del header['COMMENT']
+    del header['HISTORY']
+    for key in header.keys():
+        if key == '':
+            del header[key]
+    return header
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def plot_matrix_array():
     return None
