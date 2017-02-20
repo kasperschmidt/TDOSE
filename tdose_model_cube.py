@@ -106,6 +106,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
             if fit_source_scales:
                 if loopverbose: print ' - Optimize flux scaling of each source in full image numerically '
+                # Make sure no infs or NaNs are passed to optimizer... masked arrays?
                 scales, covs   = optimize_source_scale_gauss(datacube[ll,:,:],noisecube[ll,:,:],
                                                              mu_objs_conv,cov_objs_conv,
                                                              optimizer='curve_fit',verbose=loopverbose)
@@ -358,7 +359,7 @@ def gen_image(imagedim,mu_objs,cov_objs,sourcescale='ones',verbose=True):
 
         if verbose: print ' - Positioning source at position according to mu-vector (x,y) = ('+\
                       str(muconv[1])+','+str(muconv[0])+') in output image'
-        source_positioned = tu.roll_2Dprofile(source_centered,muconv,showprofiles=False)
+        source_positioned = tu.roll_2Dprofile(source_centered,muconv-1.0,showprofiles=False)
 
         if verbose: print ' - Adding convolved source to output image'
         img_out  = img_out + source_positioned
