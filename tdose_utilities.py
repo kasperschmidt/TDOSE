@@ -238,7 +238,8 @@ def roll_2Dprofile(profile,position,padvalue=0.0,showprofiles=False):
     Move 2D profile to given psotion in array by rolling it in x and y.
 
     --- INPUT ---
-    psotion      position to move center of image (profile) to:  [ypos,xpos]
+    position      position to move center of image (profile) to:  [ypos,xpos]
+                  NB! assumes position value starts from 0, i.e., if providing pixel values subtract 1.
 
     --- EXAMPLE OF USE ---
     tu.roll_2Dprofile(gauss2D,)
@@ -601,9 +602,9 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
     fout.write("# Region file format: DS9 version 4.1 \nfk5\n")
 
     if textlist is None:
-        textstrings = pyfits.open(fitstable)[1].data['obj'].astype(str)
+        textstrings = pyfits.open(fitstable)[1].data['obj'].astype(int).astype(str)
     else:
-        textstrings = pyfits.open(fitstable)[1].data['obj'].astype(str)
+        textstrings = pyfits.open(fitstable)[1].data['obj'].astype(int).astype(str)
         for tt, obj in enumerate(textstrings):
             textstrings[tt] = obj+': '+textlist[tt]
 
@@ -618,6 +619,7 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
         sigmay    = paramarray[oo*6+3]*scale[0]/3600.0
         sigmax    = (paramarray[oo*6+4]*scale[1]*np.cos(np.deg2rad(dec)))/3600.0
         angle     = paramarray[oo*6+5]
+        #if oo == 4: pdb.set_trace()
         string = 'ellipse('+str(ra)+','+str(dec)+','+str(Nsigma*sigmax)+','+str(Nsigma*sigmay)+','+str(angle)+') '
 
         string = string+' # color='+color+' width='+str(width)+\
