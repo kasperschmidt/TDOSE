@@ -137,7 +137,7 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if noise_cube is not None:
-        if verbose: print ' - Estimate S/N at each wavelength for 1D spectrum'
+        if verbose: print ' - Estimate S/N at each wavelength for 1D spectrum (see Eq. 16 of Kamann+2013)'
         total_cube    = np.sum(source_model_cube,axis=0)
         object_cube   = np.sum(source_model_cube[source_ent,:,:],axis=0)
 
@@ -154,14 +154,17 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
         # combining mask making sure all individual mask pixels have True for it to be true in combined mask
         comb_mask     = (pix_mask | invalid_mask1 | invalid_mask2)
 
-        if verbose: print '   Calculating noise propogated as d_spec_k = sqrt( SUMij (d_pixij / fluxfrac)**2 )'
-
-        squared_ratio = ( np.ma.array(noise_cube,mask=comb_mask) / np.ma.array(fluxfrac_cube,mask=comb_mask) )**2
-        noise_masked  = np.sqrt( np.sum( np.sum( squared_ratio, axis=1), axis=1) )
-        noise_1D      = noise_masked.filled()
+        if verbose: print '   Calculating noise propogated as d_spec_k = 1/sqrt( SUMij (fluxfrac_ij**2 / d_pix_ij**2) )'
+        squared_ratio     = np.ma.array(fluxfrac_cube**2,mask=comb_mask) / np.ma.array(noise_cube**2,mask=comb_mask)
+        inv_noise_masked  = np.sqrt( np.sum( np.sum( squared_ratio, axis=1), axis=1) )
+        noise_1D          = 1.0/inv_noise_masked.filled()
 
         if verbose: print '   Generating S/N vecotr'
         SN_1D         = spec_1D / noise_1D
+
+        good1Dfluxval           = (spec_1D == 0.0)
+        noise_1D[good1Dfluxval] = 0.0
+        SN_1D[good1Dfluxval]    = 0.0
     else:
         if verbose: print ' - No "noise_cube" provided. Setting all errors and S/N values to NaN'
         SN_1D    = np.zeros(spec_1D.shape)*np.NaN
@@ -357,10 +360,11 @@ def extract_spectrum_viasourcemodelcube(datacube,sourceweights,wavelengths,
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return sourcecube, sourcecube_err, spec_wave, spec_flux, spec_err
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=None,plotSNcurve=False,yrange=None,
+def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=None,plotSNcurve=False,
                  simsources=None,simsourcefile='/Users/kschmidt/work/TDOSE/mock_cube_sourcecat161213_all.fits',
                  sim_cube_dim=None,comparisonspecs=None,comp_colors=['blue'],comp_wavecol='WAVE_AIR',
-                 comp_fluxcol='FLUX',comp_errcol='FLUXERR',comp_labels=None,showspecs=False,shownoise=True,verbose=True):
+                 comp_fluxcol='FLUX',comp_errcol='FLUXERR',comp_labels=None,
+                 xrange=None,yrange=None,showspecs=False,shownoise=True,verbose=True):
     """
     Simple plots of multiple 1D spectra
 
@@ -391,16 +395,27 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
         else:
             spec_label = labels[ff]
 
+        if xrange is not None:
+            goodent = np.where((specdat['wave'] > xrange[0]) & (specdat['wave'] < xrange[1]))[0]
+            if goodent == []:
+                if verbose: print' - The chosen xrange is not covered by the input spectrum. Plotting full spectrum'
+                goodent = np.arange(len(specdat['wave']))
+        else:
+            goodent = np.arange(len(specdat['wave']))
+
         if plotSNcurve:
-            plt.plot(specdat['wave'],specdat['s2n'],color=spec_color,lw=lthick*2, label=spec_label)
+            plt.plot(specdat['wave'][goodent],specdat['s2n'][goodent],color=spec_color,lw=lthick*2, label=spec_label)
             ylabel = 'S/N'
+            plotname = plotname.replace('.pdf','_S2N.pdf')
         else:
             fillalpha = 0.30
             #if spec_color == 'green': pdb.set_trace()
             if shownoise:
-                plt.fill_between(specdat['wave'],specdat['flux']-specdat['fluxerror'],specdat['flux']+specdat['fluxerror'],
+                plt.fill_between(specdat['wave'][goodent],
+                                 specdat['flux'][goodent]-specdat['fluxerror'][goodent],
+                                 specdat['flux'][goodent]+specdat['fluxerror'][goodent],
                                  alpha=fillalpha,color=spec_color)
-            plt.plot(specdat['wave'],specdat['flux'],color=spec_color,lw=lthick*2, label=spec_label)
+            plt.plot(specdat['wave'][goodent],specdat['flux'][goodent],color=spec_color,lw=lthick*2, label=spec_label)
             ylabel = 'flux'
 
     if simsources is not None:
@@ -427,6 +442,14 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
         for comparisonspec in comparisonspecs:
             compdat = pyfits.open(comparisonspec)[1].data
 
+            if xrange is not None:
+                goodent = np.where((compdat[comp_wavecol] > xrange[0]) & (compdat[comp_wavecol] < xrange[1]))[0]
+                if goodent == []:
+                    if verbose: print' - The chosen xrange is not covered by the comparison spectrum. Plotting full spectrum'
+                    goodent = np.arange(len(compdat[comp_wavecol]))
+            else:
+                goodent = np.arange(len(compdat[comp_wavecol]))
+
             if comp_colors is None:
                 comp_color = None
             else:
@@ -439,23 +462,27 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
 
 
             if plotSNcurve:
-                plt.plot(compdat[comp_wavecol],compdat[comp_fluxcol]/compdat[comp_errcol],
+                plt.plot(compdat[comp_wavecol][goodent],compdat[comp_fluxcol][goodent]/compdat[comp_errcol][goodent],
                          color=comp_color,lw=lthick*2, label=comp_label)
                 ylabel = 'S/N'
             else:
                 fillalpha = 0.30
-                plt.fill_between(compdat[comp_wavecol],
-                                 compdat[comp_fluxcol]-compdat[comp_errcol],compdat[comp_fluxcol]+compdat[comp_errcol],
+                plt.fill_between(compdat[comp_wavecol][goodent],
+                                 compdat[comp_fluxcol][goodent]-compdat[comp_errcol][goodent],
+                                 compdat[comp_fluxcol][goodent]+compdat[comp_errcol][goodent],
                                  alpha=fillalpha,color=comp_color)
-                plt.plot(compdat[comp_wavecol],compdat[comp_fluxcol],color=comp_color,lw=lthick, label=comp_label)
+                plt.plot(compdat[comp_wavecol][goodent],compdat[comp_fluxcol][goodent],
+                         color=comp_color,lw=lthick, label=comp_label)
                 ylabel = 'flux'
-
 
     plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
     plt.ylabel(ylabel, fontsize=Fsize)
 
     if yrange is not None:
         plt.ylim(yrange)
+
+    if xrange is not None:
+        plt.xlim(xrange)
 
     leg = plt.legend(fancybox=True, loc='upper right',prop={'size':Fsize},ncol=1,numpoints=1,
                      bbox_to_anchor=(1.25, 1.03))  # add the legend
