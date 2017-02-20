@@ -10,7 +10,8 @@ import pdb
 import matplotlib.pyplot as plt
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def extract_spectra(model_cube_file,source_association_dictionary=None,outputdir='./',clobber=False,
-                    noise_cube_file=None,noise_cube_ext='ERROR',source_model_cube_file=None,verbose=True):
+                    noise_cube_file=None,noise_cube_ext='ERROR',source_model_cube_file=None,
+                    model_cube_ext='DATA',layer_scale_ext='WAVESCL',verbose=True):
     """
     Assemble the spectra determined by the wavelength layer scaling of the normalized models
     when generating the source model cube
@@ -31,9 +32,9 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,outputdir
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Loading data needed for spectral assembly'
-    model_cube        = pyfits.open(model_cube_file)[0].data
-    model_cube_hdr    = pyfits.open(model_cube_file)[0].header
-    layer_scale_arr   = pyfits.open(model_cube_file)[1].data
+    model_cube        = pyfits.open(model_cube_file)[model_cube_ext].data
+    model_cube_hdr    = pyfits.open(model_cube_file)[model_cube_ext].header
+    layer_scale_arr   = pyfits.open(model_cube_file)[layer_scale_ext].data
     if noise_cube_file is not None:
         noise_cube        = pyfits.open(noise_cube_file)[noise_cube_ext].data
         source_model_cube = pyfits.open(source_model_cube_file)[0].data
@@ -99,6 +100,7 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
     noise_cube        Cube with uncertainties (sqrt(variance)) of data cube to be used for estimating 1D uncertainties
                       To estimate S/N and 1D noise, providing a source model cube is required
     source_model_cube Source model cube containing the model cube for each individual source seperately
+                      Needed in order to estimate noise from noise-cube
     specname          Name of file to save spectrum to
     obj_cube_hdr      Provide a template header to save the object cube (from combining the individual source cube)
                       as an extension to the extracted spectrum
@@ -122,7 +124,7 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
     maxsource = np.max(sourceIDs)
     if maxsource >= layer_scale_arr.shape[0]:
         sys.exit(' ---> Sources in list '+str(str(sourceIDs))+
-                 ' not available among '+layer_scale_arr.shape[0].shape+' sources in layer_scale_arr.')
+                 ' not available among '+str(layer_scale_arr.shape[0])+' sources in layer_scale_arr.')
     else:
         if verbose: print '   All sources exist in layer_scale_arr; proceeding...'
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -357,7 +359,8 @@ def extract_spectrum_viasourcemodelcube(datacube,sourceweights,wavelengths,
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=None,plotSNcurve=False,yrange=None,
                  simsources=None,simsourcefile='/Users/kschmidt/work/TDOSE/mock_cube_sourcecat161213_all.fits',
-                 sim_cube_dim=None,showspecs=False,verbose=True):
+                 sim_cube_dim=None,comparisonspecs=None,comp_colors=['blue'],comp_wavecol='WAVE_AIR',
+                 comp_fluxcol='FLUX',comp_errcol='FLUXERR',comp_labels=None,showspecs=False,shownoise=True,verbose=True):
     """
     Simple plots of multiple 1D spectra
 
@@ -394,8 +397,9 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
         else:
             fillalpha = 0.30
             #if spec_color == 'green': pdb.set_trace()
-            plt.fill_between(specdat['wave'],specdat['flux']-specdat['fluxerror'],specdat['flux']+specdat['fluxerror'],
-                             alpha=fillalpha,color=spec_color)
+            if shownoise:
+                plt.fill_between(specdat['wave'],specdat['flux']-specdat['fluxerror'],specdat['flux']+specdat['fluxerror'],
+                                 alpha=fillalpha,color=spec_color)
             plt.plot(specdat['wave'],specdat['flux'],color=spec_color,lw=lthick*2, label=spec_label)
             ylabel = 'flux'
 
@@ -418,6 +422,33 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
 
         plt.plot(specdat['wave'],sim_total,'--',color='black',lw=lthick*2,
                  label='Sim. spectrum: \nsimsource='+str(simsources))
+
+    if comparisonspecs is not None:
+        for comparisonspec in comparisonspecs:
+            compdat = pyfits.open(comparisonspec)[1].data
+
+            if comp_colors is None:
+                comp_color = None
+            else:
+                comp_color = comp_colors[ff]
+
+            if comp_labels is None:
+                comp_label = comparisonspec
+            else:
+                comp_label = comp_labels[ff]
+
+
+            if plotSNcurve:
+                plt.plot(compdat[comp_wavecol],compdat[comp_fluxcol]/compdat[comp_errcol],
+                         color=comp_color,lw=lthick*2, label=comp_label)
+                ylabel = 'S/N'
+            else:
+                fillalpha = 0.30
+                plt.fill_between(compdat[comp_wavecol],
+                                 compdat[comp_fluxcol]-compdat[comp_errcol],compdat[comp_fluxcol]+compdat[comp_errcol],
+                                 alpha=fillalpha,color=comp_color)
+                plt.plot(compdat[comp_wavecol],compdat[comp_fluxcol],color=comp_color,lw=lthick, label=comp_label)
+                ylabel = 'flux'
 
 
     plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
