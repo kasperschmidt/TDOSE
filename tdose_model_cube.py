@@ -106,10 +106,28 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
             if fit_source_scales:
                 if loopverbose: print ' - Optimize flux scaling of each source in full image numerically '
-                # Make sure no infs or NaNs are passed to optimizer... masked arrays?
-                scales, covs   = optimize_source_scale_gauss(datacube[ll,:,:],noisecube[ll,:,:],
-                                                             mu_objs_conv,cov_objs_conv,
-                                                             optimizer='curve_fit',verbose=loopverbose)
+                if ( len(np.where(np.isfinite(datacube[ll,:,:].ravel()) == True )[0]) != len(datacube[ll,:,:].ravel()) ) or \
+                        ( len(np.where(np.isfinite(noisecube[ll,:,:].ravel()) == True )[0]) != len(noisecube[ll,:,:].ravel()) ):
+                    if loopverbose: print '   Found non-finite values in cubes so generating mask to ignore those in modeling '
+                    invalid_mask1   = np.ma.masked_invalid(datacube[ll,:,:]).mask
+                    invalid_mask2   = np.ma.masked_invalid(noisecube[ll,:,:]).mask
+                    comb_mask       = (invalid_mask1 | invalid_mask2)
+
+                    datacube_layer  = np.ma.array(datacube[ll,:,:],mask=comb_mask)
+                    noisecube_layer = np.ma.array(noisecube[ll,:,:],mask=comb_mask)
+
+                    # filling masked arrays; curve_fit can't handle masked arrays as the np.asarray_chkfinite(datacube_layer)
+                    # used to chekc for NaNs in curve_fit still returns an error even though the array is masked
+                    datacube_layer.filled(fill_value=0.0)
+                    noisecube_layer.filled(fill_value=1.0)
+                else:
+                    datacube_layer  = datacube[ll,:,:]
+                    noisecube_layer = noisecube[ll,:,:]
+
+                scales, covs   = tmc.optimize_source_scale_gauss(datacube_layer,noisecube_layer,
+                                                                 mu_objs_conv,cov_objs_conv,
+                                                                 optimizer='curve_fit',verbose=loopverbose)
+
                 output_layer   = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
                                                sourcescale=scales,verbose=loopverbose)
                 output_scales  = scales
@@ -228,7 +246,7 @@ def optimize_source_scale_gauss(img_data,img_std,mu_objs,cov_objs,optimizer='cur
     if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if optimizer == 'leastsq':
-        sys.exit('optimizer = "leastsq" no enabled')
+        sys.exit('optimizer = "leastsq" not enabled')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     elif optimizer == 'curve_fit':
         scales_initial_guess   = np.ones(mu_objs.shape[0])
@@ -240,10 +258,9 @@ def optimize_source_scale_gauss(img_data,img_std,mu_objs,cov_objs,optimizer='cur
                                                    curve_fit_fct_wrapper_sourcefit((xgrid, ygrid),mu_objs,
                                                                                    cov_objs,*scales),(xgrid, ygrid),
                                                    img_data.ravel(), p0 = scales_initial_guess, sigma=img_std.ravel() )
-
         output = scale_best, scale_cov
     else:
-        sys.exit(' ---> Invalid optimizer ('+optimizer+') chosen in optimize_img_scale()')
+        sys.exit(' ---> Invalid optimizer ('+optimizer+') chosen for optimize_source_scale_gauss()')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print '   ----------- Finished on '+tu.get_now_string()+' ----------- '
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
