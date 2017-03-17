@@ -3,6 +3,7 @@ import numpy as np
 import os
 import sys
 import pyfits
+import scipy
 import scipy.ndimage
 import scipy.optimize as opt
 import tdose_utilities as tu
@@ -15,7 +16,7 @@ import warnings
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='gauss',fit_source_scales=True,
                   noisecube='None',save_modelcube=True,cubename='tdose_model_cube_output_RENAME.fits',clobber=True,
-                  outputhdr='None',model_layers=None,verbose=True):
+                  outputhdr='None',model_layers=None,optimize_method='matrix',returnresidual=False,verbose=True):
     """
     Generate full model of data cube
 
@@ -42,6 +43,12 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
     clobber            If true any existing fits file will be overwritten
     outputhdr          Header to use for output fits file. If none provided a default header will be used.
     model_layers       Proivde array of layer number (starting from 0) to model if full cube should not be modelled
+    optimize_method    Method to use for optimizing the flux scales in each layers. Possible choices are:
+                            curvefit        Numerical optimization using a chi2 approach with curve_fit
+                            matrix          Minimizing the chi2 expression manually solving the matrix equation
+                            lstsq           Minimizing the chi2 expression using the scipy.linalg.lstsq function
+                            all             Run all three methods and compare them (for trouble shooting)
+    returnresidual     Set to True to return the residual between each of the modelled layers and the data (data-model)
     verbose            Toggle verbosity
 
     --- EXAMPLE OF USE ---
@@ -82,6 +89,12 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
         else:
             layerlist = np.asarray(model_layers).astype(int)
 
+        if optimize_method =='all':
+            optimize_method_list = ['curvefit','matrix','lstsq']
+        else:
+            optimize_method_list = [optimize_method]
+
+
         for ll in layerlist:
             if verbose:
                 infostr = '   Matching layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % datashape[0])+''
@@ -118,25 +131,86 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
                     # filling masked arrays; curve_fit can't handle masked arrays as the np.asarray_chkfinite(datacube_layer)
                     # used to chekc for NaNs in curve_fit still returns an error even though the array is masked
-                    datacube_layer.filled(fill_value=0.0)
-                    noisecube_layer.filled(fill_value=1.0)
+                    datacube_layer  = datacube_layer.filled(fill_value=0.0)
+                    noisecube_layer = noisecube_layer.filled(fill_value=1.0)
                 else:
                     datacube_layer  = datacube[ll,:,:]
                     noisecube_layer = noisecube[ll,:,:]
 
-                scales, covs   = tmc.optimize_source_scale_gauss(datacube_layer,noisecube_layer,
-                                                                 mu_objs_conv,cov_objs_conv,
-                                                                 optimizer='curve_fit',verbose=loopverbose)
+                #-------------------------------------------------------------------------------------------------------
+                if 'curvefit' in optimize_method_list:
+                    scalesCFIT, covsCFIT  = tmc.optimize_source_scale_gauss(datacube_layer,
+                                                                            np.ones(datashape[1:]), # noise always ones
+                                                                            mu_objs_conv,cov_objs_conv,
+                                                                            optimizer='curve_fit',verbose=loopverbose)
 
-                output_layer   = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
-                                               sourcescale=scales,verbose=loopverbose)
-                output_scales  = scales
+                    output_layerCFIT      = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
+                                                          sourcescale=scalesCFIT,verbose=loopverbose)
 
-                # Instead of curve_fit above, this optimization should be possible to replace by matrix inversion...
-                # solve   A^T A f = A^T d   where  A represents the 4D source model cube (Nobj,Nxpix,Nypix,Nlambda),
-                #                                  f the 3D fluxes    (Nobj,Npix,Nlambda) and
-                #                                  d is the data cube (Nxpix,Nypix,Nlambda)
+                    output_layer   = output_layerCFIT
+                    output_scales  = scalesCFIT
+                #-------------------------------------------------------------------------------------------------------
+                if ('matrix' in optimize_method_list) or ('lstsq' in optimize_method_list):
+                    for ss in xrange(Nsource):
+                        img_model  = tmc.gen_image(datashape[1:],mu_objs[ss],cov_objs[ss],sourcescale='ones',verbose=False)
+                        img_model  = img_model/noisecube_layer
+                        modelravel = img_model.ravel()
+                        if ss == 0:
+                            Atrans = modelravel
+                        else:
+                            Atrans = np.vstack([Atrans,modelravel])
+                    A          = np.transpose(Atrans)
+                    dataravel  = (datacube_layer/noisecube_layer).ravel()
 
+                    #---------------------------------------------------------------------------------------------------
+                    if 'matrix' in optimize_method_list:
+                        ATA        = Atrans.dot(A)
+                        ATd        = Atrans.dot(dataravel)
+                        ATAinv     = np.linalg.inv(ATA)
+                        scalesMTX  = ATAinv.dot(ATd)
+
+                        output_layerMTX   = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
+                                                       sourcescale=scalesMTX,verbose=loopverbose)
+
+
+                        output_layer   = output_layerMTX
+                        output_scales  = scalesMTX
+                    #---------------------------------------------------------------------------------------------------
+                    if 'lstsq' in optimize_method_list:
+                        LSQout     = scipy.linalg.lstsq(A,dataravel)
+                        scalesLSQ  = LSQout[0]
+
+                        output_layerLSQ  = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
+                                                         sourcescale=scalesLSQ,verbose=loopverbose)
+
+                        output_layer   = output_layerLSQ
+                        output_scales  = scalesLSQ
+                #-------------------------------------------------------------------------------------------------------
+                if optimize_method == 'all':
+                    resCFIT    = (datacube_layer-output_layerCFIT).ravel()
+                    resMTX     = (datacube_layer-output_layerMTX).ravel()
+                    resLSQ     = (datacube_layer-output_layerLSQ).ravel()
+
+                    medianCFIT = np.median(resCFIT)
+                    medianMTX  = np.median(resMTX)
+                    medianLSQ  = np.median(resLSQ)
+
+                    meanCFIT   = np.mean(resCFIT)
+                    meanMTX    = np.mean(resMTX)
+                    meanLSQ    = np.mean(resLSQ)
+
+                    import pylab as plt
+                    plt.hist(resCFIT,label='dat-CFITmodel (med='+str("%.2f" % medianCFIT)+', mea='+str("%.2f" % meanCFIT)+')',
+                             bins=50,alpha=0.3)
+                    plt.hist(resMTX,label='dat-MTXmodel (med='+str("%.2f" % medianMTX)+', mea='+str("%.2f" % meanMTX)+')',
+                             bins=50,alpha=0.3)
+                    plt.hist(resLSQ,label='dat-LSQmodel (med='+str("%.2f" % medianLSQ)+', mea='+str("%.2f" % meanLSQ)+')',
+                             bins=50,alpha=0.3)
+                    plt.legend()
+                    plt.show()
+
+                    print ' ---> Stopping in gen_fullmodel() for further investigation'
+                    pdb.set_trace()
             else:
                 if loopverbose: print ' - Optimize flux scaling of full image numerically '
                 layer_img      = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
@@ -147,7 +221,10 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                 output_scales  = np.asarray(scale.tolist * Nsource)
 
             layer_scales[:,ll]     = output_scales
-            model_cube_out[ll,:,:] = output_layer
+            if returnresidual:
+                model_cube_out[ll,:,:] = output_layer
+            else:
+                model_cube_out[ll,:,:] = datacube_layer-output_layer
         if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
     else:
         sys.exit(' ---> Invalid parameter type ('+paramtype+') provided to gen_fullmodel()')
@@ -321,7 +398,7 @@ def curve_fit_fct_wrapper_sourcefit((x,y),mu_objs,cov_objs,*scales):
     """
     imagedim  = x.shape
     scls      = np.asarray(scales)
-    img_model = gen_image(imagedim,mu_objs,cov_objs,sourcescale=scls,verbose=False)
+    img_model = tmc.gen_image(imagedim,mu_objs,cov_objs,sourcescale=scls,verbose=False)
 
     return img_model.ravel()
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -366,7 +443,11 @@ def gen_image(imagedim,mu_objs,cov_objs,sourcescale='ones',verbose=True):
         scalings = sourcescale
 
     for oo in xrange(Nobj):
-        muconv, covarconv = mu_objs[oo,:], cov_objs[oo,:,:]
+        if len(mu_objs) == 2: # only one object
+            muconv, covarconv = mu_objs[:], cov_objs[:,:]
+        else:
+            muconv, covarconv = mu_objs[oo,:], cov_objs[oo,:,:]
+
 
         if verbose: print ' - Generating source in spatial dimensions '
         try:
