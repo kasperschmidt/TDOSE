@@ -16,7 +16,8 @@ import warnings
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='gauss',fit_source_scales=True,
                   noisecube='None',save_modelcube=True,cubename='tdose_model_cube_output_RENAME.fits',clobber=True,
-                  outputhdr='None',model_layers=None,optimize_method='matrix',returnresidual=False,verbose=True):
+                  outputhdr='None',model_layers=None,optimize_method='matrix',returnresidual=False,verbose=True,
+                  loopverbose=False):
     """
     Generate full model of data cube
 
@@ -50,6 +51,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                             all             Run all three methods and compare them (for trouble shooting)
     returnresidual     Set to True to return the residual between each of the modelled layers and the data (data-model)
     verbose            Toggle verbosity
+    loopverbose        Toggle verbosity in loop over objects
 
     --- EXAMPLE OF USE ---
 
@@ -82,8 +84,6 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
             noisecube = np.ones(datashape)
 
         if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
-        loopverbose = False
-
         if model_layers is None:
             layerlist = np.arange(datashape[0])
         else:
@@ -152,7 +152,8 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                 #-------------------------------------------------------------------------------------------------------
                 if ('matrix' in optimize_method_list) or ('lstsq' in optimize_method_list):
                     for ss in xrange(Nsource):
-                        img_model  = tmc.gen_image(datashape[1:],mu_objs[ss],cov_objs[ss],sourcescale='ones',verbose=False)
+                        img_model  = tmc.gen_image(datashape[1:],mu_objs_conv[ss],cov_objs_conv[ss],sourcescale=[1.0],
+                                                   verbose=False)
                         img_model  = img_model/noisecube_layer
                         modelravel = img_model.ravel()
                         if ss == 0:
@@ -170,8 +171,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                         scalesMTX  = ATAinv.dot(ATd)
 
                         output_layerMTX   = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
-                                                       sourcescale=scalesMTX,verbose=loopverbose)
-
+                                                          sourcescale=scalesMTX,verbose=loopverbose)
 
                         output_layer   = output_layerMTX
                         output_scales  = scalesMTX
@@ -221,7 +221,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                 output_scales  = np.asarray(scale.tolist * Nsource)
 
             layer_scales[:,ll]     = output_scales
-            if returnresidual:
+            if not returnresidual:
                 model_cube_out[ll,:,:] = output_layer
             else:
                 model_cube_out[ll,:,:] = datacube_layer-output_layer
@@ -427,8 +427,16 @@ def gen_image(imagedim,mu_objs,cov_objs,sourcescale='ones',verbose=True):
 
     """
     img_out   = np.zeros(imagedim)
-    Nmu       = mu_objs.shape[0]
-    Ncov      = cov_objs.shape[0]
+    if mu_objs.shape == (2,):
+        Nmu       = 1
+    else:
+        Nmu       = mu_objs.shape[0]
+
+    if cov_objs.shape == (2, 2):
+        Ncov      = 1
+    else:
+        Ncov      = cov_objs.shape[0]
+
     if Nmu != Ncov:
         sys.exit(' ---> Number of mu-vectors ('+str(Nmu)+') and covariance matrixes ('+str(Ncov)+
                  ') does not agree in gen_image()')
@@ -453,6 +461,7 @@ def gen_image(imagedim,mu_objs,cov_objs,sourcescale='ones',verbose=True):
         try:
             source_centered = tu.gen_2Dgauss(imagedim,covarconv,scalings[oo],show2Dgauss=False,verbose=verbose)
         except:
+            print ' - ERROR: Something went wrong in tdose_model_cube.gen_image(); stopping to further investigate...'
             pdb.set_trace()
 
         if verbose: print ' - Positioning source at position according to mu-vector (x,y) = ('+\
