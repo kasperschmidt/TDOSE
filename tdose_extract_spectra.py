@@ -138,33 +138,41 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if noise_cube is not None:
         if verbose: print ' - Estimate S/N at each wavelength for 1D spectrum (see Eq. 16 of Kamann+2013)'
-        total_cube    = np.sum(source_model_cube,axis=0)
-        object_cube   = np.sum(source_model_cube[source_ent,:,:],axis=0)
+        object_cube   = np.sum(np.abs(source_model_cube[source_ent,:,:]),axis=0)
 
-        if verbose: print '   Estimating fraction flux belonging to object in each cube pixel'
-        fluxfrac_cube = object_cube/total_cube
+        #total_cube    = np.sum(np.abs(source_model_cube),axis=0)
+        #layerflux     = np.sum(np.sum(source_model_cube[source_ent,:,:],axis=2),axis=2)
 
-        fluxfrac_min  = 0.1
+        if verbose: print '   Estimating fraction flux in each cube pixel'
+        fluxfrac_cube = object_cube / spec_1D[:,None,None]
+
+        fluxfrac_min  = -9999 # 0.1
         if verbose: print '   Defining pixel mask (ignoring NaN pixels and pixels with <'+str(fluxfrac_min)+\
                           ' of total pixel flux in model cube) '
-        pix_mask      = (fluxfrac_cube < fluxfrac_min)
+        # pix_mask      = (fluxfrac_cube < fluxfrac_min)
         invalid_mask1 = np.ma.masked_invalid(fluxfrac_cube).mask
         invalid_mask2 = np.ma.masked_invalid(noise_cube).mask
 
         # combining mask making sure all individual mask pixels have True for it to be true in combined mask
-        comb_mask     = (pix_mask | invalid_mask1 | invalid_mask2)
+        comb_mask     = (invalid_mask1 | invalid_mask2) # | pix_mask
 
         if verbose: print '   Calculating noise propogated as d_spec_k = 1/sqrt( SUMij (fluxfrac_ij**2 / d_pix_ij**2) )'
-        squared_ratio     = np.ma.array(fluxfrac_cube**2,mask=comb_mask) / np.ma.array(noise_cube**2,mask=comb_mask)
-        inv_noise_masked  = np.sqrt( np.sum( np.sum( squared_ratio, axis=1), axis=1) )
-        noise_1D          = 1.0/inv_noise_masked.filled()
+        squared_ratio     = np.ma.array(fluxfrac_cube,mask=comb_mask)**2 / np.ma.array(noise_cube,mask=comb_mask)**2
 
-        if verbose: print '   Generating S/N vecotr'
+        # lyaent_11503085 = 777
+        # plt.imshow(squared_ratio.filled(fill_value=0)[lyaent_11503085,:,:]); plt.colorbar(); plt.show()
+        # 1./np.sqrt(np.sum(squared_ratio[lyaent_11503085,:,:]))
+        # spec_1D[lyaent_11503085]
+        # plt.show()
+
+        inv_noise_masked  = np.sqrt( np.sum( np.sum( squared_ratio, axis=1), axis=1) )
+        noise_1D          = (1.0/inv_noise_masked).filled(fill_value=0.0)
+        if verbose: print '   Generating S/N vector'
         SN_1D         = spec_1D / noise_1D
 
-        good1Dfluxval           = (spec_1D == 0.0)
-        noise_1D[good1Dfluxval] = 0.0
-        SN_1D[good1Dfluxval]    = 0.0
+        #good1Dfluxval           = (spec_1D == 0.0)
+        #noise_1D[good1Dfluxval] = 0.0
+        #SN_1D[good1Dfluxval]    = 0.0
     else:
         if verbose: print ' - No "noise_cube" provided. Setting all errors and S/N values to NaN'
         SN_1D    = np.zeros(spec_1D.shape)*np.NaN
