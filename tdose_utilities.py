@@ -233,9 +233,38 @@ def gen_2Dgauss(size,cov,scale,verbose=True,show2Dgauss=False):
 
     return gauss2D
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False):
+    """
+    Shift 2D profile to given position in array by rolling it in x and y.
+    Can move by sub-pixel amount using interpolation
+
+    --- INPUT ---
+    position      position to move center of image (profile) to:  [ypos,xpos]
+                  NB! assumes position value starts from 0, i.e., if providing pixel values subtract 1.
+
+    --- EXAMPLE OF USE ---
+
+    """
+    profile_dim = profile.shape
+
+    yshift = position[0]-profile_dim[0]/2.
+    xshift = position[1]-profile_dim[1]/2.
+    profile_shifted = scipy.ndimage.interpolation.shift(profile, [yshift,xshift], output=None, order=3,
+                                                        mode='constant', cval=0.0, prefilter=True)
+
+    #profile_shifted = np.roll(np.roll(profile,yroll,axis=0),xroll,axis=1)
+
+    if showprofiles:
+        vmaxval = np.max(profile_shifted)
+        plt.imshow(profile_shifted,interpolation='none',vmin=-vmaxval, vmax=vmaxval)
+        plt.title('Positioned Source')
+        plt.show()
+
+    return profile_shifted
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def roll_2Dprofile(profile,position,padvalue=0.0,showprofiles=False):
     """
-    Move 2D profile to given psotion in array by rolling it in x and y.
+    Move 2D profile to given position in array by rolling it in x and y.
 
     --- INPUT ---
     position      position to move center of image (profile) to:  [ypos,xpos]
