@@ -381,7 +381,10 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     Simple plots of multiple 1D spectra
 
     """
-    if verbose: print ' - Plotting spectra to '+plotname
+    if len(filelist) == 1:
+        if verbose: print ' - Plotting data from '+filelist[0]
+    else:
+        if verbose: print ' - Plotting data from filelist '
     fig = plt.figure(figsize=(10, 3))
     fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
     Fsize  = 10
@@ -525,6 +528,12 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                          color=sky_color,lw=lthick, label=sky_label)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if xrange is None:
+        xvals = [4800,9300]
+    else:
+        xvals = xrange
+    plt.plot(xvals,[0,0],'--k',lw=lthick)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
     plt.ylabel(ylabel, fontsize=Fsize)
 
@@ -547,5 +556,65 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
 
     plt.clf()
     plt.close('all')
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def plot_histograms(datavectors,plotname='./tdose_cubehist.pdf',colors=None,labels=None,bins=None,
+                    xrange=None,yrange=None,verbose=True,norm=True,ylog=True):
+    """
+    Plot histograms of a set of data vectors.
 
+    """
+    Ndat = len(datavectors)
+    if verbose: print ' - Plotting histograms of N = '+str(Ndat)+' data vectors'
+
+    if colors is None:
+        colors = ['blue']*Ndat
+
+    if labels is None:
+        labels = ['data vector no. '+str(ii+1) for ii in np.arange(Ndat)]
+
+    if bins is None:
+        bins = np.arange(-100,102,2)
+
+    fig = plt.figure(figsize=(10, 3))
+    fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.08, right=0.81, bottom=0.1, top=0.95)
+    Fsize  = 10
+    lthick = 1
+    plt.rc('text', usetex=True)
+    plt.rc('font', family='serif',size=Fsize)
+    plt.rc('xtick', labelsize=Fsize)
+    plt.rc('ytick', labelsize=Fsize)
+    plt.clf()
+    plt.ioff()
+    #plt.title(plotname.split('TDOSE 1D spectra'),fontsize=Fsize)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    for dd, datavec in enumerate(datavectors):
+        hist = plt.hist(datavec[~np.isnan(datavec)],color=colors[dd],bins=bins,histtype="step",lw=lthick,
+                        label=labels[dd],normed=norm)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if yrange is None:
+        yvals = [1e-5,1e8]
+    else:
+        yvals = yrange
+    plt.plot([0,0],yvals,'--k',lw=lthick)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    plt.xlabel('', fontsize=Fsize)
+    plt.ylabel('\#', fontsize=Fsize)
+
+    if yrange is not None:
+        plt.ylim(yrange)
+
+    if xrange is not None:
+        plt.xlim(xrange)
+
+    if ylog:
+        plt.yscale('log')
+
+    leg = plt.legend(fancybox=True, loc='upper right',prop={'size':Fsize},ncol=1,numpoints=1,
+                     bbox_to_anchor=(1.25, 1.03))  # add the legend
+    leg.get_frame().set_alpha(0.7)
+
+    if verbose: print '   Saving plot to',plotname
+    plt.savefig(plotname)
+    plt.clf()
+    plt.close('all')
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
