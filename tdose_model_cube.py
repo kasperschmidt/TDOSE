@@ -466,7 +466,8 @@ def gen_image(imagedim,mu_objs,cov_objs,sourcescale='ones',verbose=True):
 
         if verbose: print ' - Positioning source at position according to mu-vector (x,y) = ('+\
                       str(muconv[1])+','+str(muconv[0])+') in output image'
-        source_positioned = tu.roll_2Dprofile(source_centered,muconv-1.0,showprofiles=False)
+        #source_positioned = tu.roll_2Dprofile(source_centered,muconv-1.0,showprofiles=False)
+        source_positioned = tu.shift_2Dprofile(source_centered,muconv-1.0,showprofiles=False)
 
         if verbose: print ' - Adding convolved source to output image'
         img_out  = img_out + source_positioned
@@ -575,12 +576,21 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
             hducube.header.append(('CTYPE4 ','SOURCE  '           ,' '),end=True)
             hducube.header.append(('CUNIT4 ','Number  '           ,' '),end=True)
 
-
+            hdus = [hducube]
         else:
             if verbose: print ' - Using header provided with "outputhdr" for output fits file '
-            hducube.header = outputhdr
+            if 'XTENSION' in outputhdr.keys():
+                hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
+                hducube        = pyfits.ImageHDU(out_cube,header=outputhdr)
+                hdus           = [hduprim,hducube]
+            else:
+                hducube = pyfits.PrimaryHDU(out_cube,header=outputhdr)
+                hdus           = [hducube]
 
-        hdulist = pyfits.HDUList([hducube])       # turn header into to hdulist
+            # if verbose: print ' - Using header provided with "outputhdr" for output fits file '
+            # hducube.header = outputhdr
+
+        hdulist = pyfits.HDUList(hdus)       # turn header into to hdulist
         hdulist.writeto(cubename,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
