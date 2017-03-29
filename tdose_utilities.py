@@ -365,7 +365,7 @@ def convert_paramarray(paramarray,hdr,hdr_new,verbose=True):
     Function to convert the pixel-based paramter array from one wcs frame to another
 
     --- INFO ---
-    paramarray    Paramter array (e.g., loaded with build_paramarray)
+    paramarray    Parameter array (e.g., loaded with build_paramarray)
     hdr           Header (wcs) information the parameter array referes to
     hdr_new       The header (wcs) information to us for transforming parameters to new reference frame
 
