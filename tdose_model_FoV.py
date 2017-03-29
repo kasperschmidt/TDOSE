@@ -337,7 +337,7 @@ def residual_multigauss(param, dataimage, nonfinite = 0.0, ravelresidual=True, s
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, verbose=True):
     """
-    Build model image of N Gaussians where param contains the paremters
+    Build model image of N Gaussians where param contains the parameters
 
     --- INPUT ---
     param           N x 6 long vector with the paremeters for generated N Gaussians. The paremeters needed are:
@@ -367,7 +367,8 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, verbose=True
 
         covmatrix          = tu.build_2D_cov_matrix(paramset[4],paramset[3],paramset[5],verbose=verbose)
         gauss2Dimg         = tu.gen_2Dgauss(imgsize,covmatrix,paramset[2],show2Dgauss=False,verbose=verbose)
-        gauss2D_positioned = tu.roll_2Dprofile(gauss2Dimg,paramset[0:2]-1.0)
+        #gauss2D_positioned = tu.roll_2Dprofile(gauss2Dimg,paramset[0:2]-1.0,showprofiles=False)
+        gauss2D_positioned = tu.shift_2Dprofile(gauss2Dimg,paramset[0:2]-1.0,showprofiles=False)
 
         modelimage         = modelimage + gauss2D_positioned
 
