@@ -647,7 +647,7 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
         fluxscale = paramarray[oo*6+2]
         sigmay    = paramarray[oo*6+3]*scale[0]/3600.0
         sigmax    = (paramarray[oo*6+4]*scale[1]*np.cos(np.deg2rad(dec)))/3600.0
-        angle     = paramarray[oo*6+5]
+        angle     = paramarray[oo*6+5]*(-1)
         #if oo == 4: pdb.set_trace()
         string = 'ellipse('+str(ra)+','+str(dec)+','+str(Nsigma*sigmax)+','+str(Nsigma*sigmay)+','+str(angle)+') '
 
