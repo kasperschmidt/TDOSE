@@ -11,6 +11,7 @@ from astropy.nddata import Cutout2D
 import pyfits
 import scipy.ndimage
 import tdose_utilities as tu
+import tdose_model_FoV as tmf
 import astropy.convolution as ac # convolve, convolve_fft, Moffat2DKernel, Gaussian2DKernel
 from scipy.stats import multivariate_normal
 import matplotlib.pylab as plt
@@ -658,6 +659,138 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
 
     fout.close()
     if verbose: print ' - Saved region file to '+outputfile
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.txt',clobber=False,
+                                      idcol=0,racol=2,deccol=3,fluxcol=22,verbose=True):
+    """
+    Generate source catalog for modeling image with tdose_model_FoV.gen_fullmodel()
+
+    """
+    if verbose: print ' - Generating TDOSE source catalog for FoV modeling'
+    if sextractorfile.endswith('.fits'):
+        sexdat  = pyfits.open(sextractorfile)[1].data
+        ids     = sexdat[idcol]
+        ras     = sexdat[racol]
+        decs    = sexdat[deccol]
+        fluxes  = sexdat[fluxcol]
+    else:
+        sexdat  = np.genfromtxt(sextractorfile,names=None,dtype=None,comments='#')
+        ids     = sexdat['f'+str(idcol)]
+        ras     = sexdat['f'+str(racol)]
+        decs    = sexdat['f'+str(deccol)]
+        fluxes  = sexdat['f'+str(fluxcol)]
+
+    if (clobber == False) & os.path.isfile(outname):
+        if verbose: print ' - WARNING: Output ('+outname+') already exists and clobber=False, hence returning None'
+        return None
+    else:
+        if verbose: print ' - Will save source catalog to '+outname+' (overwriting any existing file)'
+        fout = open(outname,'w')
+        fout.write('# TDOSE Source catalog generated with tdose_utilities.gen_sourcecat_from_SExtractorfile() from:\n')
+        fout.write('# '+sextractorfile+'\n')
+        fout.write('# id xpos  ypos  fluxscale \n')
+
+        for ii, id in enumerate(ids):
+            fout.write(str(ids[ii])+' '+str(ras[ii])+' '+str(decs[ii])+' '+str(fluxes[ii])+'  \n')
+
+        fout.close()
+        return outname
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=None,clobber=False,
+                                      idcol='ID',racol='RA',deccol='DEC',aimg='A_IMAGE',bimg='B_IMAGE',
+                                      angle='THETA_IMAGE',fluxscale='FLUX_ISO_F814W',Nsigma=3,
+                                      saveDS9region=True,ds9color='red',ds9width=2,ds9fontsize=12,
+                                      savefitsimage=False,verbose=True):
+    """
+    Generate source catalog for modeling image with tdose_model_FoV.gen_fullmodel()
+
+    --- INPUT ---
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    sexfile   = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/catalog_photometry_candels-cdfs-02.fits'
+    imgheader = pyfits.open('/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_cut_v1.0.fits')[0].header
+    paramlist = tu.gen_paramlist_from_SExtractorfile(sexfile,imgheader=imgheader,Nsigma=8,savefitsimage=True)
+
+    """
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Loading SExtractor catalog'
+    try:
+        sourcedat = pyfits.open(sextractorfile)[1].data
+    except:
+        sys.exit(' ---> Problems loading fits catalog')
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if imgheader is None:
+        if verbose: print ' - Image header not provided; assuming ra and dec col are in pixel units'
+    else:
+        if verbose: print ' - Image header provided; converting ra and dec values using wcs info from header'
+        striphdr = tu.strip_header(imgheader.copy())
+        wcs_in   = wcs.WCS(striphdr)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    Nobjects   = len(sourcedat)
+    if verbose: print ' - Assembling paramter list for '+str(Nobjects)+' sources found in catalog'
+    paramlist = []
+    for oo in xrange(Nobjects):
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        if imgheader is None:
+            xpos       = sourcedat[racol][oo]
+            ypos       = sourcedat[deccol][oo]
+        else:
+            skycoord   = SkyCoord(sourcedat[racol][oo], sourcedat[deccol][oo], frame='icrs', unit='deg')
+            pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in)
+            xpos, ypos = pixcoord[0], pixcoord[1]
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        xpos = xpos
+        ypos = ypos
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        if fluxscale is not None:
+            fs = sourcedat[fluxscale][oo]
+        else:
+            fs = 1.0
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        sigy  = sourcedat[bimg][oo]*Nsigma
+        sigx  = sourcedat[aimg][oo]*Nsigma
+        ang   = sourcedat[angle][oo]
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        objlist    = [ypos,     xpos,     fs,       sigy,  sigx,  ang]
+        paramlist  = paramlist + objlist
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    paramlist_arr = np.asarray(paramlist)
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if saveDS9region:
+        if verbose: print ' - Generating DS9 region file with object parameters'
+        ds9region_file = sextractorfile.replace('.fits','_tdose.reg')
+        if os.path.isfile(ds9region_file) & (clobber == False):
+            if verbose: print ' - ds9 region file '+ds9region_file+' already exists and clobber=False so skipping'
+        else:
+            fout = open(ds9region_file,'w')
+            fout.write("# Region file format: DS9 version 4.1 \nimage\n")
+
+            for oo in xrange(Nobjects):
+                objparam = np.resize(paramlist_arr,(Nobjects,6))[oo]
+
+                string = 'ellipse('+str(objparam[1])+','+str(objparam[0])+','+str(objparam[4])+','+\
+                         str(objparam[3])+','+str(objparam[5])+') '
+
+                string = string+' # color='+ds9color+' width='+str(ds9width)+\
+                         ' font="times '+str(ds9fontsize)+' bold roman" text={'+str(sourcedat[idcol][oo])+'}'
+
+                fout.write(string+' \n')
+            fout.close()
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if savefitsimage:
+        if verbose: print ' - Generating image with object models from object parameters'
+        fitsimage = sextractorfile.replace('.fits','_tdose_modelimage.fits')
+        if imgheader is None:
+            if verbose: print ' - No image header provided for fits file ' \
+                              '(to get wcs and image model image dimensions) so skipping'
+        else:
+            imgsize   = np.array([striphdr['NAXIS2'],striphdr['NAXIS1']])
+            tmf.save_modelimage(fitsimage,paramlist_arr,imgsize,param_init=False,clobber=clobber,
+                                outputhdr=imgheader,verbose=verbose,verbosemodel=verbose)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    return paramlist_arr
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def plot_matrix_array():
     return None
