@@ -84,7 +84,7 @@ def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigx
 
     return param_init, fit_output
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def save_modelimage(outname,paramlist,imgsize,param_init=False,clobber=False,outputhdr=None,verbose=True):
+def save_modelimage(outname,paramlist,imgsize,param_init=False,clobber=False,outputhdr=None,verbose=True, verbosemodel=False):
     """
     Generate and save a fits file containing the model image obtained from modeling multiple gaussians
 
@@ -94,7 +94,7 @@ def save_modelimage(outname,paramlist,imgsize,param_init=False,clobber=False,out
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Generate model image from input paramters'
     xgrid, ygrid = tu.gen_gridcomponents(imgsize)
-    modelimg     = tmf.modelimage_multigauss((xgrid,ygrid), paramlist, showmodelimg=False, verbose=False)
+    modelimg     = tmf.modelimage_multigauss((xgrid,ygrid), paramlist, showmodelimg=False, verbose=verbosemodel)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Saving generated image to '+outname
@@ -335,7 +335,7 @@ def residual_multigauss(param, dataimage, nonfinite = 0.0, ravelresidual=True, s
 
     return residualimg
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, verbose=True):
+def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, verbose=True, verbosefull=False):
     """
     Build model image of N Gaussians where param contains the parameters
 
@@ -363,15 +363,21 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, verbose=True
     imgsize    = xgrid.shape
     modelimage = np.zeros(imgsize)
     for psets in np.arange(int(Ngauss)):
+        if verbose:
+            infostr = '   Insering model of object '+str("%5.f" % (psets))+' / '+str("%5.f" % Ngauss)+'    '
+            sys.stdout.write("%s\r" % infostr)
+            sys.stdout.flush()
+
         paramset    = param[psets*6:psets*6+6]
 
-        covmatrix          = tu.build_2D_cov_matrix(paramset[4],paramset[3],paramset[5],verbose=verbose)
-        gauss2Dimg         = tu.gen_2Dgauss(imgsize,covmatrix,paramset[2],show2Dgauss=False,verbose=verbose)
+        covmatrix          = tu.build_2D_cov_matrix(paramset[4],paramset[3],paramset[5],verbose=verbosefull)
+        gauss2Dimg         = tu.gen_2Dgauss(imgsize,covmatrix,paramset[2],show2Dgauss=False,verbose=verbosefull)
         #gauss2D_positioned = tu.roll_2Dprofile(gauss2Dimg,paramset[0:2]-1.0,showprofiles=False)
         gauss2D_positioned = tu.shift_2Dprofile(gauss2Dimg,paramset[0:2]-1.0,showprofiles=False)
 
         modelimage         = modelimage + gauss2D_positioned
 
+    if verbose: print '\n done...'
     if showmodelimg:
         plt.imshow(modelimage,interpolation='none', vmin=1e-5, vmax=np.max(modelimage), norm=mpl.colors.LogNorm())
         plt.title('Model Image')
