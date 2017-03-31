@@ -37,7 +37,7 @@ def build_2D_cov_matrix(sigmax,sigmay,angle,verbose=True):
     cov_orig[0,0] = sigmay**2.0
     cov_orig[1,1] = sigmax**2.0
 
-    angle_rad     = angle * np.pi/180.0
+    angle_rad     = (180.0-angle) * np.pi/180.0 # The (90-angle) makes sure the same convention as DS9 is used
     c, s          = np.cos(angle_rad), np.sin(angle_rad)
     rotmatrix     = np.matrix([[c, -s], [s, c]])
 
@@ -304,13 +304,15 @@ def roll_2Dprofile(profile,position,padvalue=0.0,showprofiles=False):
 
     return profile_shifted
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def get_now_string():
+def get_now_string(withseconds=False):
     """
     Retruning a string containing a formated version of the current data and time
     """
-    nowstr  = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+    if withseconds:
+        nowstr  = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+    else:
+        nowstr  = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
     return nowstr
-
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_gridcomponents(imgsize):
     """
@@ -648,7 +650,7 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
         fluxscale = paramarray[oo*6+2]
         sigmay    = paramarray[oo*6+3]*scale[0]/3600.0
         sigmax    = (paramarray[oo*6+4]*scale[1]*np.cos(np.deg2rad(dec)))/3600.0
-        angle     = paramarray[oo*6+5]*(-1)
+        angle     = paramarray[oo*6+5]
         #if oo == 4: pdb.set_trace()
         string = 'ellipse('+str(ra)+','+str(dec)+','+str(Nsigma*sigmax)+','+str(Nsigma*sigmay)+','+str(angle)+') '
 
@@ -661,7 +663,7 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
     if verbose: print ' - Saved region file to '+outputfile
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.txt',clobber=False,
-                                      idcol=0,racol=2,deccol=3,fluxcol=22,verbose=True):
+                                      idcol=0,racol=2,deccol=3,fluxcol=22,fluxfactor=100.,verbose=True):
     """
     Generate source catalog for modeling image with tdose_model_FoV.gen_fullmodel()
 
@@ -672,13 +674,13 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
         ids     = sexdat[idcol]
         ras     = sexdat[racol]
         decs    = sexdat[deccol]
-        fluxes  = sexdat[fluxcol]
+        fluxes  = sexdat[fluxcol]*fluxfactor
     else:
         sexdat  = np.genfromtxt(sextractorfile,names=None,dtype=None,comments='#')
         ids     = sexdat['f'+str(idcol)]
         ras     = sexdat['f'+str(racol)]
         decs    = sexdat['f'+str(deccol)]
-        fluxes  = sexdat['f'+str(fluxcol)]
+        fluxes  = sexdat['f'+str(fluxcol)]*fluxfactor
 
     if (clobber == False) & os.path.isfile(outname):
         if verbose: print ' - WARNING: Output ('+outname+') already exists and clobber=False, hence returning None'
@@ -698,7 +700,7 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=None,clobber=False,
                                       idcol='ID',racol='RA',deccol='DEC',aimg='A_IMAGE',bimg='B_IMAGE',
-                                      angle='THETA_IMAGE',fluxscale='FLUX_ISO_F814W',Nsigma=3,
+                                      angle='THETA_IMAGE',fluxscale='FLUX_ISO_F814W',fluxfactor=100.,Nsigma=3,
                                       saveDS9region=True,ds9color='red',ds9width=2,ds9fontsize=12,
                                       savefitsimage=False,verbose=True):
     """
@@ -744,7 +746,7 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
         ypos = ypos
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if fluxscale is not None:
-            fs = sourcedat[fluxscale][oo]
+            fs = sourcedat[fluxscale][oo]*fluxfactor
         else:
             fs = 1.0
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -

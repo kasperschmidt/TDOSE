@@ -13,7 +13,7 @@ import pdb
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,datanoise=None,
                   fluxscale='fluxscale',show_residualimg=False,generateimage=False,optimizer='curve_fit',
-                  clobber=False,verbose=True,outputhdr=None):
+                  clobber=False,outputhdr=None,param_initguess=None,verbose=True):
     """
     model
 
@@ -39,8 +39,11 @@ def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigx
     if sigysigxangle is not None:
         if verbose: print ' sigysigxangle',
     if verbose: print ' in initial guess'
-    param_init   = tmf.gen_paramlist(sourcecatalog,xpos_col=xpos_col,ypos_col=ypos_col,
-                                     sigysigxangle=sigysigxangle,fluxscale=fluxscale,verbose=verbose)
+    if param_initguess is None:
+        param_init   = tmf.gen_paramlist(sourcecatalog,xpos_col=xpos_col,ypos_col=ypos_col,
+                                         sigysigxangle=sigysigxangle,fluxscale=fluxscale,verbose=verbose)
+    else:
+        param_init   = param_initguess
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     fit_output  = tmf.model_objects_gauss(param_init,dataimg,optimizer=optimizer,datanoise=datanoise,
                                           verbose=verbose,show_residualimg=show_residualimg)
@@ -48,9 +51,9 @@ def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigx
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if type(generateimage) == str:
         tmf.save_modelimage(generateimage,fit_output[0],dataimg.shape,param_init=param_init,
-                            verbose=verbose,clobber=clobber,outputhdr=outputhdr)
+                            verbose=verbose,verbosemodel=verbose,clobber=clobber,outputhdr=outputhdr)
         tmf.save_modelimage(generateimage.replace('.fits','_initial.fits'),param_init,dataimg.shape,param_init=False,
-                            verbose=verbose,clobber=clobber,outputhdr=outputhdr)
+                            verbose=verbose,verbosemodel=verbose,clobber=clobber,outputhdr=outputhdr)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Storing fitted source paramters as fits table and returning output'
@@ -289,6 +292,10 @@ def curve_fit_function_wrapper((x,y),*args):
     """
     Wrapper for curve_fit optimizer call to be able to provide list of parameters to model_objects_gauss()
     """
+    infostr = '   curve_fit_function_wrapper call at '+tu.get_now_string(withseconds=True)
+    sys.stdout.write("%s\r" % infostr)
+    sys.stdout.flush()
+
     paramlist = np.asarray(args)
     modelimg  = tmf.modelimage_multigauss((x,y), paramlist, showmodelimg=False, verbose=False)
     #print paramlist
@@ -348,9 +355,9 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, verbose=True
 
     --- EXAMPLE OF USE ---
     import tdose_model_FoV as tmf
-
-    param      = [35,15,1,2.1,1.2,30,    120,100,200,20.1,15.2,0]
-    modelimage = tmf.modelimage_multigauss(param, [200,150], showmodelimg=True, verbose=True)
+    xgrid, ygrid = tu.gen_gridcomponents((500,1000))
+    param      = np.asarray([305,515,1,40.1,4.2,21.69,    120,100,200,20.1,15.2,0])
+    modelimage = tmf.modelimage_multigauss((xgrid,ygrid), param, showmodelimg=True, verbose=True)
 
     """
     Ngauss  = len(param)/6.0
@@ -364,7 +371,7 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, verbose=True
     modelimage = np.zeros(imgsize)
     for psets in np.arange(int(Ngauss)):
         if verbose:
-            infostr = '   Insering model of object '+str("%5.f" % (psets))+' / '+str("%5.f" % Ngauss)+'    '
+            infostr = '   Inserting model of object '+str("%5.f" % (psets+1))+' / '+str("%5.f" % Ngauss)+'    '
             sys.stdout.write("%s\r" % infostr)
             sys.stdout.flush()
 
@@ -377,7 +384,7 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, verbose=True
 
         modelimage         = modelimage + gauss2D_positioned
 
-    if verbose: print '\n done...'
+    if verbose: print '\n   done'
     if showmodelimg:
         plt.imshow(modelimage,interpolation='none', vmin=1e-5, vmax=np.max(modelimage), norm=mpl.colors.LogNorm())
         plt.title('Model Image')
