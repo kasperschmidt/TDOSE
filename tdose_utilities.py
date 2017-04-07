@@ -9,6 +9,9 @@ from astropy.coordinates import SkyCoord
 from astropy.wcs.utils import pixel_to_skycoord
 from astropy.nddata import Cutout2D
 import pyfits
+import subprocess
+import glob
+import shutil
 import scipy.ndimage
 import tdose_utilities as tu
 import tdose_model_FoV as tmf
@@ -215,6 +218,7 @@ def gen_2Dgauss(size,cov,scale,verbose=True,show2Dgauss=False):
 
     """
     if verbose: print ' - Generating multivariate_normal object for generating 2D gauss'
+    # matrix expression of multivariate gaussian to implement? P(x,m,C) = [1/det(2 pi C)] exp{ -1/2 (x-m)^T C^{-1} (x-m) }
     mvn = multivariate_normal([0, 0], cov)
 
     if verbose: print ' - Setting up grid to populate with 2D gauss PDF'
@@ -794,11 +798,327 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return paramlist_arr
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def plot_matrix_array():
-    return None
+def extract_fitsextension(fitsfile,extension,outputname='default',conversion='None',useheader4output=False,clobber=False,
+                          verbose=True):
+    """
+    Extract and extension from a fits file and save it as seperate fitsfile.
+    Useful for preparing fits images for GALFIT run.
 
+    --- EXAMPLE OF USE ---
+    fitsfile = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/imgblock_6475_acs_814w.fits'
+    tu.extract_fitsextension(fitsfile,2)
+
+    fitsfile = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_wht_cut_v2.0.fits'
+    tu.extract_fitsextension(fitsfile,0,conversion='ivar2sigma',useheader4output=True)
+
+
+    """
+    dataarr = pyfits.open(fitsfile)[extension].data
+
+    if outputname.lower() == 'default':
+        outputname = fitsfile.replace('.fits','_extension'+str(extension)+'.fits')
+
+    if conversion == 'ivar2sigma':
+        if verbose: print ' - Converting extension from units of inverse variance to sigma (standard deviation)'
+        dataarr    = np.sqrt(1.0/dataarr)
+        outputname = outputname.replace('.fits','_ivar2sigma.fits')
+
+    if useheader4output:
+        if verbose: print ' - Using header of input image for output'
+        hdr = pyfits.open(fitsfile)[extension].header
+    else:
+        hdr = None
+
+    if verbose: print ' - Saving extracted extension to '+outputname
+    if os.path.isfile(outputname) & (clobber == False):
+        sys.exit(' ----> Output file '+outputname+' already exists and clobber=False')
+    else:
+        pyfits.writeto(outputname,dataarr,header=hdr)
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def build_fits_wcs():
-    return None
+def galfit_buildinput_fromssextractoroutput(filename,sexcatalog,image,imgext=0,sigmaimg='none',objecttype='gaussian',
+                                            Nsigma=3,fluxfactor=100.,saveDS9region=True,savefitsimage=False,
+                                            magzeropoint=26.5,platescale=[0.03,0.03],convolvebox=[100,100],psfimg='none',
+                                            clobber=False,verbose=True):
+    """
+    Assemble a galfit input file from a SExtractor catalog.
 
+    --- INPUT ---
+
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    import pyfits
+    image       = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_cut_v2.0.fits'
+    sigmaimg    = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_wht_cut_v2.0_extension0_ivar2sigma.fits'
+    psfimg      = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/imgblock_6475_acs_814w_extension2.fits'
+    sexcatalog  = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/catalog_photometry_candels-cdfs-02.fits'
+    fileout     = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/galfit_inputfile_acs_814w_candels-cdfs-02-sextractor.txt'
+    tu.galfit_buildinput_fromssextractoroutput(fileout,sexcatalog,image,objecttype='gaussian',magzeropoint=25.947,sigmaimg=sigmaimg,platescale=[0.03,0.03],psfimg=psfimg,convolvebox=[500,500])
+
+    """
+
+    imgheader   = pyfits.open(image)[imgext].header
+
+    param_sex = tu.gen_paramlist_from_SExtractorfile(sexcatalog,imgheader=imgheader,Nsigma=Nsigma,
+                                                     fluxfactor=fluxfactor,saveDS9region=saveDS9region,
+                                                     savefitsimage=savefitsimage,clobber=clobber,verbose=verbose)
+
+    tu.galfit_buildinput_fromparamlist(filename,param_sex,image,objecttype=objecttype,sigmaimg=sigmaimg,psfimg=psfimg,
+                                       platescale=platescale,magzeropoint=magzeropoint,convolvebox=convolvebox,verbose=True)
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def galfit_buildinput_fromparamlist(filename,paramlist,dataimg,sigmaimg='none',psfimg='none',badpiximg='none',
+                                    objecttype='gaussian',ids=None,clobber=False,
+                                    imgregion='full',imgext=0,convolvebox=[100,100],magzeropoint=26.5,
+                                    platescale=[0.06,0.06],verbose=True):
+    """
+    Assemble a galfit input file from a TDOSE parameter list
+
+    --- INPUT ---
+
+
+    """
+    if verbose: print(' - Assembling input file for GALFIT modeling based on TDOSE source parameter list')
+    if os.path.isfile(filename) & (clobber==False):
+        if verbose: print(' - '+filename+' already exists and clobber=False so not generating new version')
+    else:
+        if verbose: print(' - Will write setups to:\n   '+filename)
+        fout =  open(filename, 'w')
+
+        image2model      = dataimg
+        outputimg        = filename.replace('.txt','_galfitoutput.fits')
+        sigmaimage       = sigmaimg
+        psfimage         = psfimg
+        psfsampling      = '1'
+        badpiximage      = badpiximg
+        paramconstraints = 'none'
+
+        if imgregion.lower() == 'full':
+            imgshape         = pyfits.open(dataimg)[imgext].data.shape
+            imageregion      = ' '.join([str(l) for l in [1,imgshape[1],1,imgshape[0]]])
+        else:
+            imageregion      = ' '.join([str(l) for l in imgregion])
+
+        convolvebox      = ' '.join([str(l) for l in convolvebox])
+        magzeropoint     = str(magzeropoint)
+        platescale       = ' '.join([str(l) for l in platescale])
+        displaytype      = 'regular'
+        choice           = '0'
+
+
+        headerstr = """#===============================================================================
+# GALFIT input file generated with tdose_utilities.galfit_buildinput_fromparamlist() on %s
+#===============================================================================
+# IMAGE and GALFIT CONTROL PARAMETERS
+A) %s               # Input data image (FITS file)
+B) %s               # Output data image block
+C) %s               # Sigma image name (made from data if blank or "none")
+D) %s               # Input PSF image and (optional) diffusion kernel
+E) %s               # PSF fine sampling factor relative to data
+F) %s               # Bad pixel mask (FITS image or ASCII coord list)
+G) %s               # File with parameter constraints (ASCII file)
+H) %s               # Image region to fit (xmin xmax ymin ymax)
+I) %s               # Size of the convolution box (x y)
+J) %s               # Magnitude photometric zeropoint
+K) %s               # Plate scale (dx dy)    [arcsec per pixel]
+O) %s               # Display type (regular, curses, both)
+P) %s               # Choose: 0=optimize, 1=model, 2=imgblock, 3=subcomps
+
+# INITIAL FITTING PARAMETERS
+#
+#   For object type, the allowed functions are:
+#       nuker, sersic, expdisk, devauc, king, psf, gaussian, moffat,
+#       ferrer, powsersic, sky, and isophote.
+#
+#   Hidden parameters will only appear when they're specified:
+#       C0 (diskyness/boxyness),
+#       Fn (n=integer, Azimuthal Fourier Modes),
+#       R0-R10 (PA rotation, for creating spiral structures).
+#
+# -----------------------------------------------------------------------------
+#   par)    par value(s)    fit toggle(s)    # parameter description
+# -----------------------------------------------------------------------------
+""" % (tu.get_now_string(),
+       image2model,
+       outputimg,
+       sigmaimage,
+       psfimage,
+       psfsampling,
+       badpiximage,
+       paramconstraints,
+       imageregion,
+       convolvebox,
+       magzeropoint,
+       platescale,
+       displaytype,
+       choice)
+
+        fout.write(headerstr)
+        if verbose: print('   wrote header to file')
+
+        Nobj = len(paramlist)/6
+        paramarr = np.resize(np.asarray(paramlist),(Nobj,6))
+
+        if ids is None:
+            ids = ['None provided']*Nobj
+
+        for oo in xrange(Nobj):
+            if verbose:
+                infostr = '   writing setup for object '+str("%6.f" % (oo+1))+' / '+str("%6.f" % Nobj)
+                sys.stdout.write("%s\r" % infostr)
+                sys.stdout.flush()
+
+            objparam = paramarr[oo] # [yposition,xposition,fluxscale,sigmay,sigmax,angle]
+            fout.write('######### Object number: '+str(oo+1)+' (ID = '+ids[oo]+') #########')
+
+            if objecttype == 'gaussian':
+                position = '   '.join([str(l) for l in [objparam[1],objparam[0],1,1]])
+                mag      = '   '.join([str(l) for l in [-2.5*np.log10(objparam[2])+float(magzeropoint),1]])#GALFIT readme eq 34
+                param4   = str(2.355*np.max(objparam[3:5]))+'  1  #  FWHM'
+                param5   = '0.0000 0'+'   #   ----- '
+                param6   = '0.0000 0'+'   #   ----- '
+                param7   = '0.0000 0'+'   #   ----- '
+                param8   = '0.0000 0'+'   #   ----- '
+                param9   = str(np.min(objparam[3:5])/np.max(objparam[3:5]))+' 1'+'   #  axis ratio (b/a)'
+                param10  = '   '.join([str(l) for l in [objparam[5],1]])+'   #  position angle (PA)'
+                Zval     = '0'
+
+                fout.write("""
+ 0) %s          #  object type
+ 1) %s          #  position x, y
+ 3) %s          #  Integrated magnitude
+ 4) %s
+ 5) %s
+ 6) %s
+ 7) %s
+ 8) %s
+ 9) %s
+10) %s
+ Z) %s          #  output option (0 = resid., 1 = Don't subtract) \n \n""" %
+                           (objecttype,position,mag,param4,param5,param6,param7,param8,param9,param10,Zval) )
+
+        if verbose: print '\n   done; closing output file'
+        fout.close()
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def galfit_run(galfitinputfile,verbose=True,galfitverbose=False):
+    """
+    Run galfit using a galfit input file (expects extension '.txt' for naming output file)
+    and save the received command line output to file.
+
+    NB: If the 'galfit' command is not available in the shell being launched with 'sh' add an executable
+        file with the content:
+            #!/bin/sh
+            /Users/username/path/to/galfit/galfit "$@"
+        to /usr/local/bin/
+
+    --- INPUT ---
+
+    --- EXAMPLE OF USE ---
+    galfitinput  = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/galfit_inputfile_acs_814w_candels-cdfs-02-sextractor.txt'
+    galfitoutput = tu.galfit_run(galfitinput)
+
+
+    """
+    if verbose: print ' - Spawning GALFIT command to shell using the input file:\n   '+galfitinputfile
+    runcmd = 'galfit  '+galfitinputfile
+    if verbose: print ' - Will run the GALFIT command:\n   '+runcmd
+
+    outputfile = galfitinputfile.replace('.txt','_cmdlineoutput.txt')
+    if verbose: print ' - Will save command line output from GALFIT to \n   '+outputfile
+    fout = open(outputfile,'w')
+    fout.write('####### output from GALFIT run with tdose_utilities.galfit_run() on '+tu.get_now_string()+' #######\n')
+    fout.close()
+
+    if verbose: print '   ----------- GALFIT run started on '+tu.get_now_string()+' ----------- '
+    process = subprocess.Popen(runcmd, stdout=subprocess.PIPE, shell=True, bufsize=1, universal_newlines=True)
+    while True:
+        line = process.stdout.readline()
+        #for line in iter(process.stdout.readline, ''):
+        if line != b'':
+            if galfitverbose:
+                sys.stdout.write(line)
+
+            fout = open(outputfile,'a')
+            fout.write(line)
+            fout.close()
+        else:
+            break
+    if verbose: print '   ----------- GALFIT run finished on '+tu.get_now_string()+' ----------- '
+
+    if verbose: print ' - Renaming and moving output files to image directory :'
+    if os.path.isfile('./fit.log'):
+        if verbose: print '   moving  ./fit.log'
+        shutil.move('./fit.log',galfitinputfile.replace('.txt','_galfit.log'))
+
+    fitoutfiles = glob.glob('./galfit.*')
+    if len(fitoutfiles) > 0:
+        for ff in fitoutfiles:
+            if verbose: print '   moving  '+ff
+            shutil.move(ff,galfitinputfile.replace('.txt','_'+ff.split('/')[-1].replace('.',''))+'result.txt')
+
+    return outputfile
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def galfit_results2paramlist(galfitresults,verbose=True):
+    """
+    Load result file from GALFIT run and save it as a TDOSE object parameter files
+
+    --- EXAMPLE OF USE ---
+    file   = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/galfit_inputfile_acs_814w_candels-cdfs-02-sextractor_galfit01result.txt'
+    param  = tu.galfit_results2paramlist(file)
+
+
+    """
+
+    paramlist = []
+
+    fin       = open(galfitresults, 'r')
+    modeltype = ''
+    objno     = ''
+    for ll, line in enumerate(fin):
+
+        if line.startswith('J) '):
+            magzp      = float( line.split('J) ')[-1].split('#')[0].split(' ')[0] )
+
+        if line.startswith('# Component number'):
+            objno      = int(line.split('number: ')[-1])
+            if verbose: print ' - extracting infor for object number '+str(objno)
+
+        if line.startswith(' 0) '):
+            modeltype = line.split(' 0) ')[-1].split('#')[0].strip()
+
+        # paramlist = [yposition,xposition,fluxscale,sigmay,sigmax,angle]
+        if modeltype == 'gaussian':
+            if line.startswith(' 1) '):
+                posstrs   = line.split(' 1) ')[-1].split('#')[0].split(' ')
+                paramlist.append(float(posstrs[1]))
+                paramlist.append(float(posstrs[0]))
+
+
+            if line.startswith(' 3) '):
+                mag       = float( line.split(' 3) ')[-1].split('#')[0].split(' ')[0] )
+                flux      = 10**( (mag+magzp)/-2.5 )
+                paramlist.append(flux)
+
+            if line.startswith(' 4) '):
+                fwhm      = float( line.split(' 4) ')[-1].split('#')[0].split(' ')[0] )
+                sigma     = fwhm/2.355
+
+            if line.startswith(' 9) '):
+                axisrat   = float( line.split(' 9) ')[-1].split('#')[0].split(' ')[0] )
+
+            if line.startswith('10) '):
+                angle     = float( line.split('10) ')[-1].split('#')[0].split(' ')[0] )
+
+                sigmax    = sigma
+                sigmay    = sigma*axisrat
+
+                paramlist.append(sigmay)
+                paramlist.append(sigmax)
+                paramlist.append(angle)
+                modeltype = ''
+                objno     = ''
+
+        elif (objno != '') & (modeltype != ''):
+            if verbose: print ' - WARNING modeltype='+modeltype+' for object '+str(objno)+' is unknonw; not added to paramlist'
+    fin.close()
+    return paramlist
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
