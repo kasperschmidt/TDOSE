@@ -9,7 +9,7 @@ import tdose_build_mock_cube as tbmc
 import pdb
 import matplotlib.pyplot as plt
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def extract_spectra(model_cube_file,source_association_dictionary=None,outputdir='./',clobber=False,
+def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='tdose_spectrum',outputdir='./',clobber=False,
                     noise_cube_file=None,noise_cube_ext='ERROR',source_model_cube_file=None,
                     model_cube_ext='DATA',layer_scale_ext='WAVESCL',verbose=True):
     """
@@ -65,7 +65,7 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,outputdir
     for oo, key in enumerate(sourcIDs_dic.keys()):
         obj_cube_hdr = model_cube_hdr.copy()
         specid       = str("%.12d" % int(key))
-        specname     = outputdir+'tdose_spectrum_'+specid+'.fits'
+        specname     = outputdir+nameext+'_'+specid+'.fits'
         specfiles.append(specname)
         sourceIDs    = sourcIDs_dic[key]
 
