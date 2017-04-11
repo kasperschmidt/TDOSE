@@ -192,17 +192,22 @@ def perform_2Dconvolution(cube,kernels,use_fftconvolution=False,verbose=True):
     return cube_convolved
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def gen_2Dgauss(size,cov,scale,verbose=True,show2Dgauss=False):
+def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
     """
     Generating a 2D gaussian with specified parameters
 
     --- INPUT ---
-    size    The dimensions of the array to return. Expects [y-size,x-size].
-            The 2D gauss will be positioned in the center of a (+/-x-size/2., +/-y-size/2) sized array
-    cov     Covariance matrix of gaussian, i.e., variances and rotation
-            Can be build with cov = build_2D_cov_matrix(stdx,stdy,angle)
-    scale   Scaling the 2D gaussian. By default scale = 1 returns normalized 2D Gaussian.
-            I.e.,  np.trapz(np.trapz(gauss2D,axis=0),axis=0) = 1
+    size          The dimensions of the array to return. Expects [y-size,x-size].
+                  The 2D gauss will be positioned in the center of a (+/-x-size/2., +/-y-size/2) sized array
+    cov           Covariance matrix of gaussian, i.e., variances and rotation
+                  Can be build with cov = build_2D_cov_matrix(stdx,stdy,angle)
+    scale         Scaling the 2D gaussian. By default scale = 1 returns normalized 2D Gaussian.
+                  I.e.,  np.trapz(np.trapz(gauss2D,axis=0),axis=0) = 1
+    method        Method to use for generating 2D gaussian:
+                   'scipy'    Using the class multivariate_normal from the scipy.stats library
+                   'matrix'   Use direct matrix expression for PDF of 2D gaussian               (slow!)
+    show2Dgauss   display image of generated 2D gaussian
+    verbose       Toggler verbosity
 
     --- EXAMPLE OF USE ---
     import tdose_utilities as tu
@@ -217,15 +222,27 @@ def gen_2Dgauss(size,cov,scale,verbose=True,show2Dgauss=False):
     gauss2DimgNorm  = tu.gen_2Dgauss([sigmay*Nsigwidth,sigmax*Nsigwidth],covmatrix,scale,show2Dgauss=True)
 
     """
-    if verbose: print ' - Generating multivariate_normal object for generating 2D gauss'
-    # matrix expression of multivariate gaussian to implement? P(x,m,C) = [1/det(2 pi C)] exp{ -1/2 (x-m)^T C^{-1} (x-m) }
-    mvn = multivariate_normal([0, 0], cov)
+    if verbose: print ' - Generating multivariate_normal object for generating 2D gauss using ',
+    if method == 'scipy':
+        if verbose: print ' scipy.stats.multivariate_normal.pdf() '
+        mvn     = multivariate_normal([0, 0], cov)
 
-    if verbose: print ' - Setting up grid to populate with 2D gauss PDF'
-    x, y = np.mgrid[-np.ceil(size[0]/2.):np.floor(size[0]/2.):1.0, -np.ceil(size[1]/2.):np.floor(size[1]/2.):1.0]
-    pos = np.zeros(x.shape + (2,))
-    pos[:, :, 0] = x; pos[:, :, 1] = y
-    gauss2D = mvn.pdf(pos)
+        if verbose: print ' - Setting up grid to populate with 2D gauss PDF'
+        x, y = np.mgrid[-np.ceil(size[0]/2.):np.floor(size[0]/2.):1.0, -np.ceil(size[1]/2.):np.floor(size[1]/2.):1.0]
+        pos = np.zeros(x.shape + (2,))
+        pos[:, :, 0] = x; pos[:, :, 1] = y
+
+        gauss2D = mvn.pdf(pos)
+    elif method == 'matrix':
+        if verbose: print ' loop over matrix expression '
+        gauss2D = np.zeros([np.int(np.ceil(size[0])),np.int(np.ceil(size[1]))])
+        mean    = np.array([np.floor(size[0]/2.),np.floor(size[1]/2.)])
+        norm    = 1/np.linalg.det(np.sqrt(cov))/2.0/np.pi
+        for xpix in np.arange(size[1]):
+            for ypix in np.arange(size[0]):
+                coordMmean                   = np.array([int(ypix),int(xpix)]) - mean
+                MTXexpr                      = np.dot(np.dot(np.transpose(coordMmean),np.linalg.inv(cov)),coordMmean)
+                gauss2D[int(ypix),int(xpix)] = norm * np.exp(-0.5 * MTXexpr)
 
     if verbose: print ' - Scaling 2D gaussian by a factor '+str(scale)
     gauss2D = gauss2D*scale
@@ -403,7 +420,7 @@ def convert_paramarray(paramarray,hdr,hdr_new,verbose=True):
 
     return paramconv
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def build_paramarray(fitstable,verbose=True):
+def build_paramarray(fitstable,returninit=False,verbose=True):
     """
     Build parameter array (list) expected by tdose_model_cube.gen_fullmodel()
     based on output parameter fits file from tdose_model_FoV.gen_fullmodel()
@@ -423,12 +440,20 @@ def build_paramarray(fitstable,verbose=True):
     paramarray = np.zeros([Nobj*6])
 
     for oo in xrange(Nobj):
-        paramarray[oo*6+0] = tabdat['ypos'][oo]
-        paramarray[oo*6+1] = tabdat['xpos'][oo]
-        paramarray[oo*6+2] = tabdat['fluxscale'][oo]
-        paramarray[oo*6+3] = tabdat['ysigma'][oo]
-        paramarray[oo*6+4] = tabdat['xsigma'][oo]
-        paramarray[oo*6+5] = tabdat['angle'][oo]
+        if returninit:
+            paramarray[oo*6+0] = tabdat['ypos_init'][oo]
+            paramarray[oo*6+1] = tabdat['xpos_init'][oo]
+            paramarray[oo*6+2] = tabdat['fluxscale_init'][oo]
+            paramarray[oo*6+3] = tabdat['ysigma_init'][oo]
+            paramarray[oo*6+4] = tabdat['xsigma_init'][oo]
+            paramarray[oo*6+5] = tabdat['angle_init'][oo]
+        else:
+            paramarray[oo*6+0] = tabdat['ypos'][oo]
+            paramarray[oo*6+1] = tabdat['xpos'][oo]
+            paramarray[oo*6+2] = tabdat['fluxscale'][oo]
+            paramarray[oo*6+3] = tabdat['ysigma'][oo]
+            paramarray[oo*6+4] = tabdat['xsigma'][oo]
+            paramarray[oo*6+5] = tabdat['angle'][oo]
 
     return paramarray
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -884,12 +909,13 @@ def galfit_buildinput_fromparamlist(filename,paramlist,dataimg,sigmaimg='none',p
         if verbose: print(' - Will write setups to:\n   '+filename)
         fout =  open(filename, 'w')
 
-        image2model      = dataimg
-        outputimg        = filename.replace('.txt','_galfitoutput.fits')
-        sigmaimage       = sigmaimg
-        psfimage         = psfimg
+        # NB Using no absolute paths as this can cause "Abort trap: 6" crash
+        image2model      = dataimg.split('/')[-1]
+        outputimg        = filename.replace('.txt','_galfitoutput.fits').split('/')[-1]
+        sigmaimage       = sigmaimg.split('/')[-1]
+        psfimage         = psfimg.split('/')[-1]
         psfsampling      = '1'
-        badpiximage      = badpiximg
+        badpiximage      = badpiximg.split('/')[-1]
         paramconstraints = 'none'
 
         if imgregion.lower() == 'full':
@@ -970,36 +996,32 @@ P) %s               # Choose: 0=optimize, 1=model, 2=imgblock, 3=subcomps
             objparam = paramarr[oo] # [yposition,xposition,fluxscale,sigmay,sigmax,angle]
             fout.write('######### Object number: '+str(oo+1)+' (ID = '+ids[oo]+') #########')
 
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if objecttype == 'gaussian':
-                position = '   '.join([str(l) for l in [objparam[1],objparam[0],1,1]])
-                mag      = '   '.join([str(l) for l in [-2.5*np.log10(objparam[2])+float(magzeropoint),1]])#GALFIT readme eq 34
-                param4   = str(2.355*np.max(objparam[3:5]))+'  1  #  FWHM'
-                param5   = '0.0000 0'+'   #   ----- '
-                param6   = '0.0000 0'+'   #   ----- '
-                param7   = '0.0000 0'+'   #   ----- '
-                param8   = '0.0000 0'+'   #   ----- '
-                param9   = str(np.min(objparam[3:5])/np.max(objparam[3:5]))+' 1'+'   #  axis ratio (b/a)'
-                param10  = '   '.join([str(l) for l in [objparam[5],1]])+'   #  position angle (PA)'
-                Zval     = '0'
+                position  = '   '.join([str(l) for l in [objparam[1],objparam[0],1,1]])
+                mag       = '   '.join([str(l) for l in [-2.5*np.log10(objparam[2])+float(magzeropoint),1]])#GALFIT readme eq 34
+                fwhm      = str(2.355*np.max(objparam[3:5]))+'  1  '
+                axisratio = str(np.min(objparam[3:5])/np.max(objparam[3:5]))+' 1  '
+                posangle  = '   '.join([str(l) for l in [objparam[5]-90,1]])
+                Zval      = '0 '
 
                 fout.write("""
  0) %s          #  object type
- 1) %s          #  position x, y
- 3) %s          #  Integrated magnitude
- 4) %s
- 5) %s
- 6) %s
- 7) %s
- 8) %s
- 9) %s
-10) %s
- Z) %s          #  output option (0 = resid., 1 = Don't subtract) \n \n""" %
-                           (objecttype,position,mag,param4,param5,param6,param7,param8,param9,param10,Zval) )
-
+ 1) %s          #  position x, y [pixel]
+ 3) %s          #  total magnitude
+ 4) %s          #  FWHM [pixels]
+ 9) %s          #  axis ratio (b/a)
+10) %s          #  position angle (PA)  [Degrees: Up=0, Left=90]
+ Z) %s          #  leave in [1] or subtract [0] this comp from data? \n \n""" %
+                           (objecttype,position,mag,fwhm,axisratio,posangle,Zval) )
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            elif objecttype == 'sersic':
+                sys.exit(' ---> Sersic galfit model setups not enabled ')
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbose: print '\n   done; closing output file'
         fout.close()
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def galfit_run(galfitinputfile,verbose=True,galfitverbose=False):
+def galfit_run(galfitinputfile,verbose=True,galfitverbose=False,noskyest=False):
     """
     Run galfit using a galfit input file (expects extension '.txt' for naming output file)
     and save the received command line output to file.
@@ -1011,15 +1033,28 @@ def galfit_run(galfitinputfile,verbose=True,galfitverbose=False):
         to /usr/local/bin/
 
     --- INPUT ---
+    galfitinputfile    GALFIT input file to run. Provide full path, as that is used to locate the
+                       working (data) directory. It is assumed that only relative paths to all input
+                       files are used in the input. Preferably they all liuve in the same directory as
+                       the galfitinputfile. Cases of "Abort trap: 6" crashes of GALFIT have been while
+                       using absolute paths in galfitinputfile run from different working directory
 
     --- EXAMPLE OF USE ---
     galfitinput  = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/galfit_inputfile_acs_814w_candels-cdfs-02-sextractor.txt'
-    galfitoutput = tu.galfit_run(galfitinput)
+    galfitoutput = tu.galfit_run(galfitinput,noskyest=False)
 
 
     """
+    currentdir = os.getcwd()
     if verbose: print ' - Spawning GALFIT command to shell using the input file:\n   '+galfitinputfile
-    runcmd = 'galfit  '+galfitinputfile
+    datapath = '/'.join(os.path.abspath(galfitinputfile).split('/')[0:-1])+'/'
+    if verbose: print '   (moving to '+datapath+' and working from there)'
+    os.chdir(datapath)
+
+    runcmd = 'galfit  '
+    if noskyest:
+        runcmd = runcmd+' -noskyest '
+    runcmd = runcmd + galfitinputfile
     if verbose: print ' - Will run the GALFIT command:\n   '+runcmd
 
     outputfile = galfitinputfile.replace('.txt','_cmdlineoutput.txt')
@@ -1055,6 +1090,9 @@ def galfit_run(galfitinputfile,verbose=True,galfitverbose=False):
             if verbose: print '   moving  '+ff
             shutil.move(ff,galfitinputfile.replace('.txt','_'+ff.split('/')[-1].replace('.',''))+'result.txt')
 
+    if verbose: print ' - Moving back to '+currentdir
+    os.chdir(datapath)
+
     return outputfile
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def galfit_results2paramlist(galfitresults,verbose=True):
@@ -1064,7 +1102,6 @@ def galfit_results2paramlist(galfitresults,verbose=True):
     --- EXAMPLE OF USE ---
     file   = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/galfit_inputfile_acs_814w_candels-cdfs-02-sextractor_galfit01result.txt'
     param  = tu.galfit_results2paramlist(file)
-
 
     """
 
