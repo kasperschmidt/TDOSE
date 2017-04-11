@@ -11,7 +11,7 @@ import matplotlib.pylab as plt
 import tdose_model_FoV as tmf
 import pdb
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,datanoise=None,
+def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,datanoise=None,
                   fluxscale='fluxscale',show_residualimg=False,generateimage=False,optimizer='curve_fit',
                   clobber=False,outputhdr=None,param_initguess=None,verbose=True):
     """
@@ -45,8 +45,14 @@ def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigx
     else:
         param_init   = param_initguess
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    fit_output  = tmf.model_objects_gauss(param_init,dataimg,optimizer=optimizer,datanoise=datanoise,
-                                          verbose=verbose,show_residualimg=show_residualimg)
+    if modeltype == 'gauss':
+        fit_output      = tmf.model_objects_gauss(param_init,dataimg,optimizer=optimizer,datanoise=datanoise,
+                                                  verbose=verbose,show_residualimg=show_residualimg)
+    elif modeltype == 'galfit':
+        galfitparamfile = sourcecatalog
+        fit_output      = tmf.model_objects_galfit(dataimg,galfitparamfile,verbose=verbose,show_residualimg=show_residualimg)
+    else:
+        sys.exit(' ---> "modeltype"='+modeltype+' is an invalid choice of modeling setup so aborting')
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if type(generateimage) == str:
@@ -67,11 +73,11 @@ def gen_fullmodel(dataimg,sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigx
     c05 = pyfits.Column(name='xsigma',         format='D', unit='PIXELS', array=fit_output[0][4::6])
     c06 = pyfits.Column(name='ysigma',         format='D', unit='PIXELS', array=fit_output[0][3::6])
     c07 = pyfits.Column(name='angle',          format='D', unit='DEGREES',array=fit_output[0][5::6])
-    c08 = pyfits.Column(name='xpos_init',      format='D', unit='PIXELS', array=param_init[0::6])
-    c09 = pyfits.Column(name='ypos_init',      format='D', unit='PIXELS', array=param_init[1::6])
+    c08 = pyfits.Column(name='xpos_init',      format='D', unit='PIXELS', array=param_init[1::6])
+    c09 = pyfits.Column(name='ypos_init',      format='D', unit='PIXELS', array=param_init[0::6])
     c10 = pyfits.Column(name='fluxscale_init', format='D', unit='',       array=param_init[2::6])
-    c11 = pyfits.Column(name='xsigma_init',    format='D', unit='PIXELS', array=param_init[3::6])
-    c12 = pyfits.Column(name='ysigma_init',    format='D', unit='PIXELS', array=param_init[4::6])
+    c11 = pyfits.Column(name='xsigma_init',    format='D', unit='PIXELS', array=param_init[4::6])
+    c12 = pyfits.Column(name='ysigma_init',    format='D', unit='PIXELS', array=param_init[3::6])
     c13 = pyfits.Column(name='angle_init',     format='D', unit='DEGREES',array=param_init[5::6])
 
     coldefs = pyfits.ColDefs([c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11,c12,c13])
@@ -342,7 +348,7 @@ def residual_multigauss(param, dataimage, nonfinite = 0.0, ravelresidual=True, s
 
     return residualimg
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, verbose=True, verbosefull=False):
+def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, useroll=False, verbose=True, verbosefull=False):
     """
     Build model image of N Gaussians where param contains the parameters
 
@@ -351,7 +357,10 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, verbose=True
                         [yposition,xposition,fluxscale,sigmay,sigmax,angle] x N
     imgsize         Size of image to model the Gaussians in
     showmodelimg    Displaye the model image?
+    useroll         Position model image in full FoV using a roll in the array; no interpolation so no sub-pixel
+                    precision (i.e., the pixel positions are rounded when performing the roll/positioning)
     verbose         Toggle verbosity
+    verbosefull     Toggle verbosity showing all details despite lengthy
 
     --- EXAMPLE OF USE ---
     import tdose_model_FoV as tmf
@@ -359,6 +368,10 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, verbose=True
     param      = np.asarray([305,515,1,40.1,4.2,21.69,    120,100,200,20.1,15.2,0])
     modelimage = tmf.modelimage_multigauss((xgrid,ygrid), param, showmodelimg=True, verbose=True)
 
+    import tdose_model_FoV as tmf
+    xgrid, ygrid = tu.gen_gridcomponents((3000,3000))
+    param      = np.asarray([305,515,1,40.1,4.2,21.69,    120,100,200,20.1,15.2,0])
+    modelimage = tmf.modelimage_multigauss((xgrid,ygrid), param, showmodelimg=True, verbose=True, verbosefull=True)
     """
     Ngauss  = len(param)/6.0
     if Ngauss != np.round(len(param)/6.0):
@@ -378,10 +391,11 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, verbose=True
         paramset    = param[psets*6:psets*6+6]
 
         covmatrix          = tu.build_2D_cov_matrix(paramset[4],paramset[3],paramset[5],verbose=verbosefull)
-        gauss2Dimg         = tu.gen_2Dgauss(imgsize,covmatrix,paramset[2],show2Dgauss=False,verbose=verbosefull)
-        #gauss2D_positioned = tu.roll_2Dprofile(gauss2Dimg,paramset[0:2]-1.0,showprofiles=False)
-        gauss2D_positioned = tu.shift_2Dprofile(gauss2Dimg,paramset[0:2]-1.0,showprofiles=False)
-
+        gauss2Dimg         = tu.gen_2Dgauss(imgsize,covmatrix,paramset[2],show2Dgauss=False,verbose=verbosefull,method='scipy')
+        if useroll:
+            gauss2D_positioned = tu.roll_2Dprofile(gauss2Dimg,paramset[0:2]-1.0,showprofiles=False)
+        else:
+            gauss2D_positioned = tu.shift_2Dprofile(gauss2Dimg,paramset[0:2]-1.0,showprofiles=False)
         modelimage         = modelimage + gauss2D_positioned
 
     if verbose: print '\n   done'
@@ -392,7 +406,7 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, verbose=True
 
     return modelimage
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def model_objects_galfit(param,verbose=True):
+def model_objects_galfit(dataimage,galfitparamfile,show_residualimg=False,verbose=True):
     """
     model
 
@@ -403,9 +417,42 @@ def model_objects_galfit(param,verbose=True):
 
 
     """
-    if verbose: print ' - Build 2D covariance matrix with varinaces (x,y)=('+str(sigmax)+','+str(sigmay)+\
-                      ') and then rotated '+str(angle)+' degrees'
-    return None
+    print ' # # # # # # # # # model_objects_galfit() still under development/testing # # # # # # # # #'
+    if verbose: print ' - Use GALFIT model output to obtain model parameters for residual between (GALFIT) model and data'
+    if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    galfitparams = tu.galfit_loadoutput(galfitparamfile)
+    Nmodels      = len(galfitparams)
+    imgsize      = dataimage.shape
+    xgrid, ygrid = tu.gen_gridcomponents(imgsize)
+
+    for oo, obj in enumerate(Nmodels):
+
+        xxx = yyy
+
+        output = param_optimized, param_cov
+
+        image       = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_cut_v1.0.fits'
+        sexcatalog  = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/catalog_photometry_candels-cdfs-02.fits'
+        fileout     = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/galfit_inputfile_acs_814w_candels-cdfs-02-sextractor.txt'
+        tu.galfit_buildinput_fromssextractoroutput(fileout,sexcatalog,image,objecttype='gaussian',verbose=verbose)
+
+        galfitoutput = tu.galfit_run(fileout,verbose=verbose)
+        param_optimized  = tu.galfit_results2paramlist(galfitoutput,verbose=verbose)
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print '   ----------- Finished on '+tu.get_now_string()+' ----------- '
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if show_residualimg:
+        if verbose: print ' - Displaying the residual image between data image and galfit model (assuming gaussians)'
+        galfit_img = tmf.modelimage_multigauss((xgrid,ygrid), output[0]  , showmodelimg=False)
+        res_img    = dataimage-galfit_img
+        plt.imshow(res_img,interpolation='none', vmin=1e-5, vmax=np.max(res_img), norm=mpl.colors.LogNorm())
+        plt.title('Data Residual = Data Image - Galfit Model Image ')
+        plt.show()
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    return output
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def model_objects_MoGs(param,verbose=True):
     """
