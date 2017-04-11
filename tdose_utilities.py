@@ -114,7 +114,7 @@ source_model           gauss                              # The source model to 
 galfit_result          None                               # If source_model = galfit provide the path and name of fits file containing galfit results
 galfit_model_extension 2                                  # Fits extension containing galfit model with model parameters of each source in header
 
-model_cutouts          True
+model_cutouts          True                               # Perform modeling and spectral extraction on small cutouts of the cube and images to reduce run-time
 cutout_directory       data_cutouts/                      # Directory to store cutouts in if different from current working directory ('./')
 cutout_sizes           [20,40]                            # Size of cutouts (in arctic) around each source to model. To use source-specific cutouts
                                                           # provide ascii file with ID x-extent[arcsec] and y-extent[arcsec] instead.
@@ -837,7 +837,7 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
     fout.close()
     if verbose: print ' - Saved region file to '+outputfile
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.txt',clobber=False,
+def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.txt',clobber=False,imgheader=None,
                                       idcol=0,racol=2,deccol=3,fluxcol=22,fluxfactor=100.,verbose=True):
     """
     Generate source catalog for modeling image with tdose_model_FoV.gen_fullmodel()
@@ -857,6 +857,18 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
         decs    = sexdat['f'+str(deccol)]
         fluxes  = sexdat['f'+str(fluxcol)]*fluxfactor
 
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if imgheader is None:
+        if verbose: print ' - Image header not provided; assuming ra and dec col are in pixel units'
+    else:
+        if verbose: print ' - Image header provided; converting ra and dec values using wcs info from header'
+        striphdr   = tu.strip_header(imgheader.copy())
+        wcs_in     = wcs.WCS(striphdr)
+        skycoord   = SkyCoord(ras, decs, frame='icrs', unit='deg')
+        pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in)
+        xpos       = pixcoord[0]
+        ypos       = pixcoord[1]
+
     if (clobber == False) & os.path.isfile(outname):
         if verbose: print ' - WARNING: Output ('+outname+') already exists and clobber=False, hence returning None'
         return None
@@ -865,10 +877,15 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
         fout = open(outname,'w')
         fout.write('# TDOSE Source catalog generated with tdose_utilities.gen_sourcecat_from_SExtractorfile() from:\n')
         fout.write('# '+sextractorfile+'\n')
-        fout.write('# id xpos  ypos  fluxscale \n')
-
-        for ii, id in enumerate(ids):
-            fout.write(str(ids[ii])+' '+str(ras[ii])+' '+str(decs[ii])+' '+str(fluxes[ii])+'  \n')
+        if imgheader:
+            fout.write('# id ra dec x_image y_image fluxscale \n')
+            for ii, id in enumerate(ids):
+                fout.write(str(ids[ii])+' '+str(ras[ii])+' '+str(decs[ii])+' '+str(xpos[ii])+' '+str(ypos[ii])+' '+
+                           str(fluxes[ii])+'  \n')
+        else:
+            fout.write('# id x_image y_image fluxscale \n')
+            for ii, id in enumerate(ids):
+                fout.write(str(ids[ii])+' '+str(ras[ii])+' '+str(decs[ii])+' '+str(fluxes[ii])+'  \n')
 
         fout.close()
         return outname
