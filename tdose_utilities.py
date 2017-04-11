@@ -97,17 +97,20 @@ def generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=Fals
 #
 # - - - - - - - - - - - - - - - - - - - - - - - - - - DATA INPUT  - - - - - - - - - - - - - - - - - - - - - - - - - - -
 data_cube              ./datacube.fits                    # Path and name of fits file containing data cube to extract spectra from
-cube_extensions        DATA                               # Name or number of fits extension containing data cube
+cube_extension         DATA                               # Name or number of fits extension containing data cube
 
 noise_cube             ./noisecube.fits                   # Path and name of fits file containing noise cube to use for extraction
-cube_extensions        STAT                               # Name or number of fits extension containing noise cube
+cube_extension         STAT                               # Name or number of fits extension containing noise cube
 
 ref_image              ./referenceimage.fits              # Path and name of fits file containing image to use as reference when creating source model
 img_extension          0                                  # Name or number of fits extension containing reference image
 
 source_catalog         ./sourcecatalog.fits               # Path and name of source catalog containing sources to extract spectra for
+sourcecat_IDcol        id                                 # Column containing source IDs in source_catalog
 sourcecat_xposcol      x_image                            # Column containing x pixel position in source_catalog
 sourcecat_yposcol      y_image                            # Column containing y pixel position in source_catalog
+sourcecat_racol        ra                                 # Column containing ra  position in source_catalog (used to position cutouts if model_cutouts = True)
+sourcecat_deccol       dec                                # Column containing dec position in source_catalog (used to position cutouts if model_cutouts = True)
 
 # - - - - - - - - - - - - - - - - - - - - - - - - SOURCE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
 source_model           gauss                              # The source model to use for sources: [gauss, galfit, mog (not enabled)]
@@ -115,7 +118,7 @@ galfit_result          None                               # If source_model = ga
 galfit_model_extension 2                                  # Fits extension containing galfit model with model parameters of each source in header
 
 model_cutouts          True                               # Perform modeling and spectral extraction on small cutouts of the cube and images to reduce run-time
-cutout_directory       data_cutouts/                      # Directory to store cutouts in if different from current working directory ('./')
+cutout_directory       data_cutouts/                      # Directory to store cutouts in.
 cutout_sizes           [20,40]                            # Size of cutouts (in arctic) around each source to model. To use source-specific cutouts
                                                           # provide ascii file with ID x-extent[arcsec] and y-extent[arcsec] instead.
 
@@ -142,7 +145,7 @@ source_model_cube      tdose_source_modelcube             # Name extension of fi
 
 # - - - - - - - - - - - - - - - - - - - - - - - - SPECTRAL EXTRACTION - - - - - - - - - - - - - - - - - - - - - - - - -
 sources_to_extract     [1,2,7]                            # Sources to extract 1D spectra for. If set to 'all', 1D spectra for all sources is produced.
-spec1D_directory       extracted_spectra/                 # Output directory to store spectra in if different from current working directory ('./')
+spec1D_directory       extracted_spectra/                 # Output directory to store spectra in.
 spec1D_name            tdose_spectrum                     # Name extension to use for extracted 1D spectra
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - PLOTTING  - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -619,7 +622,7 @@ def WCS3DtoWCS2D(wcs3d,verbose=True):
     return wcs2d
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
-                    clobber=False,imgfiles=None,imgexts=None,verbose=True):
+                    clobber=False,imgfiles=None,imgexts=None,imgnames=None,verbose=True):
     """
     Function for cropping/extracting sub data cube (and potentially corresponding image)
 
@@ -632,6 +635,8 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
     clobber        If true existing fits image will be overwritten
     imgfiles       List of file names to extract sub-images for corresponding to sub-cube's spacial extent
                    Will save images to same directory as sub-cub outname
+    imgexts
+    imgnames
     verbose        Toggle verbosity
 
     --- EXAMPLE OF USE ---
@@ -716,8 +721,12 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
             imgexts = [0]*Nimg
 
         for ii, imgfile in enumerate(imgfiles):
-            imgname = imgfile.split('/')[-1]
-            outname = outname.replace('.fits','_CUTOUT'+str(cutoutsize[0])+'x'+str(cutoutsize[1])+'arcsec_From_'+imgname)
+            if imgnames is None:
+                imgname = imgfile.split('/')[-1]
+                outname = outname.replace('.fits','_CUTOUT'+str(cutoutsize[0])+'x'+str(cutoutsize[1])+'arcsec_From_'+imgname)
+            else:
+                outname = imgnames[ii]
+
             cutout  = tu.extract_subimage(imgfile,ra,dec,cutoutsize,outname=outname,
                                           imgext=imgexts[ii],clobber=clobber,verbose=verbose)
 
