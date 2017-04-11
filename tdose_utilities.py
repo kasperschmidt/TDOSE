@@ -30,8 +30,8 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
                  tdose_load_setup.generate_setup_template()
 
     --- EXAMPLE OF USE ---
-    import tdose_load_setup as tls
-    setup = tls.load_setup(setupfile='./tdose_setup_template.txt')
+    import tdose_utilities as tu
+    setup = tu.load_setup(setupfile='./tdose_setup_template.txt')
 
     """
     if verbose: print ' --- tdose_load_setup.load_setup() --- '
@@ -44,6 +44,26 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
             val = float(setup_arr[ii,1])
         except:
             val = str(setup_arr[ii,1])
+
+        # - - - treatment of individual paramters - - -
+        if ('extension' in setup_arr[ii,0]) & (type(val) == float): val = int(val)
+        if setup_arr[ii,1].lower() == 'none':  val = None
+        if setup_arr[ii,1].lower() == 'true':  val = True
+        if setup_arr[ii,1].lower() == 'false': val = False
+
+        lists = ['source_remove','model_cube_layers','sources_to_extract','plot_1Dspec_xrange','plot_1Dspec_yrange',
+                 'plot_S2Nspec_xrange','plot_S2Nspec_yrange']
+        if (setup_arr[ii,0] in lists) & (setup_arr[ii,0] != 'all'):
+            val = [float(vv) for vv in val.split('[')[-1].split(']')[0].split(',')]
+
+        if ('psf_sigma' in setup_arr[ii,0]) & (type(val) == str):
+            if  '/' in val:
+                sigmasplit = val.split('/')
+                if len(sigmasplit) != 2:
+                    pass
+                else:
+                    val = float(sigmasplit[0]) / float(sigmasplit[1])
+
         setup_dic[setup_arr[ii,0]] = val
     if verbose: print ' -  Returning dictionary containing setup parameters'
     return setup_dic
@@ -56,8 +76,8 @@ def generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=Fals
     outputfile    The name of the output which will contain the TDOSE setup template
 
     --- EXAMPLE OF USE ---
-    import tdose_load_setup as tls
-    tls.generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=True)
+    import tdose_utilities as tu
+    tu.generate_setup_template(outputfile='./tdose_setup_template_new.txt',clobber=True)
 
     """
     if verbose: print ' --- tdose_load_setup.generate_setup_template() --- '
@@ -70,37 +90,78 @@ def generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=Fals
             if verbose: print ' - Output already exists but clobber=True so overwriting it '
 
         setuptemplate = """
-# Template for TDOSE (http://github.com/kasperschmidt/TDOSE) setup file
-# Generated with tdose_load_setup.generate_setup_template()
+#-------------------------------------------------START OF TDOSE SETUP-------------------------------------------------
 #
-# - - - - - - - - - - - - - - - - - - - - - - - - - - DATA SETUP  - - - - - - - - - - - - - - - - - - - - - - - - - - -
-data_cube         ./filename.fits   # Path and name of data cube to extract spectra from
+# Template for TDOSE (http://github.com/kasperschmidt/TDOSE) setup file
+# Generated with tdose_utilities.generate_setup_template() on %s
+#
+# - - - - - - - - - - - - - - - - - - - - - - - - - - DATA INPUT  - - - - - - - - - - - - - - - - - - - - - - - - - - -
+data_cube              ./datacube.fits                    # Path and name of fits file containing data cube to extract spectra from
+cube_extensions        DATA                               # Name or number of fits extension containing data cube
 
-ref_image         ./filename.fits   # Path and name of fits file containing image to use as reference when creating source model
-img_extension     0                 # Name or number of fits extension containing reference image
+noise_cube             ./noisecube.fits                   # Path and name of fits file containing noise cube to use for extraction
+cube_extensions        STAT                               # Name or number of fits extension containing noise cube
 
-object_catalog    ./filename.fits   # Path and name of object catalog containing objects to extract spectra for
-objcat_xposcol    x_image           # Column containing x pixel position in object_catalog
-objcat_yposcol    y_image           # Column containing y pixel position in object_catalog
+ref_image              ./referenceimage.fits              # Path and name of fits file containing image to use as reference when creating source model
+img_extension          0                                  # Name or number of fits extension containing reference image
 
-# - - - - - - - - - - - - - - - - - - - - - - - - OBJECT MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
-obj_model         gauss             # Indicate what model to use for objects; gauss, mog, galfit
-model_name        ./default         # Path and base name (i.e., without extension) of output to generate
+source_catalog         ./sourcecatalog.fits               # Path and name of source catalog containing sources to extract spectra for
+sourcecat_xposcol      x_image                            # Column containing x pixel position in source_catalog
+sourcecat_yposcol      y_image                            # Column containing y pixel position in source_catalog
+
+# - - - - - - - - - - - - - - - - - - - - - - - - SOURCE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
+source_model           gauss                              # The source model to use for sources: [gauss, galfit, mog (not enabled)]
+galfit_result          None                               # If source_model = galfit provide the path and name of fits file containing galfit results
+galfit_model_extension 2                                  # Fits extension containing galfit model with model parameters of each source in header
+
+model_cutouts          True
+cutout_directory       data_cutouts/                      # Directory to store cutouts in if different from current working directory ('./')
+cutout_sizes           [20,40]                            # Size of cutouts (in arctic) around each source to model. To use source-specific cutouts
+                                                          # provide ascii file with ID x-extent[arcsec] and y-extent[arcsec] instead.
+
+model_image_ext        tdose_modelimage                   # Name extension of fits file containing reference image model. To ignored use None
+model_param_ext        tdose_modelimage_objparam          # Name extension of fits file containing reference image model parameters.
+model_param_reg        tdose_modelimage_ds9               # Name extension of DS9 region file for reference image model. To ignored use None
+
+model_image_cube_ext   tdose_modelimage_cubeWCS           # Name extension of fits file containing model image after conversion to cube WCS. To ignored use None.
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - PSF MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
-psf_type          data              # Select PSF type to use. If data 'psf_model' is used. If 'analytic' a
-                                    # PSF model is build using the given setup (not enabled as of 151209)
-psf_model         ./filename.fits   # Path and name of PSF model
-psf_name          ./default         # Path and base name (i.e., without extension) of output to generate
+psf_type               gauss                              # Select PSF model to build
+psf_sigma_blue         0.76/2.35482                       # Sigma of PSF at the blue end of the data cube
+psf_sigma_red          0.61/2.35482                       # Sigma of PSF at the red  end of the data cube
+psf_sigma_evolve       linear                             # Evolution of the sigma from blue to red end of data cube
 
-# - - - - - - - - - - - - - - - - - - - - - - - SPECTRAL EXTRACTION SETUP - - - - - - - - - - - - - - - - - - - - - - -
-spec_name         ./default         # Path and base name (i.e., without extension) of output to generate
+# - - - - - - - - - - - - - - - - - - - - - - - - - CUBE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
+model_cube_layers      [770,790]                          # Layers of data cube to model. If 'all' the full cube will be modeled.
+model_cube_optimizer   matrix                             # The optimizer to use when matching flux levels in cube layers: [matrix,curvet,lstsq]
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - MODIFY CUBE SETUP - - - - - - - - - - - - - - - - - - - - - - - - -
-obj_remove        ./filename.fits   # Path and name of catalog of objects to remove from "data_cube"
-mod_cat_name      ./default         # Path and (base)name of output cube to generate
+model_cube_ext         tdose_modelcube                    # Name extension of fits file containing model data cube.
+residual_cube_ext      tdose_modelcube_residual           # Name extension of fits file containing residual between model data cube and data. To ignored use None.
 
-"""
+source_model_cube      tdose_source_modelcube             # Name extension of fits file containing source model cube (used to modify data cube).
+
+# - - - - - - - - - - - - - - - - - - - - - - - - SPECTRAL EXTRACTION - - - - - - - - - - - - - - - - - - - - - - - - -
+sources_to_extract     [1,2,7]                            # Sources to extract 1D spectra for. If set to 'all', 1D spectra for all sources is produced.
+spec1D_directory       extracted_spectra/                 # Output directory to store spectra in if different from current working directory ('./')
+spec1D_name            tdose_spectrum                     # Name extension to use for extracted 1D spectra
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - PLOTTING  - - - - - - - - - - - - - - - - - - - - - - - - - - -
+plot_1Dspec            True                               # Generate plot of the extracted 1D spectra
+plot_1Dspec_xrange     [5000,7000]                        # Range of x-axes (wavelength) for plot of 1D spectra
+plot_1Dspec_yrange     [-100,300]                         # Range of y-axes (flux) for plot of 1D spectra
+
+plot_S2Nspec           True                               # Generated plot of the extracted spectra in units of signal-to-noise (S2N)
+plot_S2Nspec_xrange    [5000,7000]                        # Range of x-axes (wavelength) for plot of S2N spectra
+plot_S2Nspec_yrange    [-1,15]                            # Range of y-axes (S2N) for plot of S2N spectra
+
+# - - - - - - - - - - - - - - - - - - - - - - - - -  MODIFYING CUBE - - - - - - - - - - - - - - - - - - - - - - - - - -
+source_remove          [1,2,5]                            # List of IDs of sources to remove from data cube using source model cube.
+                                                          # For long list of IDs provide path and name of file containing IDs (only)
+modeified_cube         tdose_modified_datacube            # Name extension of file containing modified data cube (IDs in obj_remove list removed). To ignored use None.
+
+#--------------------------------------------------END OF TDOSE SETUP--------------------------------------------------
+
+""" % (tu.get_now_string())
         fout = open(outputfile,'w')
         fout.write(setuptemplate)
         fout.close()
