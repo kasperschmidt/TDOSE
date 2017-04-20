@@ -1,0 +1,23 @@
+
+#---------------------------------------------START OF TDOSE MODIFY SETUP---------------------------------------------
+#
+# Template for TDOSE (http://github.com/kasperschmidt/TDOSE) setup file for modifyinf data cubes
+# Generated with tdose_utilities.generate_setup_template_modify() on 2017-04-20 12:05
+# Cube modifications are run independent of tdose.perform_extraction() with running tdose.modify_cube()
+#
+# - - - - - - - - - - - - - - - - - - - - - - - - -  MODIFYING CUBE - - - - - - - - - - - - - - - - - - - - - - - - - -
+data_cube              /Volumes/DATABCKUP2/TDOSEextractions/tdose_cutouts/DATACUBE_candels-cdfs-02_v1.0_dcbgc_id8685_cutout9p0x12p0arcsec.fits                    # Path and name of fits file containing data cube to modify
+cube_extension         DATA_DCBGC                         # Name or number of fits extension containing data cube
+source_model_cube      /Volumes/DATABCKUP2/TDOSEextractions/tdose_models/DATACUBE_candels-cdfs-02_v1.0_dcbgc_id8685_cutout9p0x12p0arcsec_tdose_source_modelcube.fits                    # Path and name of fits file containing source model cube
+source_extension       DATA_DCBGC                         # Name or number of fits extension containing source model cube
+
+modyified_cube         tdose_modified_datacube            # Name extension of file containing modified data cube.
+
+                                                          # should be removed ( in "objects" will be removed.
+modify_sources_list    [1,2,5]                            # List of IDs of sources to remove from data cube using source model cube.
+                                                          # For long list of IDs provide path and name of file containing IDs (only)
+sources_action         remove                             # Indicate how to modify the data cube. Chose between:
+                                                          #    'remove'     Sources in modify_sources_list are removed from data cube (default)
+                                                          #    'keep'       All sources except the sources in modify_sources_list are removed from data cube
+#----------------------------------------------END OF TDOSE MODIFY SETUP----------------------------------------------
+
