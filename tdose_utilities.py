@@ -34,7 +34,7 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
     setup = tu.load_setup(setupfile='./tdose_setup_template.txt')
 
     """
-    if verbose: print ' --- tdose_load_setup.load_setup() --- '
+    if verbose: print ' --- tdose_utilities.load_setup() --- '
     #------------------------------------------------------------------------------------------------------
     if verbose: print ' -  Loading setup for TDOSE in '+setupfile
     setup_arr = np.genfromtxt(setupfile,dtype=None,names=None)
@@ -52,7 +52,7 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
         if setup_arr[ii,1].lower() == 'false': val = False
 
         lists = ['source_remove','model_cube_layers','sources_to_extract','plot_1Dspec_xrange','plot_1Dspec_yrange',
-                 'plot_S2Nspec_xrange','plot_S2Nspec_yrange']
+                 'plot_S2Nspec_xrange','plot_S2Nspec_yrange','cutout_sizes']
         if (setup_arr[ii,0] in lists) & (setup_arr[ii,0] != 'all'):
             val = [float(vv) for vv in val.split('[')[-1].split(']')[0].split(',')]
 
@@ -77,10 +77,13 @@ def generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=Fals
 
     --- EXAMPLE OF USE ---
     import tdose_utilities as tu
-    tu.generate_setup_template(outputfile='./tdose_setup_template_new.txt',clobber=True)
+
+    filename = './tdose_setup_template_new.txt'
+    tu.generate_setup_template(outputfile=filename,clobber=True)
+    setup    = tu.load_setup(setupfile=filename)
 
     """
-    if verbose: print ' --- tdose_load_setup.generate_setup_template() --- '
+    if verbose: print ' --- tdose_utilities.generate_setup_template() --- '
     #------------------------------------------------------------------------------------------------------
     if os.path.isfile(outputfile) & (clobber == False):
         sys.exit(' ---> Outputfile already exists and clobber=False ')
@@ -93,24 +96,32 @@ def generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=Fals
 #-------------------------------------------------START OF TDOSE SETUP-------------------------------------------------
 #
 # Template for TDOSE (http://github.com/kasperschmidt/TDOSE) setup file
-# Generated with tdose_utilities.generate_setup_template() on %s
+# Generated with tdose_utilities.generate_setup_template() on 2017-04-11 14:03
+# The spectral extraction using this setup is run with tdose.perform_extraction()
 #
 # - - - - - - - - - - - - - - - - - - - - - - - - - - DATA INPUT  - - - - - - - - - - - - - - - - - - - - - - - - - - -
-data_cube              ./datacube.fits                    # Path and name of fits file containing data cube to extract spectra from
-cube_extension         DATA                               # Name or number of fits extension containing data cube
+data_cube              /Volumes/DATABCKUP2/MUSE-Wide/datacubes_dcbgc/DATACUBE_candels-cdfs-02_v1.0_dcbgc.fits                    # Path and name of fits file containing data cube to extract spectra from
+cube_extension         DATA_DCBGC                         # Name or number of fits extension containing data cube
 
-noise_cube             ./noisecube.fits                   # Path and name of fits file containing noise cube to use for extraction
-cube_extension         STAT                               # Name or number of fits extension containing noise cube
+noise_cube             /Volumes/DATABCKUP2/MUSE-Wide/datacubes_dcbgc/DATACUBE_candels-cdfs-02_v1.0_dcbgc.fits                   # Path and name of fits file containing noise cube to use for extraction
+noise_extension         STAT                              # Name or number of fits extension containing noise cube
 
-ref_image              ./referenceimage.fits              # Path and name of fits file containing image to use as reference when creating source model
+ref_image              /Volumes/DATABCKUP2/MUSE-Wide/hst_cutouts/acs_814w_candels-cdfs-02_cut_v1.0.fits              # Path and name of fits file containing image to use as reference when creating source model
 img_extension          0                                  # Name or number of fits extension containing reference image
 
-source_catalog         ./sourcecatalog.fits               # Path and name of source catalog containing sources to extract spectra for
+source_catalog         /Volumes/DATABCKUP2/TDOSEextractions/tdose_sourcecats/catalog_photometry_candels-cdfs-02_tdose_sourcecat.fits               # Path and name of source catalog containing sources to extract spectra for
 sourcecat_IDcol        id                                 # Column containing source IDs in source_catalog
 sourcecat_xposcol      x_image                            # Column containing x pixel position in source_catalog
 sourcecat_yposcol      y_image                            # Column containing y pixel position in source_catalog
 sourcecat_racol        ra                                 # Column containing ra  position in source_catalog (used to position cutouts if model_cutouts = True)
 sourcecat_deccol       dec                                # Column containing dec position in source_catalog (used to position cutouts if model_cutouts = True)
+sourcecat_fluxcol      fluxscale                                # Column containing dec position in source_catalog (used to position cutouts if model_cutouts = True)
+
+# - - - - - - - - - - - - - - - - - - - - - - - - OUTPUT DIRECTORIES  - - - - - - - - - - - - - - - - - - - - - - - - -
+
+models_directory       /Volumes/DATABCKUP2/TDOSEextractions/tdose_models/                  # Directory to store the modeling output from TDOSE in
+cutout_directory       /Volumes/DATABCKUP2/TDOSEextractions/tdose_cutouts/                 # Directory to store image and cube cutouts in if model_cutouts=True
+spec1D_directory       /Volumes/DATABCKUP2/TDOSEextractions/tdose_spectra/                 # Output directory to store spectra in.
 
 # - - - - - - - - - - - - - - - - - - - - - - - - SOURCE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
 source_model           gauss                              # The source model to use for sources: [gauss, galfit, mog (not enabled)]
@@ -118,34 +129,31 @@ galfit_result          None                               # If source_model = ga
 galfit_model_extension 2                                  # Fits extension containing galfit model with model parameters of each source in header
 
 model_cutouts          True                               # Perform modeling and spectral extraction on small cutouts of the cube and images to reduce run-time
-cutout_directory       data_cutouts/                      # Directory to store cutouts in.
-cutout_sizes           [20,40]                            # Size of cutouts (in arctic) around each source to model. To use source-specific cutouts
+
+cutout_sizes           [9,12]                             # Size of cutouts [ra,dec] in arcsec around each source to model. To use source-specific cutouts
                                                           # provide ascii file with ID x-extent[arcsec] and y-extent[arcsec] instead.
-
 model_image_ext        tdose_modelimage                   # Name extension of fits file containing reference image model. To ignored use None
-model_param_ext        tdose_modelimage_objparam          # Name extension of fits file containing reference image model parameters.
 model_param_reg        tdose_modelimage_ds9               # Name extension of DS9 region file for reference image model. To ignored use None
-
 model_image_cube_ext   tdose_modelimage_cubeWCS           # Name extension of fits file containing model image after conversion to cube WCS. To ignored use None.
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - PSF MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
+### USE PSF SETUP AS DESCRIBED IN Herenz+ MW paper; from QC pages
+
 psf_type               gauss                              # Select PSF model to build
 psf_sigma_blue         0.76/2.35482                       # Sigma of PSF at the blue end of the data cube
 psf_sigma_red          0.61/2.35482                       # Sigma of PSF at the red  end of the data cube
 psf_sigma_evolve       linear                             # Evolution of the sigma from blue to red end of data cube
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - CUBE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
-model_cube_layers      [770,790]                          # Layers of data cube to model. If 'all' the full cube will be modeled.
+model_cube_layers      [1100,1180]                        # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
 model_cube_optimizer   matrix                             # The optimizer to use when matching flux levels in cube layers: [matrix,curvet,lstsq]
 
 model_cube_ext         tdose_modelcube                    # Name extension of fits file containing model data cube.
 residual_cube_ext      tdose_modelcube_residual           # Name extension of fits file containing residual between model data cube and data. To ignored use None.
-
 source_model_cube      tdose_source_modelcube             # Name extension of fits file containing source model cube (used to modify data cube).
 
 # - - - - - - - - - - - - - - - - - - - - - - - - SPECTRAL EXTRACTION - - - - - - - - - - - - - - - - - - - - - - - - -
-sources_to_extract     [1,2,7]                            # Sources to extract 1D spectra for. If set to 'all', 1D spectra for all sources is produced.
-spec1D_directory       extracted_spectra/                 # Output directory to store spectra in.
+sources_to_extract     [8685,10195,29743]                 # Sources to extract 1D spectra for. If set to 'all', 1D spectra for all sources is produced.
 spec1D_name            tdose_spectrum                     # Name extension to use for extracted 1D spectra
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - PLOTTING  - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -157,17 +165,66 @@ plot_S2Nspec           True                               # Generated plot of th
 plot_S2Nspec_xrange    [5000,7000]                        # Range of x-axes (wavelength) for plot of S2N spectra
 plot_S2Nspec_yrange    [-1,15]                            # Range of y-axes (S2N) for plot of S2N spectra
 
-# - - - - - - - - - - - - - - - - - - - - - - - - -  MODIFYING CUBE - - - - - - - - - - - - - - - - - - - - - - - - - -
-source_remove          [1,2,5]                            # List of IDs of sources to remove from data cube using source model cube.
-                                                          # For long list of IDs provide path and name of file containing IDs (only)
-modeified_cube         tdose_modified_datacube            # Name extension of file containing modified data cube (IDs in obj_remove list removed). To ignored use None.
-
 #--------------------------------------------------END OF TDOSE SETUP--------------------------------------------------
 
 """ % (tu.get_now_string())
         fout = open(outputfile,'w')
         fout.write(setuptemplate)
         fout.close()
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def generate_setup_template_modify(outputfile='./tdose_setup_template_modify.txt',clobber=False,verbose=True):
+    """
+    Generate setup text file template for modifying data cubes
+
+    --- INPUT ---
+    outputfile    The name of the output which will contain the TDOSE setup template
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+
+    filename = './tdose_setup_template_modify_new.txt'
+    tu.generate_setup_template_modify(outputfile=filename,clobber=True)
+    setup    = tu.load_setup(setupfile=filename)
+
+    """
+    if verbose: print ' --- tdose_utilities.generate_setup_template_modify() --- '
+    #------------------------------------------------------------------------------------------------------
+    if os.path.isfile(outputfile) & (clobber == False):
+        sys.exit(' ---> Outputfile already exists and clobber=False ')
+    else:
+        if verbose: print ' - Will store setup template in '+outputfile
+        if os.path.isfile(outputfile) & (clobber == True):
+            if verbose: print ' - Output already exists but clobber=True so overwriting it '
+
+        setuptemplate = """
+#---------------------------------------------START OF TDOSE MODIFY SETUP---------------------------------------------
+#
+# Template for TDOSE (http://github.com/kasperschmidt/TDOSE) setup file for modifyinf data cubes
+# Generated with tdose_utilities.generate_setup_template_modify() on %s
+# Cube modifications are run independent of tdose.perform_extraction() with tdose.modify_cube()
+#
+# - - - - - - - - - - - - - - - - - - - - - - - - -  MODIFYING CUBE - - - - - - - - - - - - - - - - - - - - - - - - - -
+data_cube              /Volumes/DATABCKUP2/TDOSEextractions/tdose_cutouts/DATACUBE_candels-cdfs-02_v1.0_dcbgc_id8685_cutout9p0x12p0arcsec.fits                    # Path and name of fits file containing data cube to modify
+cube_extension         DATA_DCBGC                         # Name or number of fits extension containing data cube
+source_model_cube      /Volumes/DATABCKUP2/TDOSEextractions/tdose_models/DATACUBE_candels-cdfs-02_v1.0_dcbgc_id8685_cutout9p0x12p0arcsec_tdose_source_modelcube.fits                    # Path and name of fits file containing source model cube
+source_extension       DATA_DCBGC                         # Name or number of fits extension containing source model cube
+
+modyified_cube         tdose_modified_datacube            # Name extension of file containing modified data cube.
+
+                                                          # should be removed ( in "objects" will be removed.
+modify_sources_list    [1,2,5]                            # List of IDs of sources to remove from data cube using source model cube.
+                                                          # For long list of IDs provide path and name of file containing IDs (only)
+sources_action         remove                             # Indicate how to modify the data cube. Chose between:
+                                                          #    'remove'     Sources in modify_sources_list are removed from data cube (default)
+                                                          #    'keep'       All sources except the sources in modify_sources_list are removed from data cube
+#----------------------------------------------END OF TDOSE MODIFY SETUP----------------------------------------------
+
+""" % (tu.get_now_string())
+        fout = open(outputfile,'w')
+        fout.write(setuptemplate)
+        fout.close()
+
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def build_2D_cov_matrix(sigmax,sigmay,angle,verbose=True):
     """
@@ -649,6 +706,7 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
     cutouts     = tu.extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],clobber=True,imgfiles=[imgfile],imgexts=[0])
 
     """
+    if verbose: print ' --- tdose_utilities.extract_subcube() --- '
     if verbose: print ' - Extracting sub data cube from :\n   '+cubefile
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if os.path.isfile(outname) & (clobber == False):
