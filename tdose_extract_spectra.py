@@ -428,7 +428,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                 s2ndat = specdat[tdose_fluxcol][goodent]/specdat[tdose_errcol][goodent]
             plt.plot(specdat[tdose_wavecol][goodent],s2ndat,color=spec_color,lw=lthick*2, label=spec_label)
             ylabel = 'S/N'
-            plotname = plotname.replace('.pdf','_S2N.pdf')
+            #plotname = plotname.replace('.pdf','_S2N.pdf')
         else:
             fillalpha = 0.30
             #if spec_color == 'green': pdb.set_trace()
