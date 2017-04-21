@@ -36,7 +36,7 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
     """
     if verbose: print ' --- tdose_utilities.load_setup() --- '
     #------------------------------------------------------------------------------------------------------
-    if verbose: print ' -  Loading setup for TDOSE in '+setupfile
+    if verbose: print ' - Loading setup for TDOSE in '+setupfile
     setup_arr = np.genfromtxt(setupfile,dtype=None,names=None)
     setup_dic = {}
     for ii in xrange(setup_arr.shape[0]):
@@ -51,7 +51,7 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
         if setup_arr[ii,1].lower() == 'true':  val = True
         if setup_arr[ii,1].lower() == 'false': val = False
 
-        lists = ['source_remove','model_cube_layers','sources_to_extract','plot_1Dspec_xrange','plot_1Dspec_yrange',
+        lists = ['modify_sources_list','model_cube_layers','sources_to_extract','plot_1Dspec_xrange','plot_1Dspec_yrange',
                  'plot_S2Nspec_xrange','plot_S2Nspec_yrange','cutout_sizes']
         if (setup_arr[ii,0] in lists) & (setup_arr[ii,0] != 'all'):
             val = [float(vv) for vv in val.split('[')[-1].split(']')[0].split(',')]
@@ -65,7 +65,7 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
                     val = float(sigmasplit[0]) / float(sigmasplit[1])
 
         setup_dic[setup_arr[ii,0]] = val
-    if verbose: print ' -  Returning dictionary containing setup parameters'
+    if verbose: print ' - Returning dictionary containing setup parameters'
     return setup_dic
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=False,verbose=True):
