@@ -53,7 +53,7 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
 
         lists = ['modify_sources_list','model_cube_layers','sources_to_extract','plot_1Dspec_xrange','plot_1Dspec_yrange',
                  'plot_S2Nspec_xrange','plot_S2Nspec_yrange','cutout_sizes']
-        if (setup_arr[ii,0] in lists) & (setup_arr[ii,0] != 'all'):
+        if (setup_arr[ii,0] in lists) & (setup_arr[ii,1] != 'all'):
             val = [float(vv) for vv in val.split('[')[-1].split(']')[0].split(',')]
 
         if ('psf_sigma' in setup_arr[ii,0]) & (type(val) == str):
@@ -115,8 +115,10 @@ sourcecat_xposcol      x_image                            # Column containing x 
 sourcecat_yposcol      y_image                            # Column containing y pixel position in source_catalog
 sourcecat_racol        ra                                 # Column containing ra  position in source_catalog (used to position cutouts if model_cutouts = True)
 sourcecat_deccol       dec                                # Column containing dec position in source_catalog (used to position cutouts if model_cutouts = True)
-sourcecat_fluxcol      fluxscale                                # Column containing dec position in source_catalog (used to position cutouts if model_cutouts = True)
-
+sourcecat_fluxcol      fluxscale                          # Column containing dec position in source_catalog (used to position cutouts if model_cutouts = True)
+sourcecat_parentIDcol  None                               # Column containing parent source IDs grouping source IDs into objects. Set to None to used id column
+                                                          # corresponding to assigning each source to a single object
+                                                          # if not None the parentid is used to group source models when storing 1D spectra. All models keep sources separate.
 # - - - - - - - - - - - - - - - - - - - - - - - - OUTPUT DIRECTORIES  - - - - - - - - - - - - - - - - - - - - - - - - -
 
 models_directory       /Volumes/DATABCKUP2/TDOSEextractions/tdose_models/                  # Directory to store the modeling output from TDOSE in
@@ -145,7 +147,7 @@ psf_sigma_red          0.61/2.35482                       # Sigma of PSF at the 
 psf_sigma_evolve       linear                             # Evolution of the sigma from blue to red end of data cube
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - CUBE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
-model_cube_layers      [1100,1180]                        # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
+model_cube_layers      all  # [1100,1180]                 # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
 model_cube_optimizer   matrix                             # The optimizer to use when matching flux levels in cube layers: [matrix,curvet,lstsq]
 
 model_cube_ext         tdose_modelcube                    # Name extension of fits file containing model data cube.
@@ -153,18 +155,21 @@ residual_cube_ext      tdose_modelcube_residual           # Name extension of fi
 source_model_cube      tdose_source_modelcube             # Name extension of fits file containing source model cube (used to modify data cube).
 
 # - - - - - - - - - - - - - - - - - - - - - - - - SPECTRAL EXTRACTION - - - - - - - - - - - - - - - - - - - - - - - - -
-sources_to_extract     [8685,10195,29743]                 # Sources to extract 1D spectra for. If set to 'all', 1D spectra for all sources is produced.
+sources_to_extract     [8685,10195,29743]                 # Sources in source_catalog to extract 1D spectra for.
+                                                          # If sourcecat_parentIDcol os not None all associated spectra are included in stored object spectra
+                                                          # If set to 'all', 1D spectra for all sources in source_catalog is produced (without grouping according to parents).
+                                                          # For long list of objects provide path and name of file containing ids (here parent grouping will be performed)
 spec1D_name            tdose_spectrum                     # Name extension to use for extracted 1D spectra
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - PLOTTING  - - - - - - - - - - - - - - - - - - - - - - - - - - -
-plot_1Dspec            True                               # Generate plot of the extracted 1D spectra
-plot_1Dspec_xrange     [5000,7000]                        # Range of x-axes (wavelength) for plot of 1D spectra
-plot_1Dspec_yrange     [-100,300]                         # Range of y-axes (flux) for plot of 1D spectra
+plot_1Dspec_ext        fluxplot                           # Name extension of pdf file containing plot of 1D spectrum
+plot_1Dspec_xrange     [4800,9300]                        # Range of x-axes (wavelength) for plot of 1D spectra
+plot_1Dspec_yrange     [-100,500]                         # Range of y-axes (flux) for plot of 1D spectra
+plot_1Dspec_shownoise  True                               # Indicate whether to show the noise envelope in plot or not
 
-plot_S2Nspec           True                               # Generated plot of the extracted spectra in units of signal-to-noise (S2N)
-plot_S2Nspec_xrange    [5000,7000]                        # Range of x-axes (wavelength) for plot of S2N spectra
+plot_S2Nspec_ext       S2Nplot                            # Name extension of pdf file containing plot of S/N spectrum
+plot_S2Nspec_xrange    [4800,9300]                        # Range of x-axes (wavelength) for plot of S2N spectra
 plot_S2Nspec_yrange    [-1,15]                            # Range of y-axes (S2N) for plot of S2N spectra
-
 #--------------------------------------------------END OF TDOSE SETUP--------------------------------------------------
 
 """ % (tu.get_now_string())
@@ -737,6 +742,8 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
                 sys.stdout.write("%s\r" % infostr)
                 sys.stdout.flush()
 
+            # KBS: Slow - don't need to do the cutout on wcs for each layer. Find a way to get x and y indexes and then
+            #      cut out directly from numpy array.
             cutout_layer  = Cutout2D(cubedata[ll,:,:], skyc, size, wcs=cubewcs_2D)
 
             if ll == 0:
