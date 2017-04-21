@@ -451,11 +451,18 @@ def gen_image(imagedim,mu_objs,cov_objs,sourcescale='ones',verbose=True):
         scalings = sourcescale
 
     for oo in xrange(Nobj):
-        if len(mu_objs) == 2: # only one object
-            muconv, covarconv = mu_objs[:], cov_objs[:,:]
+        if Nobj == 1: # only one object
+            if len(mu_objs.shape) == 2:
+                muconv = mu_objs[oo,:]
+            else:
+                muconv = mu_objs[:]
+
+            if len(cov_objs.shape) == 3:
+                covarconv = cov_objs[oo,:,:]
+            else:
+                covarconv = cov_objs[:,:]
         else:
             muconv, covarconv = mu_objs[oo,:], cov_objs[oo,:,:]
-
 
         if verbose: print ' - Generating source in spatial dimensions '
         try:
