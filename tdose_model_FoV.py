@@ -273,7 +273,7 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',datanoise=Non
     else:
         sys.exit(' ---> Invalid optimizer ('+optimizer+') chose in model_objects_gauss()')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print '   ----------- Finished on '+tu.get_now_string()+' ----------- '
+    if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
     #if verbose: print ' - The returned best-fit parameters are \n   ',output[0]
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if show_residualimg:
