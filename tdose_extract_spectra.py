@@ -10,7 +10,7 @@ import pdb
 import matplotlib.pyplot as plt
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='tdose_spectrum',outputdir='./',clobber=False,
-                    noise_cube_file=None,noise_cube_ext='ERROR',source_model_cube_file=None,
+                    noise_cube_file=None,noise_cube_ext='ERROR',source_model_cube_file=None,source_cube_ext='DATA',
                     model_cube_ext='DATA',layer_scale_ext='WAVESCL',verbose=True):
     """
     Assemble the spectra determined by the wavelength layer scaling of the normalized models
@@ -37,7 +37,7 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='
     layer_scale_arr   = pyfits.open(model_cube_file)[layer_scale_ext].data
     if noise_cube_file is not None:
         noise_cube        = pyfits.open(noise_cube_file)[noise_cube_ext].data
-        source_model_cube = pyfits.open(source_model_cube_file)[0].data
+        source_model_cube = pyfits.open(source_model_cube_file)[model_cube_ext].data
     else:
         noise_cube        = None
         source_model_cube = None
@@ -64,7 +64,10 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='
     specfiles = []
     for oo, key in enumerate(sourcIDs_dic.keys()):
         obj_cube_hdr = model_cube_hdr.copy()
-        specid       = str("%.12d" % int(key))
+        try:
+            specid       = str("%.10d" % int(key))
+        except:
+            specid       = str(key)
         specname     = outputdir+nameext+'_'+specid+'.fits'
         specfiles.append(specname)
         sourceIDs    = sourcIDs_dic[key]
