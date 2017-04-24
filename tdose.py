@@ -1,6 +1,7 @@
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 import pyfits
 import pdb
+import time
 import os
 import sys
 import numpy as np
@@ -42,14 +43,20 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
     --- EXAMPLE OF USE ---
     import tdose
+
+    # full extraction w/o generating cutouts
     tdose.perform_extraction(setupfile='./tdose_setup_candels-cdfs-02.txt',performcutout=False)
 
-    tdose.perform_extraction(setupfile='/Users/kschmidt/work/TDOSE/tdose_setup_candels-cdfs-02.txt',verbosefull=True,performcutout=False,generatesourcecat=False,modelrefimage=False,refimagemodel2cubewcs=False,definePSF=True,modeldatacube=True,clobber=True)
+    # only plotting:
+    tdose.perform_extraction(setupfile='./tdose_setup_candels-cdfs-02.txt',verbosefull=True,performcutout=False,generatesourcecat=False,modelrefimage=False,refimagemodel2cubewcs=False,definePSF=False,modeldatacube=False,createsourcecube=False,store1Dspectra=False,plot1Dspectra=True,clobber=True)
 
 
     """
+    start_time = time.clock()
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print '====================== TDOSE: Loading setup ======================'
+    if verbose: print '=================================================================================================='
+    if verbose: print ' TDOSE: Loading setup                                       '+\
+                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
     if verbosefull:
         verbose = True
 
@@ -63,18 +70,20 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
     Nsources        = len(sourceids_init)
     sourcenumber    = np.arange(Nsources)
 
-    if type(setupdic['sources_to_extract']) == str:
+    if type(setupdic['sources_to_extract']) == np.str_ or (type(setupdic['sources_to_extract']) == str):
         if setupdic['sources_to_extract'].lower() == 'all':
-            extractids = sourceids_init
+            extractids = sourceids_init.astype(float)
         else:
             extractids = np.genfromtxt(setupdic['sources_to_extract'],dtype=None,comments='#')
-            extractids = list(extractids)
+            extractids = list(extractids.astype(float))
     else:
         extractids = setupdic['sources_to_extract']
     Nextractions = len(extractids)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if setupdic['model_cutouts']:
-        if verbose: print '====================== TDOSE: Generate cutouts around sources to extract ======================'
+        if verbose: print '=================================================================================================='
+        if verbose: print ' TDOSE: Generate cutouts around sources to extract          '+\
+                          '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
         cut_images = []
         cut_cubes  = []
         for oo, cutoutid in enumerate(extractids):
@@ -146,7 +155,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 if verbose: print ' >>> Skipping generating the cutout source catalogs (assume they exist)'
 
         if verbose:
-            print '====================== TDOSE: Done cutting out sub cubes and postage stamps ======================'
+            print '=================================================================================================='
+            print ' TDOSE: Done cutting out sub cubes and postage stamps       '+\
+                  '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
             print ' - To open resulting images in DS9 execute the following command '
             ds9string = ' ds9 '+setupdic['ref_image']+' xxregionxx '+\
                         ' '.join(cut_images)+' -lock frame wcs -tile grid layout '+str(len(cut_images)+1)+' 1 &'
@@ -161,7 +172,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if not verbosefull:
             if verbose: print '\n   done'
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print '====================== TDOSE: Defining and loading data for extractions ======================'
+    if verbose: print '=================================================================================================='
+    if verbose: print ' TDOSE: Defining and loading data for extractions           '+\
+                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
     Nloops    = 1
     loopnames = [-9999]
 
@@ -196,7 +209,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                         refimg.split('/')[-1].replace('.fits','_'+setupdic['model_image_ext']+'.fits')
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbosefull: print '---------------------- TDOSE: Model reference image ----------------------'
+        if verbosefull: print '--------------------------------------------------------------------------------------------------'
+        if verbosefull: print ' TDOSE: Model reference image                               '+\
+                              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
         regionfile    = setupdic['models_directory']+'/'+\
                         refimg.split('/')[-1].replace('.fits','_'+setupdic['model_param_reg']+'.reg')
         modelparam    = modelimg.replace('.fits','_objparam.fits') # output from refernce image modeling
@@ -225,7 +240,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             if verbosefull: print ' >>> Skipping modeling reference image (assume models exist)'
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbosefull: print '---------------------- TDOSE: Convert ref. image model to cube WCS ----------------------'
+        if verbosefull: print '--------------------------------------------------------------------------------------------------'
+        if verbosefull: print ' TDOSE: Convert ref. image model to cube WCS                '+\
+                              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
         cubewcsimg       = setupdic['models_directory']+'/'+\
                            refimg.split('/')[-1].replace('.fits','_'+setupdic['model_image_cube_ext']+'.fits')
         paramREF      = tu.build_paramarray(modelparam,verbose=verbosefull)
@@ -249,7 +266,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             if verbosefull: print ' >>> Skipping converting reference image model to cube WCS frame (assume models exist)'
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbosefull: print '---------------------- TDOSE: Defining PSF ----------------------'
+        if verbosefull: print '--------------------------------------------------------------------------------------------------'
+        if verbosefull: print ' TDOSE: Defining PSF                                        '+\
+                              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
         if definePSF :
             print ' >>>>>>> KBS: Enable generating PSF using setup file parameters <<<<<<<<'
             xpos,ypos,fluxscale,angle = 0.0, 0.0, 1.0, 0.0
@@ -267,18 +286,44 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             if verbosefull: print ' >>> Skipping defining PSF of data cube (assume it is defined)'
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbosefull: print '---------------------- TDOSE: Modelling data cube ----------------------'
+        if verbosefull: print '--------------------------------------------------------------------------------------------------'
+        if verbosefull: print ' TDOSE: Modelling data cube                                 '+\
+                              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
         modcubename = setupdic['models_directory']+'/'+\
                       datacube.split('/')[-1].replace('.fits','_'+setupdic['model_cube_ext']+'.fits')
         rescubename = setupdic['models_directory']+'/'+\
                       datacube.split('/')[-1].replace('.fits','_'+setupdic['residual_cube_ext']+'.fits')
 
         if modeldatacube:
-            # - - - - - - - - MODEL MUSE CUBE - - - - - - - -
+
             if setupdic['model_cube_layers'] == 'all':
                 layers = None
-            else:
+            elif type(setupdic['model_cube_layers']) == list:
                 layers = np.arange(setupdic['model_cube_layers'][0],setupdic['model_cube_layers'][1]+1,1)
+            else:
+                layerinfo = np.genfromtxt(setupdic['model_cube_layers'],dtype=None,comments='#')
+
+                try:
+                    layer_ids            = layerinfo[:,0].astype(float)
+                    structuredlayerarray = False
+                except:
+                    layer_ids            = layerinfo['f0'].astype(float)
+                    structuredlayerarray = True
+
+                objent = np.where(layer_ids == extid)[0]
+
+                if len(objent) > 1:
+                    sys.exit(' ---> More than one match in '+setupdic['model_cube_layers']+' for object '+str(extid))
+                elif len(objent) == 0:
+                    sys.exit(' ---> No match in '+setupdic['model_cube_layers']+' for object '+str(extid))
+                else:
+                    if structuredlayerarray:
+                        if layerinfo['f1'][objent] == 'all':
+                            layers = None
+                        else:
+                            layers = [int(layerinfo['f1'][objent]),int(layerinfo['f2'][objent])]
+                    else:
+                        layers = layerinfo[objent,1:][0].astype(float).tolist()
 
             optimizer    = setupdic['model_cube_optimizer']
             paramtype    = setupdic['source_model']
@@ -305,7 +350,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                           datacube.split('/')[-1].replace('.fits','_'+setupdic['source_model_cube']+'.fits')
 
         if createsourcecube:
-            if verbosefull: print '---------------------- TDOSE: Creating source model cube ----------------------'
+            if verbosefull: print '--------------------------------------------------------------------------------------------------'
+            if verbosefull: print ' TDOSE: Creating source model cube                          '+\
+                                  '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
             model_cube        = pyfits.open(modcubename)[setupdic['cube_extension']].data
             layer_scales      = pyfits.open(modcubename)['WAVESCL'].data
 
@@ -319,7 +366,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             if verbosefull: print ' >>> Skipping generating source model cube (assume it exists)'
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbose: print '====================== TDOSE: Storing extracted 1D spectra to files ======================'
+        if verbose: print '=================================================================================================='
+        if verbose: print ' TDOSE: Storing extracted 1D spectra to files               '+\
+                          '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
         specoutputdir   = setupdic['spec1D_directory']
 
         model_cube_file = modcubename
@@ -370,7 +419,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             if verbosefull: print ' >>> Skipping storing 1D spectra to binary fits tables '
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbose: print '====================== TDOSE: Plotting extracted spectra ======================'
+        if verbose: print '=================================================================================================='
+        if verbose: print ' TDOSE: Plotting extracted spectra                          '+\
+                          '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
         showspec        = False
 
         for key in SAD.keys():
@@ -403,12 +454,46 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbose:
-            print '====================== TDOSE: Modeling and extraction done for object '+str(extid)+' ======================'
+            print '=================================================================================================='
+            print ' TDOSE: Modeling and extraction done for object '+str(extid)+\
+                  '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
             print ' - To open resulting files in DS9 execute the following command '
             print ' ds9 '+refimg+' -region '+setupdic['source_catalog'].replace('.fits','.reg')+' '+\
                   modelimg+' -region '+regionfile+' '+cubewcsimg+' '+datacube+' '+modcubename+' '+rescubename+\
                   ' '+sourcecubename+' -lock frame wcs -tile grid layout 7 1 &'
             print '============================================================================================'
+
+    if verbose:
+        print """
+                                                .''.
+                      .''.             *''*    :_\/_:     .
+                     :_\/_:   .    .:.*_\/_*   : /\ :  .'.:.'.
+                 .''.: /\ : _\(/_  ':'* /\ *  : '..'.  -=:o:=-
+                :_\/_:'.:::. /)\*''*  .|.* '.\'/.'_\(/_'.':'.'
+                : /\ : :::::  '*_\/_* | |  -= o =- /)\    '  *
+                 '..'  ':::'   * /\ * |'|  .'/.\'.  '._____
+                     *        __*..* |  |     :      |.   |' .---|
+                      _*   .-'   '-. |  |     .--'|  ||   | _|   |
+                   .-'|  _.|  |    ||   '-__  |   |  |    ||     |
+                   |' | |.    |    ||       | |   |  |    ||     |
+                ___|  '-'     '    ""       '-'   '-.'    '`     |____
+
+                  _________   _____       ______     _____     ______
+                 |__    __|| |  __ \\    /  __  \\  / ____\\  |  ___||
+                    |  ||    | || \ \\   | || | ||  \ \\__    | ||__
+                    |  ||    | || | ||   | || | ||   \__  \\  |  __||
+                    |  ||    | ||_/ //   | ||_| ||   ___\  \\ | ||___
+                    |__||    |_____//    \_____//   |______// |_____||
+
+                    _____      ______     __    __    ______    ___
+                   |  __ \\   /  __  \\  |  \\ |  ||  |  ___||  |  ||
+                   | || \ \\  | || | ||  |   \\|  ||  | ||__    |  ||
+                   | || | ||  | || | ||  |        ||  |  __||   |__||
+                   | ||_/ //  | ||_| ||  |  ||\   ||  | ||___    __
+                   |_____//   \_____//   |__|| \__||  |_____||  |__||
+
+==================================================================================================
+ """
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def modify_cube(modifysetupfile='./tdose_setup_template_modify.txt',verbose=True):
@@ -458,9 +543,16 @@ def get_datinfo(cutoutid,setupdic):
         noisecube  = setupdic['noise_cube']
         sourcecat  = setupdic['source_catalog']
     else:
-        if type(setupdic['cutout_sizes']) == str:
-            imgsize   = 'loop over input list'
-            sys.exit(' ---> input cutout size list not enabled ')
+        if type(setupdic['cutout_sizes']) == np.str_:
+            sizeinfo = np.genfromtxt(setupdic['cutout_sizes'],dtype=None,comments='#')
+            objent   = np.where(sizeinfo[:,0] == cutoutid)[0]
+
+            if len(objent) > 1:
+                sys.exit(' ---> More than one match in '+setupdic['cutout_sizes']+' for object '+str(cutoutid))
+            elif len(objent) == 0:
+                sys.exit(' ---> No match in '+setupdic['cutout_sizes']+' for object '+str(cutoutid))
+            else:
+                imgsize   = sizeinfo[objent,1:][0].astype(float).tolist()
         else:
             imgsize   = setupdic['cutout_sizes']
 

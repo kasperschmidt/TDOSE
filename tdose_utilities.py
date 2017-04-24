@@ -51,10 +51,18 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
         if setup_arr[ii,1].lower() == 'true':  val = True
         if setup_arr[ii,1].lower() == 'false': val = False
 
+        dirs = ['sources_to_extract','model_cube_layers','cutout_sizes']
+        if (setup_arr[ii,0] in dirs) & ('/' in setup_arr[ii,1]):
+            val = setup_arr[ii,1]
+            setup_dic[setup_arr[ii,0]] = val
+            continue
+
         lists = ['modify_sources_list','model_cube_layers','sources_to_extract','plot_1Dspec_xrange','plot_1Dspec_yrange',
                  'plot_S2Nspec_xrange','plot_S2Nspec_yrange','cutout_sizes']
         if (setup_arr[ii,0] in lists) & (setup_arr[ii,1] != 'all'):
             val = [float(vv) for vv in val.split('[')[-1].split(']')[0].split(',')]
+            setup_dic[setup_arr[ii,0]] = val
+            continue
 
         if ('psf_sigma' in setup_arr[ii,0]) & (type(val) == str):
             if  '/' in val:
@@ -63,6 +71,8 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
                     pass
                 else:
                     val = float(sigmasplit[0]) / float(sigmasplit[1])
+            setup_dic[setup_arr[ii,0]] = val
+            continue
 
         setup_dic[setup_arr[ii,0]] = val
     if verbose: print ' - Returning dictionary containing setup parameters'
