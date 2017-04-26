@@ -12,8 +12,8 @@ import tdose_model_FoV as tmf
 import pdb
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,datanoise=None,
-                  fluxscale='fluxscale',show_residualimg=False,generateimage=False,optimizer='curve_fit',
-                  clobber=False,outputhdr=None,param_initguess=None,verbose=True):
+                  fluxscale='fluxscale',show_residualimg=False,generateimage=False,generateresidualimage=False,
+                  optimizer='curve_fit',clobber=False,outputhdr=None,param_initguess=None,verbose=True):
     """
     model
 
@@ -61,6 +61,10 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
         tmf.save_modelimage(generateimage.replace('.fits','_initial.fits'),param_init,dataimg.shape,param_init=False,
                             verbose=verbose,verbosemodel=verbose,clobber=clobber,outputhdr=outputhdr)
 
+        if generateresidualimage:
+            tmf.save_modelimage(generateimage.replace('.fits','_residual.fits'),fit_output[0],dataimg.shape,param_init=param_init,
+                                verbose=verbose,verbosemodel=verbose,clobber=clobber,outputhdr=outputhdr,dataresidual=dataimg)
+
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Storing fitted source paramters as fits table and returning output'
     tablename = generateimage.replace('.fits','_objparam.fits')
@@ -93,7 +97,8 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
 
     return param_init, fit_output
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def save_modelimage(outname,paramlist,imgsize,param_init=False,clobber=False,outputhdr=None,verbose=True, verbosemodel=False):
+def save_modelimage(outname,paramlist,imgsize,param_init=False,dataresidual=None,
+                    clobber=False,outputhdr=None,verbose=True, verbosemodel=False):
     """
     Generate and save a fits file containing the model image obtained from modeling multiple gaussians
 
@@ -104,6 +109,9 @@ def save_modelimage(outname,paramlist,imgsize,param_init=False,clobber=False,out
     if verbose: print ' - Generate model image from input paramters'
     xgrid, ygrid = tu.gen_gridcomponents(imgsize)
     modelimg     = tmf.modelimage_multigauss((xgrid,ygrid), paramlist, showmodelimg=False, verbose=verbosemodel)
+
+    if dataresidual is not None:
+        modelimg = dataresidual - modelimg
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Saving generated image to '+outname
