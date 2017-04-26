@@ -20,7 +20,7 @@ import tdose_extract_spectra as tes
 def perform_extraction(setupfile='./tdose_setup_template.txt',
                        performcutout=True,generatesourcecat=True,modelrefimage=True,refimagemodel2cubewcs=True,
                        definePSF=True,modeldatacube=True,createsourcecube=True,store1Dspectra=True,plot1Dspectra=True,
-                       plotS2Nspectra=True,clobber=False,verbose=True,verbosefull=False):
+                       plotS2Nspectra=True,save_init_model_output=False,clobber=False,verbose=True,verbosefull=False):
     """
     Perform extraction of spectra from data cube based on information in TDOSE setup file
 
@@ -36,7 +36,10 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
     modeldatacube          To skip modeling the data cube set modeldatacube=False
     createsourcecube       To skip creating the source model cube set createsourcecube=False
     store1Dspectra         To skip storing the 1D spectra to binary fits tables set store1Dspectra=False
-
+    save_init_model_output If a SExtractor catalog is provide to the keyword gauss_guess in the setup file
+                           An initial guess including the SExtractor fits is generated for the Gaussian model.
+                           To save a ds9 region, image and paramater list (the two latter is available from the default
+                           output of the TDOSE modeling) set save_init_model_output=True
     clobber                If True existing output files will be overwritten
     verbose                Toggle verbosity
     verbose                Toggle extended verbosity
@@ -227,11 +230,46 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             names.append(namestr)
 
         if modelrefimage:
+            if setupdic['gauss_guess'] is None:
+                param_initguess = None
+            else:
+                objects   = pyfits.open(sourcecat)[1].data['id'].tolist()
+
+                if save_init_model_output:
+                    saveDS9region = True
+                    savefitsimage = True
+                    savefitstable = True
+                    ds9regionname = refimg.replace('.fits','_tdose_initial_model_ds9region.reg')
+                    fitsimagename = refimg.replace('.fits','_tdose_initial_model_image.fits')
+                    fitstablename = refimg.replace('.fits','_tdose_initial_model_objparam.fits')
+                else:
+                    saveDS9region = False
+                    savefitsimage = False
+                    savefitstable = False
+
+                paramlist = tu.gen_paramlist_from_SExtractorfile(setupdic['gauss_guess'],imgheader=img_hdr,clobber=clobber,
+                                                                 objects=objects,
+                                                                 idcol=setupdic['gauss_guess_idcol'],
+                                                                 racol=setupdic['gauss_guess_racol'],
+                                                                 deccol=setupdic['gauss_guess_deccol'],
+                                                                 aimg=setupdic['gauss_guess_aimg'],
+                                                                 bimg=setupdic['gauss_guess_bimg'],
+                                                                 angle=setupdic['gauss_guess_angle'],
+                                                                 fluxscale=setupdic['gauss_guess_fluxscale'],
+                                                                 fluxfactor=setupdic['gauss_guess_fluxfactor'],
+                                                                 Nsigma=setupdic['gauss_guess_Nsigma'],
+                                                                 verbose=verbosefull,
+                                                                 saveDS9region=saveDS9region,ds9regionname=ds9regionname,
+                                                                 savefitsimage=savefitsimage,fitsimagename=fitsimagename,
+                                                                 savefitstable=savefitstable,fitstablename=fitstablename)
+                param_initguess = paramlist
+
             pinit, fit    = tmf.gen_fullmodel(img_data,sourcecat,verbose=verbosefull,
                                               xpos_col=setupdic['sourcecat_xposcol'],ypos_col=setupdic['sourcecat_yposcol'],
                                               datanoise=None,sigysigxangle=None,
                                               fluxscale=setupdic['sourcecat_fluxcol'],generateimage=modelimg,
-                                              clobber=clobber,outputhdr=img_hdr)
+                                              generateresidualimage=True,clobber=clobber,outputhdr=img_hdr,
+                                              param_initguess=param_initguess)
 
             tu.model_ds9region(modelparam,regionfile,img_wcs,color='cyan',width=2,Nsigma=2,textlist=names,
                                fontsize=12,clobber=clobber)
@@ -243,6 +281,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if verbosefull: print '--------------------------------------------------------------------------------------------------'
         if verbosefull: print ' TDOSE: Convert ref. image model to cube WCS                '+\
                               '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+        pdb.set_trace()
         cubewcsimg       = setupdic['models_directory']+'/'+\
                            refimg.split('/')[-1].replace('.fits','_'+setupdic['model_image_cube_ext']+'.fits')
         paramREF      = tu.build_paramarray(modelparam,verbose=verbosefull)
