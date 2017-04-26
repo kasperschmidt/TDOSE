@@ -16,7 +16,7 @@ import warnings
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='gauss',fit_source_scales=True,
                   noisecube='None',save_modelcube=True,cubename='tdose_model_cube_output_RENAME.fits',clobber=True,
-                  outputhdr='None',model_layers=None,optimize_method='matrix',returnresidual=False,verbose=True,
+                  outputhdr='None',model_layers=None,optimize_method='matrix',returnresidual=None,verbose=True,
                   loopverbose=False):
     """
     Generate full model of data cube
@@ -49,7 +49,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                             matrix          Minimizing the chi2 expression manually solving the matrix equation
                             lstsq           Minimizing the chi2 expression using the scipy.linalg.lstsq function
                             all             Run all three methods and compare them (for trouble shooting)
-    returnresidual     Set to True to return the residual between each of the modelled layers and the data (data-model)
+    returnresidual     Provide file name of residual cube (data-model) to return this as well
     verbose            Toggle verbosity
     loopverbose        Toggle verbosity in loop over objects
 
@@ -93,7 +93,6 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
             optimize_method_list = ['curvefit','matrix','lstsq']
         else:
             optimize_method_list = [optimize_method]
-
 
         for ll in layerlist:
             if verbose:
@@ -221,84 +220,93 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                 output_scales  = np.asarray(scale.tolist * Nsource)
 
             layer_scales[:,ll]     = output_scales
-            if not returnresidual:
-                model_cube_out[ll,:,:] = output_layer
-            else:
-                model_cube_out[ll,:,:] = datacube_layer-output_layer
+            model_cube_out[ll,:,:] = output_layer
         if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
     else:
         sys.exit(' ---> Invalid parameter type ('+paramtype+') provided to gen_fullmodel()')
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if save_modelcube:
-        if verbose: print ' - Saving model cube to \n   '+cubename
-        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if outputhdr == 'None':
-            hducube = pyfits.PrimaryHDU(model_cube_out)       # default HDU with default minimal header
-            if verbose: print ' - No header provided so will generate one '
-            # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
-            hducube.header.append(('BUNIT  '                      ,'(10**(-20)*erg/s/cm**2/Angstrom)**2'),end=True)
-            hducube.header.append(('OBJECT '                      ,'model_cube'),end=True)
-            hducube.header.append(('CRPIX1 ',    201.043514357863 ,' Pixel coordinate of reference point'),end=True)
-            hducube.header.append(('CRPIX2 ',    201.629151352493 ,' Pixel coordinate of reference point'),end=True)
-            hducube.header.append(('CD1_1  ',-5.55555555555556E-05,' Coordinate transformation matrix element'),end=True)
-            hducube.header.append(('CD1_2  ',                   0.,' Coordinate transformation matrix element'),end=True)
-            hducube.header.append(('CD2_1  ',                   0.,' Coordinate transformation matrix element'),end=True)
-            hducube.header.append(('CD2_2  ',5.55555555555556E-05 ,' Coordinate transformation matrix element'),end=True)
-            hducube.header.append(('CUNIT1 ','deg     '           ,' Units of coordinate increment and value'),end=True)
-            hducube.header.append(('CUNIT2 ','deg     '           ,' Units of coordinate increment and value'),end=True)
-            hducube.header.append(('CTYPE1 ','RA---TAN'           ,' Right ascension, gnomonic projection'),end=True)
-            hducube.header.append(('CTYPE2 ','DEC--TAN'           ,' Declination, gnomonic projection'),end=True)
-            hducube.header.append(('CSYER1 ',   1.50464086916E-05 ,' [deg] Systematic error in coordinate'),end=True)
-            hducube.header.append(('CSYER2 ',   6.61226954775E-06 ,' [deg] Systematic error in coordinate'),end=True)
-            hducube.header.append(('CRVAL1 ',          53.1078417 ,' '),end=True)
-            hducube.header.append(('CRVAL2 ',         -27.8267356 ,' '),end=True)
-            hducube.header.append(('CTYPE3 ','AWAV    '           ,' '),end=True)
-            hducube.header.append(('CUNIT3 ','Angstrom'           ,' '),end=True)
-            hducube.header.append(('CD3_3  ',                1.25 ,' '),end=True)
-            hducube.header.append(('CRPIX3 ',                  1. ,' '),end=True)
-            hducube.header.append(('CRVAL3 ',    4800             ,' '),end=True)
-            hducube.header.append(('CD1_3  ',                  0. ,' '),end=True)
-            hducube.header.append(('CD2_3  ',                  0. ,' '),end=True)
-            hducube.header.append(('CD3_1  ',                  0. ,' '),end=True)
-            hducube.header.append(('CD3_2  ',                  0. ,' '),end=True)
+        tmc.save_cube(cubename,model_cube_out,layer_scales,outputhdr=outputhdr,clobber=clobber,verbose=verbose)
 
-            hdus = [hducube]
-        else:
-            if verbose: print ' - Using header provided with "outputhdr" for output fits file '
-            if 'XTENSION' in outputhdr.keys():
-                hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
-                hducube        = pyfits.ImageHDU(model_cube_out,header=outputhdr)
-                hdus           = [hduprim,hducube]
-            else:
-                hducube = pyfits.PrimaryHDU(model_cube_out,header=outputhdr)
-                hdus           = [hducube]
-        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        hduscales = pyfits.ImageHDU(layer_scales)       # default HDU with default minimal header
-        # writing hdrkeys:       '---KEY--',                      '----------------MAX LENGTH COMMENT-------------'
-        hduscales.header.append(('EXTNAME ','WAVESCL'            ,' None'),end=True)
-        hduscales.header.append(('BUNIT   '                      ,' None'),end=True)
-        hduscales.header.append(('OBJECT  '                      ,' layer_scales'),end=True)
-        hduscales.header.append(('CRPIX1  ',                   99,' '),end=True)
-        hduscales.header.append(('CRVAL1  ',                   99,' '),end=True)
-        hduscales.header.append(('CDELT1  ',                 1.25,' '),end=True)
-        hduscales.header.append(('CUNIT1  ', 'Angstrom',' '),end=True)
-        hduscales.header.append(('CTYPE1  ', 'WAVE    ',' '),end=True)
-        hduscales.header.append(('CRPIX2  ',                  0.0,' '),end=True)
-        hduscales.header.append(('CRVAL2  ',                    0,' '),end=True)
-        hduscales.header.append(('CDELT2  ',                  1.0,' '),end=True)
-        hduscales.header.append(('CUNIT2  ', 'Number  ',' '),end=True)
-        hduscales.header.append(('CTYPE2  ', 'SOURCE  ',' '),end=True)
-
-        hduscales.header['CRPIX1'] = hducube.header['CRPIX3']
-        hduscales.header['CRVAL1'] = hducube.header['CRVAL3']
-        hduscales.header['CDELT1'] = hducube.header['CD3_3']
-        hdus.append(hduscales)
-        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        hdulist = pyfits.HDUList(hdus)       # turn header into to hdulist
-        hdulist.writeto(cubename,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+        if returnresidual is not None:
+            residualcube = datacube - model_cube_out
+            tmc.save_cube(returnresidual,residualcube,layer_scales,outputhdr=outputhdr,clobber=clobber,verbose=verbose)
 
     return model_cube_out, layer_scales
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def save_cube(cubename,datacube,layer_scales,outputhdr=None,clobber=False,verbose=True):
+    """
+    Saveing data cube to fits file
+
+    """
+    if verbose: print ' - Saving model cube to \n   '+cubename
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if outputhdr is None:
+        hducube = pyfits.PrimaryHDU(datacube)       # default HDU with default minimal header
+        if verbose: print ' - No header provided so will generate one '
+        # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
+        hducube.header.append(('BUNIT  '                      ,'(10**(-20)*erg/s/cm**2/Angstrom)**2'),end=True)
+        hducube.header.append(('OBJECT '                      ,'model_cube'),end=True)
+        hducube.header.append(('CRPIX1 ',    201.043514357863 ,' Pixel coordinate of reference point'),end=True)
+        hducube.header.append(('CRPIX2 ',    201.629151352493 ,' Pixel coordinate of reference point'),end=True)
+        hducube.header.append(('CD1_1  ',-5.55555555555556E-05,' Coordinate transformation matrix element'),end=True)
+        hducube.header.append(('CD1_2  ',                   0.,' Coordinate transformation matrix element'),end=True)
+        hducube.header.append(('CD2_1  ',                   0.,' Coordinate transformation matrix element'),end=True)
+        hducube.header.append(('CD2_2  ',5.55555555555556E-05 ,' Coordinate transformation matrix element'),end=True)
+        hducube.header.append(('CUNIT1 ','deg     '           ,' Units of coordinate increment and value'),end=True)
+        hducube.header.append(('CUNIT2 ','deg     '           ,' Units of coordinate increment and value'),end=True)
+        hducube.header.append(('CTYPE1 ','RA---TAN'           ,' Right ascension, gnomonic projection'),end=True)
+        hducube.header.append(('CTYPE2 ','DEC--TAN'           ,' Declination, gnomonic projection'),end=True)
+        hducube.header.append(('CSYER1 ',   1.50464086916E-05 ,' [deg] Systematic error in coordinate'),end=True)
+        hducube.header.append(('CSYER2 ',   6.61226954775E-06 ,' [deg] Systematic error in coordinate'),end=True)
+        hducube.header.append(('CRVAL1 ',          53.1078417 ,' '),end=True)
+        hducube.header.append(('CRVAL2 ',         -27.8267356 ,' '),end=True)
+        hducube.header.append(('CTYPE3 ','AWAV    '           ,' '),end=True)
+        hducube.header.append(('CUNIT3 ','Angstrom'           ,' '),end=True)
+        hducube.header.append(('CD3_3  ',                1.25 ,' '),end=True)
+        hducube.header.append(('CRPIX3 ',                  1. ,' '),end=True)
+        hducube.header.append(('CRVAL3 ',    4800             ,' '),end=True)
+        hducube.header.append(('CD1_3  ',                  0. ,' '),end=True)
+        hducube.header.append(('CD2_3  ',                  0. ,' '),end=True)
+        hducube.header.append(('CD3_1  ',                  0. ,' '),end=True)
+        hducube.header.append(('CD3_2  ',                  0. ,' '),end=True)
+
+        hdus = [hducube]
+    else:
+        if verbose: print ' - Using header provided with "outputhdr" for output fits file '
+        if 'XTENSION' in outputhdr.keys():
+            hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
+            hducube        = pyfits.ImageHDU(datacube,header=outputhdr)
+            hdus           = [hduprim,hducube]
+        else:
+            hducube = pyfits.PrimaryHDU(datacube,header=outputhdr)
+            hdus           = [hducube]
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    hduscales = pyfits.ImageHDU(layer_scales)       # default HDU with default minimal header
+    # writing hdrkeys:       '---KEY--',                      '----------------MAX LENGTH COMMENT-------------'
+    hduscales.header.append(('EXTNAME ','WAVESCL'            ,' None'),end=True)
+    hduscales.header.append(('BUNIT   '                      ,' None'),end=True)
+    hduscales.header.append(('OBJECT  '                      ,' layer_scales'),end=True)
+    hduscales.header.append(('CRPIX1  ',                   99,' '),end=True)
+    hduscales.header.append(('CRVAL1  ',                   99,' '),end=True)
+    hduscales.header.append(('CDELT1  ',                 1.25,' '),end=True)
+    hduscales.header.append(('CUNIT1  ', 'Angstrom',' '),end=True)
+    hduscales.header.append(('CTYPE1  ', 'WAVE    ',' '),end=True)
+    hduscales.header.append(('CRPIX2  ',                  0.0,' '),end=True)
+    hduscales.header.append(('CRVAL2  ',                    0,' '),end=True)
+    hduscales.header.append(('CDELT2  ',                  1.0,' '),end=True)
+    hduscales.header.append(('CUNIT2  ', 'Number  ',' '),end=True)
+    hduscales.header.append(('CTYPE2  ', 'SOURCE  ',' '),end=True)
+
+    hduscales.header['CRPIX1'] = hducube.header['CRPIX3']
+    hduscales.header['CRVAL1'] = hducube.header['CRVAL3']
+    hduscales.header['CDELT1'] = hducube.header['CD3_3']
+    hdus.append(hduscales)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    hdulist = pyfits.HDUList(hdus)       # turn header into to hdulist
+    hdulist.writeto(cubename,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def optimize_source_scale_gauss(img_data,img_std,mu_objs,cov_objs,optimizer='curve_fit',verbose=True):
     """

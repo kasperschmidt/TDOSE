@@ -281,7 +281,6 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if verbosefull: print '--------------------------------------------------------------------------------------------------'
         if verbosefull: print ' TDOSE: Convert ref. image model to cube WCS                '+\
                               '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
-        pdb.set_trace()
         cubewcsimg       = setupdic['models_directory']+'/'+\
                            refimg.split('/')[-1].replace('.fits','_'+setupdic['model_image_cube_ext']+'.fits')
         paramREF      = tu.build_paramarray(modelparam,verbose=verbosefull)
@@ -308,7 +307,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if verbosefull: print '--------------------------------------------------------------------------------------------------'
         if verbosefull: print ' TDOSE: Defining PSF                                        '+\
                               '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
-        if definePSF :
+        if definePSF or modeldatacube:
             print ' >>>>>>> KBS: Enable generating PSF using setup file parameters <<<<<<<<'
             xpos,ypos,fluxscale,angle = 0.0, 0.0, 1.0, 0.0
             paramPSF                  = []
@@ -361,8 +360,10 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                             layers = None
                         else:
                             layers = [int(layerinfo['f1'][objent]),int(layerinfo['f2'][objent])]
+                            layers = np.arange(layers[0],layers[1]+1,1)
                     else:
                         layers = layerinfo[objent,1:][0].astype(float).tolist()
+                        layers = np.arange(layers[0],layers[1]+1,1)
 
             optimizer    = setupdic['model_cube_optimizer']
             paramtype    = setupdic['source_model']
@@ -372,14 +373,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                                                          psfparamtype=psfparamtype,noisecube=cube_noise,save_modelcube=True,
                                                          cubename=modcubename,clobber=clobber,
                                                          fit_source_scales=True,outputhdr=cube_hdr,verbose=verbosefull,
-                                                         returnresidual=False,optimize_method=optimizer,model_layers=layers)
-
-            if rescubename is not None:
-                cube_model, layer_scales = tmc.gen_fullmodel(cube_data,paramCUBE,paramPSF,paramtype=paramtype,
-                                                             psfparamtype=psfparamtype,noisecube=cube_noise,save_modelcube=True,
-                                                             cubename=rescubename,clobber=clobber,
-                                                             fit_source_scales=True,outputhdr=cube_hdr,verbose=verbosefull,
-                                                             returnresidual=True,optimize_method=optimizer,model_layers=layers)
+                                                         returnresidual=rescubename,optimize_method=optimizer,model_layers=layers)
 
         else:
             if verbosefull: print ' >>> Skipping modeling of data cube (assume it exists)'
@@ -387,7 +381,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         sourcecubename  = setupdic['models_directory']+'/'+\
                           datacube.split('/')[-1].replace('.fits','_'+setupdic['source_model_cube']+'.fits')
-
+        pdb.set_trace()
         if createsourcecube:
             if verbosefull: print '--------------------------------------------------------------------------------------------------'
             if verbosefull: print ' TDOSE: Creating source model cube                          '+\
