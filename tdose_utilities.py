@@ -974,13 +974,14 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
         fout.close()
         return outname
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=None,clobber=False,
+def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=None,clobber=False,objects='all',
                                       idcol='ID',racol='RA',deccol='DEC',aimg='A_IMAGE',bimg='B_IMAGE',
                                       angle='THETA_IMAGE',fluxscale='FLUX_ISO_F814W',fluxfactor=100.,Nsigma=3,
-                                      saveDS9region=True,ds9color='red',ds9width=2,ds9fontsize=12,
-                                      savefitsimage=False,verbose=True):
+                                      saveDS9region=True,ds9regionname=None,ds9color='red',ds9width=2,ds9fontsize=12,
+                                      savefitsimage=False,fitsimagename=None,
+                                      savefitstable=False,fitstablename=None,verbose=True):
     """
-    Generate source catalog for modeling image with tdose_model_FoV.gen_fullmodel()
+    Generate parameter list for Gaussian source modeling with tdose_model_FoV.gen_fullmodel() based on SEctractor catalog
 
     --- INPUT ---
 
@@ -988,7 +989,7 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
     import tdose_utilities as tu
     sexfile   = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/catalog_photometry_candels-cdfs-02.fits'
     imgheader = pyfits.open('/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_cut_v1.0.fits')[0].header
-    paramlist = tu.gen_paramlist_from_SExtractorfile(sexfile,imgheader=imgheader,Nsigma=8,savefitsimage=True)
+    paramlist = tu.gen_paramlist_from_SExtractorfile(sexfile,imgheader=imgheader,Nsigma=8,savefitsimage=False,objects=[10195])
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1006,9 +1007,17 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
         wcs_in   = wcs.WCS(striphdr)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Nobjects   = len(sourcedat)
-    if verbose: print ' - Assembling paramter list for '+str(Nobjects)+' sources found in catalog'
+
+    if objects == 'all':
+        Nobjects_convert = Nobjects
+    else:
+        Nobjects_convert = len(objects)
+
+    if verbose: print ' - Assembling paramter list for '+str(Nobjects_convert)+' sources found in catalog'
     paramlist = []
     for oo in xrange(Nobjects):
+        if objects != 'all':
+            if sourcedat[idcol][oo] not in objects: continue # skipping objects not in objects list provided
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if imgheader is None:
             xpos       = sourcedat[racol][oo]
@@ -1038,7 +1047,11 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if saveDS9region:
         if verbose: print ' - Generating DS9 region file with object parameters'
-        ds9region_file = sextractorfile.replace('.fits','_tdose.reg')
+        if ds9regionname is None:
+            ds9region_file = sextractorfile.replace('.fits','_tdose.reg')
+        else:
+            ds9region_file = ds9regionname
+
         if os.path.isfile(ds9region_file) & (clobber == False):
             if verbose: print ' - ds9 region file '+ds9region_file+' already exists and clobber=False so skipping'
         else:
@@ -1046,6 +1059,9 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
             fout.write("# Region file format: DS9 version 4.1 \nimage\n")
 
             for oo in xrange(Nobjects):
+                if objects != 'all':
+                    if sourcedat[idcol][oo] not in objects: continue # skipping objects not in objects list provided
+
                 objparam = np.resize(paramlist_arr,(Nobjects,6))[oo]
 
                 string = 'ellipse('+str(objparam[1])+','+str(objparam[0])+','+str(objparam[4])+','+\
@@ -1059,7 +1075,11 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if savefitsimage:
         if verbose: print ' - Generating image with object models from object parameters'
-        fitsimage = sextractorfile.replace('.fits','_tdose_modelimage.fits')
+        if fitsimagename is None:
+            fitsimage = sextractorfile.replace('.fits','_tdose_modelimage.fits')
+        else:
+            fitsimage = fitsimagename
+
         if imgheader is None:
             if verbose: print ' - No image header provided for fits file ' \
                               '(to get wcs and image model image dimensions) so skipping'
@@ -1068,6 +1088,37 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
             tmf.save_modelimage(fitsimage,paramlist_arr,imgsize,param_init=False,clobber=clobber,
                                 outputhdr=imgheader,verbose=verbose,verbosemodel=verbose)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if savefitstable:
+        if objects != 'all':
+            Nobj = len(objects)
+        else:
+            Nobj = Nobjects
+
+        objparam = np.resize(paramlist_arr,(Nobj,6))
+
+        if verbose: print ' - Storing fitted source paramters as fits table and returning output'
+        if fitstablename is None:
+            tablename = sextractorfile.replace('.fits','_tdose_paramlist.fits')
+        else:
+            tablename = fitstablename
+
+        objnumbers = np.arange(Nobj)+1
+        c01 = pyfits.Column(name='obj',            format='D', unit='',       array=objnumbers)
+        c02 = pyfits.Column(name='xpos',           format='D', unit='PIXELS', array=paramlist_arr[1::6])
+        c03 = pyfits.Column(name='ypos',           format='D', unit='PIXELS', array=paramlist_arr[0::6])
+        c04 = pyfits.Column(name='fluxscale',      format='D', unit='',       array=paramlist_arr[2::6])
+        c05 = pyfits.Column(name='xsigma',         format='D', unit='PIXELS', array=paramlist_arr[4::6])
+        c06 = pyfits.Column(name='ysigma',         format='D', unit='PIXELS', array=paramlist_arr[3::6])
+        c07 = pyfits.Column(name='angle',          format='D', unit='DEGREES',array=paramlist_arr[5::6])
+
+        coldefs = pyfits.ColDefs([c01,c02,c03,c04,c05,c06,c07])
+
+        th = pyfits.new_table(coldefs) # creating default header
+
+        tbHDU  = pyfits.new_table(coldefs, header=th.header)
+        tbHDU.writeto(tablename, clobber=clobber)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     return paramlist_arr
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def extract_fitsextension(fitsfile,extension,outputname='default',conversion='None',useheader4output=False,clobber=False,
