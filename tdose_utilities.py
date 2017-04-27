@@ -113,8 +113,8 @@ def generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=Fals
 data_cube              /Volumes/DATABCKUP2/MUSE-Wide/datacubes_dcbgc/DATACUBE_candels-cdfs-02_v1.0_dcbgc.fits                    # Path and name of fits file containing data cube to extract spectra from
 cube_extension         DATA_DCBGC                         # Name or number of fits extension containing data cube
 
-noise_cube             /Volumes/DATABCKUP2/MUSE-Wide/datacubes_dcbgc/DATACUBE_candels-cdfs-02_v1.0_dcbgc.fits                   # Path and name of fits file containing noise cube to use for extraction
-noise_extension         STAT                              # Name or number of fits extension containing noise cube
+variance_cube          /Volumes/DATABCKUP2/MUSE-Wide/datacubes_dcbgc/DATACUBE_candels-cdfs-02_v1.0_dcbgc.fits                   # Path and name of fits file containing variance cube to use for extraction
+variance_extension     STAT                              # Name or number of fits extension containing noise cube
 
 ref_image              /Volumes/DATABCKUP2/MUSE-Wide/hst_cutouts/acs_814w_candels-cdfs-02_cut_v1.0.fits              # Path and name of fits file containing image to use as reference when creating source model
 img_extension          0                                  # Name or number of fits extension containing reference image
@@ -200,7 +200,7 @@ plot_1Dspec_shownoise  True                               # Indicate whether to 
 
 plot_S2Nspec_ext       S2Nplot                            # Name extension of pdf file containing plot of S/N spectrum
 plot_S2Nspec_xrange    [4800,9300]                        # Range of x-axes (wavelength) for plot of S2N spectra
-plot_S2Nspec_yrange    [-1,15]                            # Range of y-axes (S2N) for plot of S2N spectra
+plot_S2Nspec_yrange    [-1,60]                            # Range of y-axes (S2N) for plot of S2N spectra
 #--------------------------------------------------END OF TDOSE SETUP--------------------------------------------------
 
 """ % (tu.get_now_string())
