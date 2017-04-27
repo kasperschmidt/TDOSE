@@ -804,9 +804,12 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
         hducutout        = pyfits.ImageHDU(cutouts[cc])
         for key in hdrs_all[cc]:
             if not key in hducutout.header.keys():
-                hducutout.header.append((key,hdrs_all[cc][key],hdrs_all[cc][key]),end=True)
-
-        hducutout.header.append(('EXTNAME ',cx            ,''),end=True)
+                keyvalue = hdrs_all[cc][key]
+                if type(keyvalue) == str:
+                    keyvalue = keyvalue.replace('Angstrom','A')
+                hducutout.header.append((key,keyvalue,keyvalue),end=True)
+                print keyvalue
+        hducutout.header.append(('EXTNAME ',cx            ,' '),end=True)
         hdulist.append(hducutout)
 
     hdulist = pyfits.HDUList(hdulist)       # turn header into to hdulist
