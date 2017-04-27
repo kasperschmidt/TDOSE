@@ -306,9 +306,9 @@ def curve_fit_function_wrapper((x,y),*args):
     """
     Wrapper for curve_fit optimizer call to be able to provide list of parameters to model_objects_gauss()
     """
-    infostr = '   curve_fit_function_wrapper call at '+tu.get_now_string(withseconds=True)
-    sys.stdout.write("%s\r" % infostr)
-    sys.stdout.flush()
+    # infostr = '   curve_fit_function_wrapper call at '+tu.get_now_string(withseconds=True)
+    # sys.stdout.write("%s\r" % infostr)
+    # sys.stdout.flush()
 
     paramlist = np.asarray(args)
     modelimg  = tmf.modelimage_multigauss((x,y), paramlist, showmodelimg=False, verbose=False)
