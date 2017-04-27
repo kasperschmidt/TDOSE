@@ -136,8 +136,13 @@ cutout_directory       /Volumes/DATABCKUP2/TDOSEextractions/tdose_cutouts/      
 spec1D_directory       /Volumes/DATABCKUP2/TDOSEextractions/tdose_spectra/                 # Output directory to store spectra in.
 
 # - - - - - - - - - - - - - - - - - - - - - - - - SOURCE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
+model_image_ext        tdose_modelimage                   # Name extension of fits file containing reference image model. To ignored use None
+model_param_reg        tdose_modelimage_ds9               # Name extension of DS9 region file for reference image model. To ignored use None
+model_image_cube_ext   tdose_modelimage_cubeWCS           # Name extension of fits file containing model image after conversion to cube WCS. To ignored use None.
+
 source_model           gauss                              # The source model to use for sources: [gauss, galfit, mog (not enabled)]
 
+# - - - - - - - - - - - - - - - - - - - - - - - - GAUSS MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
 gauss_guess            /Volumes/DATABCKUP2/MUSE-Wide/catalogs_photometry/catalog_photometry_candels-cdfs-02.fits                               # To base initial guess of gaussian parameters on a SExtractor output provide SExtractor output fits file here
                                                           # If gauss_initguess=None the positions and flux scale provided in source_catalog will be used.
 gauss_guess_idcol      ID                                 # Column of IDs in gauss_guess SExtractor file
@@ -150,16 +155,14 @@ gauss_guess_fluxscale  ACS_F814W_FLUX                     # Column of flux in ga
 gauss_guess_fluxfactor 3                                  # Factor to apply to flux scale in initial Gauss parameter guess
 gauss_guess_Nsigma     1                                  # Number of sigmas to include in initial Gauss parameter guess
 
+# - - - - - - - - - - - - - - - - - - - - - - - - GALFIT MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
 galfit_result          None                               # If source_model = galfit provide the path and name of fits file containing galfit results
 galfit_model_extension 2                                  # Fits extension containing galfit model with model parameters of each source in header
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - CUTOUT SETUP  - - - - - - - - - - - - - - - - - - - - - - - - - -
 model_cutouts          True                               # Perform modeling and spectral extraction on small cutouts of the cube and images to reduce run-time
-
 cutout_sizes           /Users/kschmidt/work/TDOSE/tdose_setup_cutoutsizes.txt                             # Size of cutouts [ra,dec] in arcsec around each source to model.
                                                           # To use source-specific cutouts provide ascii file containing ID xsize[arcsec] and ysize[arcsec].
-model_image_ext        tdose_modelimage                   # Name extension of fits file containing reference image model. To ignored use None
-model_param_reg        tdose_modelimage_ds9               # Name extension of DS9 region file for reference image model. To ignored use None
-model_image_cube_ext   tdose_modelimage_cubeWCS           # Name extension of fits file containing model image after conversion to cube WCS. To ignored use None.
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - PSF MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
 psf_type               gauss                              # Select PSF model to build. Choices are:
@@ -189,6 +192,7 @@ sources_to_extract     /Users/kschmidt/work/TDOSE/tdose_setup_objects.txt # [868
 spec1D_name            tdose_spectrum                     # Name extension to use for extracted 1D spectra
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - PLOTTING  - - - - - - - - - - - - - - - - - - - - - - - - - - -
+plot_generate          True                               # Indicate whether to generate plots or not
 plot_1Dspec_ext        fluxplot                           # Name extension of pdf file containing plot of 1D spectrum
 plot_1Dspec_xrange     [4800,9300]                        # Range of x-axes (wavelength) for plot of 1D spectra
 plot_1Dspec_yrange     [-100,1500]                        # Range of y-axes (flux) for plot of 1D spectra
