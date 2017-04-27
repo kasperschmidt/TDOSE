@@ -761,31 +761,33 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
         cubewcs_2D = tu.WCS3DtoWCS2D(cubewcs.copy())
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbose: print ' - Extracting sub-image in eachlayer'
-        for ll in xrange(Nlayers):
-            if verbose:
-                infostr = '   cutting out from layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % Nlayers)
-                sys.stdout.write("%s\r" % infostr)
-                sys.stdout.flush()
+        if verbose: print ' - Extracting sub-cube based on cutout bounding box of first layer'
+        firstlayer    = 0
+        cutout_layer  = Cutout2D(cubedata[firstlayer,:,:], skyc, size, wcs=cubewcs_2D, mode='partial')
 
-            # KBS: Slow - don't need to do the cutout on wcs for each layer. Find a way to get x and y indexes and then
-            #      cut out directly from numpy array.
-            cutout_layer  = Cutout2D(cubedata[ll,:,:], skyc, size, wcs=cubewcs_2D)
+        for key in cutout_layer.wcs.to_header().keys():
+            striphdr[key] = cutout_layer.wcs.to_header()[key]
+        hdrs_all.append(striphdr)
 
-            if ll == 0:
-                cutout_cube = np.zeros([Nlayers,cutout_layer.data.shape[0],cutout_layer.data.shape[1]])
-                for key in cutout_layer.wcs.to_header().keys():
-                    striphdr[key] = cutout_layer.wcs.to_header()[key]
-                hdrs_all.append(striphdr)
-
-            cutout_cube[ll,:,:] = cutout_layer.data
+        manualcutting = False # always use quick solution (results are identical)
+        if manualcutting:
+            cutout_cube         = np.zeros([Nlayers,cutout_layer.data.shape[0],cutout_layer.data.shape[1]])
+            for ll in xrange(Nlayers):
+                if verbose:
+                    infostr = '   cutting out from layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % Nlayers)
+                    sys.stdout.write("%s\r" % infostr)
+                    sys.stdout.flush()
+                cutout_layer        = Cutout2D(cubedata[ll,:,:], skyc, size, wcs=cubewcs_2D)
+                cutout_cube[ll,:,:] = cutout_layer.data
+            if verbose: print '\n   done'
+        else:
+            cutout_cube = cubedata[:,cutout_layer.bbox_original[0][0]:cutout_layer.bbox_original[0][1]+1,
+                          cutout_layer.bbox_original[1][0]:cutout_layer.bbox_original[1][1]+1]
 
         if cc == 0:
             cutouts = [cutout_cube]
         else:
             cutouts.append(cutout_cube)
-
-        if verbose: print '\n   done'
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Saving sub-cubes to '+outname

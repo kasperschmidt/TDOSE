@@ -26,8 +26,8 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
     --- INPUT ---
     setupfile              TDOSE setup file. Templetae can be generated with tu.generate_setup_template()
-    performcutout          To skip cutting out subcubes and images is time-consuming. To skip this step (i.e., if the
-                           cutouts have already been genereated and exist) set performcutout=False
+    performcutout          To skip cutting out subcubes and images (i.e., if the cutouts have already been
+                           genereated and exist) set performcutout=False
     generatesourcecat      To skip generating the cutout source catalogs from the main source catalog of sources
                            to model (e.g., after editing the source catalog) set generatesourcecat=False
     modelrefimage          To skip modeling the reference image set modelrefimage=False
@@ -381,7 +381,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         sourcecubename  = setupdic['models_directory']+'/'+\
                           datacube.split('/')[-1].replace('.fits','_'+setupdic['source_model_cube']+'.fits')
-        pdb.set_trace()
+
         if createsourcecube:
             if verbosefull: print '--------------------------------------------------------------------------------------------------'
             if verbosefull: print ' TDOSE: Creating source model cube                          '+\
