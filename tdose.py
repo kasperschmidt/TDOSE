@@ -111,10 +111,10 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 sys.stdout.write("%s\r" % infostr)
                 sys.stdout.flush()
 
-        imgstr, imgsize, refimg, datacube, noisecube, sourcecat = tdose.get_datinfo(extid,setupdic)
+        imgstr, imgsize, refimg, datacube, variancecube, sourcecat = tdose.get_datinfo(extid,setupdic)
 
         cube_data     = pyfits.open(datacube)[setupdic['cube_extension']].data
-        cube_noise    = np.sqrt(pyfits.open(noisecube)[setupdic['noise_extension']].data)
+        cube_variance = np.sqrt(pyfits.open(variancecube)[setupdic['variance_extension']].data)
         cube_hdr      = pyfits.open(datacube)[setupdic['cube_extension']].header
         cube_wcs2D    = tu.WCS3DtoWCS2D(wcs.WCS(tu.strip_header(cube_hdr.copy())))
         cube_scales   = wcs.utils.proj_plane_pixel_scales(cube_wcs2D)*3600.0
@@ -199,7 +199,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                       datacube.split('/')[-1].replace('.fits','_'+setupdic['residual_cube_ext']+'.fits')
 
         if modeldatacube:
-            model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_noise,paramCUBE,cube_hdr,paramPSF,
+            model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_variance,paramCUBE,cube_hdr,paramPSF,
                            clobber=clobber,verbose=verbose,verbosefull=verbosefull)
         else:
             if verbose: print ' >>> Skipping modeling of data cube (assume it exists)'
@@ -228,13 +228,12 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if verbose: print '=================================================================================================='
         if verbose: print ' TDOSE: Storing extracted 1D spectra to files               '+\
                           '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
-        specoutputdir   = setupdic['spec1D_directory']
-
-        model_cube_file = modcubename
-        noise_cube_file = noisecube
-        noise_cube_ext  = setupdic['noise_extension']
-        smc_file        = sourcecubename
-        smc_ext         = setupdic['cube_extension']
+        specoutputdir      = setupdic['spec1D_directory']
+        model_cube_file    = modcubename
+        variance_cube_file = variancecube
+        variance_cube_ext  = setupdic['variance_extension']
+        smc_file           = sourcecubename
+        smc_ext            = setupdic['cube_extension']
 
         SAD    = collections.OrderedDict()
 
@@ -271,7 +270,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             specfiles  = tes.extract_spectra(model_cube_file,model_cube_ext=setupdic['cube_extension'],
                                              layer_scale_ext='WAVESCL',clobber=clobber,nameext=setupdic['spec1D_name'],
                                              source_association_dictionary=SAD,outputdir=specoutputdir,
-                                             noise_cube_file=noise_cube_file,noise_cube_ext=noise_cube_ext,
+                                             variance_cube_file=variance_cube_file,variance_cube_ext=variance_cube_ext,
                                              source_model_cube_file=smc_file,source_cube_ext=smc_ext,verbose=True)
 
         else:
@@ -390,13 +389,13 @@ def gen_cutouts(setupdic,extractids,Nextractions,sourceids_init,sourcedat_init,
         dec         = sourcedat_init[setupdic['sourcecat_deccol']][objent]
 
 
-        cutstr, cutoutsize, cut_img, cut_cube, cut_noise, cut_sourcecat = tdose.get_datinfo(cutoutid,setupdic)
+        cutstr, cutoutsize, cut_img, cut_cube, cut_variance, cut_sourcecat = tdose.get_datinfo(cutoutid,setupdic)
         cut_images.append(cut_img)
 
         if performcutout:
-            if setupdic['data_cube'] == setupdic['noise_cube']:
+            if setupdic['data_cube'] == setupdic['variance_cube']:
                 cutouts   = tu.extract_subcube(setupdic['data_cube'],ra,dec,cutoutsize,cut_cube,
-                                               cubeext=[setupdic['cube_extension'],setupdic['noise_extension']],clobber=clobber,
+                                               cubeext=[setupdic['cube_extension'],setupdic['variance_extension']],clobber=clobber,
                                                imgfiles=[setupdic['ref_image']],imgexts=[setupdic['img_extension']],
                                                imgnames=[cut_img],verbose=verbosefull)
             else:
@@ -405,8 +404,8 @@ def gen_cutouts(setupdic,extractids,Nextractions,sourceids_init,sourcedat_init,
                                                imgfiles=[setupdic['ref_image']],imgexts=[setupdic['img_extension']],
                                                imgnames=[cut_img],verbose=verbosefull)
 
-                cutouts   = tu.extract_subcube(setupdic['noise_cube'],ra,dec,cutoutsize,cut_noise,
-                                               cubeext=[setupdic['noise_extension']],clobber=clobber,
+                cutouts   = tu.extract_subcube(setupdic['variance_cube'],ra,dec,cutoutsize,cut_variance,
+                                               cubeext=[setupdic['variance_extension']],clobber=clobber,
                                                imgfiles=None,imgexts=None,imgnames=None,verbose=verbosefull)
         else:
             if verbose: print ' >>> Skipping cutting out images and cubes (assuming they exist)'
@@ -508,7 +507,7 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
                        fontsize=12,clobber=clobber)
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_noise,paramCUBE,cube_hdr,paramPSF,
+def model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_variance,paramCUBE,cube_hdr,paramPSF,
                    clobber=False,verbose=True,verbosefull=True):
     """
     Modeling the data cube
@@ -549,6 +548,7 @@ def model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_noise,p
     paramtype    = setupdic['source_model']
     psfparamtype = setupdic['psf_type']
 
+    cube_noise = np.sqrt(cube_variance) # turn variance cube into standard deviation
     cube_model, layer_scales = tmc.gen_fullmodel(cube_data,paramCUBE,paramPSF,paramtype=paramtype,
                                                  psfparamtype=psfparamtype,noisecube=cube_noise,save_modelcube=True,
                                                  cubename=modcubename,clobber=clobber,
@@ -728,7 +728,7 @@ def get_datinfo(cutoutid,setupdic):
 
         refimg     = cut_img
         datacube   = cut_cube
-        if setupdic['data_cube'] == setupdic['noise_cube']:
+        if setupdic['data_cube'] == setupdic['variance_cube']:
             noisecube  = cut_cube
         else:
             noisecube  = cut_noise
