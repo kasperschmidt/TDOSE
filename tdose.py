@@ -37,7 +37,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
     createsourcecube       To skip creating the source model cube set createsourcecube=False
     store1Dspectra         To skip storing the 1D spectra to binary fits tables set store1Dspectra=False
     save_init_model_output If a SExtractor catalog is provide to the keyword gauss_guess in the setup file
-                           An initial guess including the SExtractor fits is generated for the Gaussian model.
+                           an initial guess including the SExtractor fits is generated for the Gaussian model.
                            To save a ds9 region, image and paramater list (the two latter is available from the default
                            output of the TDOSE modeling) set save_init_model_output=True
     clobber                If True existing output files will be overwritten
@@ -47,11 +47,11 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
     --- EXAMPLE OF USE ---
     import tdose
 
-    # full extraction w/o generating cutouts
-    tdose.perform_extraction(setupfile='./tdose_setup_candels-cdfs-02.txt',performcutout=False)
+    # full extraction with minimal text output to prompt
+    tdose.perform_extraction(setupfile='./tdose_setup_candels-cdfs-02.txt',verbose=True,verbosefull=False)
 
     # only plotting:
-    tdose.perform_extraction(setupfile='./tdose_setup_candels-cdfs-02.txt',verbosefull=True,performcutout=False,generatesourcecat=False,modelrefimage=False,refimagemodel2cubewcs=False,definePSF=False,modeldatacube=False,createsourcecube=False,store1Dspectra=False,plot1Dspectra=True,clobber=True)
+    tdose.perform_extraction(setupfile='./tdose_setup_candels-cdfs-02.txt',performcutout=False,generatesourcecat=False,modelrefimage=False,refimagemodel2cubewcs=False,definePSF=False,modeldatacube=False,createsourcecube=False,store1Dspectra=False,plot1Dspectra=True,clobber=True,verbosefull=False)
 
 
     """
@@ -151,7 +151,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                                  save_init_model_output=save_init_model_output,clobber=clobber,verbose=verbose,
                                  verbosefull=verbosefull)
         else:
-            if verbosefull: print ' >>> Skipping modeling reference image (assume models exist)'
+            if verbose: print ' >>> Skipping modeling reference image (assume models exist)'
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbosefull: print '--------------------------------------------------------------------------------------------------'
@@ -177,7 +177,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                                 outputhdr=cubehdu.header,verbose=verbosefull)
 
         else:
-            if verbosefull: print ' >>> Skipping converting reference image model to cube WCS frame (assume models exist)'
+            if verbose: print ' >>> Skipping converting reference image model to cube WCS frame (assume models exist)'
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbosefull: print '--------------------------------------------------------------------------------------------------'
@@ -187,7 +187,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             paramPSF = tdose.define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,
                                         clobber=clobber,verbose=verbose,verbosefull=verbosefull)
         else:
-            if verbosefull: print ' >>> Skipping defining PSF of data cube (assume it is defined)'
+            if verbose: print ' >>> Skipping defining PSF of data cube (assume it is defined)'
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbosefull: print '--------------------------------------------------------------------------------------------------'
@@ -202,7 +202,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_noise,paramCUBE,cube_hdr,paramPSF,
                            clobber=clobber,verbose=verbose,verbosefull=verbosefull)
         else:
-            if verbosefull: print ' >>> Skipping modeling of data cube (assume it exists)'
+            if verbose: print ' >>> Skipping modeling of data cube (assume it exists)'
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         sourcecubename  = setupdic['models_directory']+'/'+\
@@ -222,7 +222,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                                                           verbose=verbosefull)
 
         else:
-            if verbosefull: print ' >>> Skipping generating source model cube (assume it exists)'
+            if verbose: print ' >>> Skipping generating source model cube (assume it exists)'
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbose: print '=================================================================================================='
@@ -275,7 +275,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                                              source_model_cube_file=smc_file,source_cube_ext=smc_ext,verbose=True)
 
         else:
-            if verbosefull: print ' >>> Skipping storing 1D spectra to binary fits tables '
+            if verbose: print ' >>> Skipping storing 1D spectra to binary fits tables '
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbose: print '=================================================================================================='
@@ -288,10 +288,49 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             print '=================================================================================================='
             print ' TDOSE: Modeling and extraction done for object '+str(extid)+\
                   '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
-            print ' - To open resulting files in DS9 execute the following command '
-            print ' ds9 '+refimg+' -region '+setupdic['source_catalog'].replace('.fits','.reg')+' '+\
-                  modelimg+' -region '+regionfile+' '+cubewcsimg+' '+datacube+' '+modcubename+' '+rescubename+\
-                  ' '+sourcecubename+' -lock frame wcs -tile grid layout 7 1 &'
+            print ' - To open all generated files in DS9 execute the following command '
+            ds9cmd  = ' ds9 '
+            Nframes = 0
+            if os.path.isfile(refimg):
+                ds9cmd  = ds9cmd+refimg+' '
+                Nframes = Nframes + 1
+
+                if os.path.isfile(setupdic['source_catalog'].replace('.fits','.reg')):
+                    ds9cmd = ds9cmd+' -region '+setupdic['source_catalog'].replace('.fits','.reg')+' '
+
+            if os.path.isfile(modelimg):
+                ds9cmd = ds9cmd+modelimg
+                Nframes = Nframes + 1
+
+                if os.path.isfile(regionfile):
+                    ds9cmd = ds9cmd+' -region '+regionfile+' '
+
+            if os.path.isfile(modelimg.replace('.fits','_residual.fits')):
+                ds9cmd = ds9cmd+modelimg.replace('.fits','_residual.fits')+' '
+                Nframes = Nframes + 1
+
+            if os.path.isfile(cubewcsimg):
+                ds9cmd = ds9cmd+cubewcsimg+' '
+                Nframes = Nframes + 1
+
+            if os.path.isfile(datacube):
+                ds9cmd = ds9cmd+datacube+' '
+                Nframes = Nframes + 1
+
+            if os.path.isfile(modcubename):
+                ds9cmd = ds9cmd+modcubename+' '
+                Nframes = Nframes + 1
+
+            if os.path.isfile(rescubename):
+                ds9cmd = ds9cmd+rescubename+' '
+                Nframes = Nframes + 1
+
+            if os.path.isfile(sourcecubename):
+                ds9cmd = ds9cmd+sourcecubename+' '
+                Nframes = Nframes + 1
+
+            ds9cmd = ds9cmd+'-lock frame wcs -tile grid layout '+str(Nframes)+' 1 &'
+            print ds9cmd
             print '============================================================================================'
 
     if verbose:
@@ -310,15 +349,15 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 ___|  '-'     '    ""       '-'   '-.'    '`     |____
 
                   _________   _____       ______     _____     ______
-                 |__    __|| |  __ \\    /  __  \\  / ____\\  |  ___||
-                    |  ||    | || \ \\   | || | ||  \ \\__    | ||__
-                    |  ||    | || | ||   | || | ||   \__  \\  |  __||
-                    |  ||    | ||_/ //   | ||_| ||   ___\  \\ | ||___
+                 |__    __|| |  __ \\\\    /  __  \\\\  / ____\\\\  |  ___||
+                    |  ||    | || \ \\\\   | || | ||  \ \\\\__    | ||__
+                    |  ||    | || | ||   | || | ||   \__  \\\\  |  __||
+                    |  ||    | ||_/ //   | ||_| ||   ___\  \\\\ | ||___
                     |__||    |_____//    \_____//   |______// |_____||
 
                     _____      ______     __    __    ______    ___
-                   |  __ \\   /  __  \\  |  \\ |  ||  |  ___||  |  ||
-                   | || \ \\  | || | ||  |   \\|  ||  | ||__    |  ||
+                   |  __ \\\\   /  __  \\\\  |  \\\\ |  ||  |  ___||  |  ||
+                   | || \ \\\\  | || | ||  |   \\\\|  ||  | ||__    |  ||
                    | || | ||  | || | ||  |        ||  |  __||   |__||
                    | ||_/ //  | ||_| ||  |  ||\   ||  | ||___    __
                    |_____//   \_____//   |__|| \__||  |_____||  |__||
@@ -357,17 +396,17 @@ def gen_cutouts(setupdic,extractids,Nextractions,sourceids_init,sourcedat_init,
         if performcutout:
             if setupdic['data_cube'] == setupdic['noise_cube']:
                 cutouts   = tu.extract_subcube(setupdic['data_cube'],ra,dec,cutoutsize,cut_cube,
-                                               cubeext=[setupdic['cube_extension'],setupdic['noise_extension']],clobber=True,
+                                               cubeext=[setupdic['cube_extension'],setupdic['noise_extension']],clobber=clobber,
                                                imgfiles=[setupdic['ref_image']],imgexts=[setupdic['img_extension']],
                                                imgnames=[cut_img],verbose=verbosefull)
             else:
                 cutouts   = tu.extract_subcube(setupdic['data_cube'],ra,dec,cutoutsize,cut_cube,
-                                               cubeext=[setupdic['cube_extension']],clobber=True,
+                                               cubeext=[setupdic['cube_extension']],clobber=clobber,
                                                imgfiles=[setupdic['ref_image']],imgexts=[setupdic['img_extension']],
                                                imgnames=[cut_img],verbose=verbosefull)
 
                 cutouts   = tu.extract_subcube(setupdic['noise_cube'],ra,dec,cutoutsize,cut_noise,
-                                               cubeext=[setupdic['noise_extension']],clobber=True,
+                                               cubeext=[setupdic['noise_extension']],clobber=clobber,
                                                imgfiles=None,imgexts=None,imgnames=None,verbose=verbosefull)
         else:
             if verbose: print ' >>> Skipping cutting out images and cubes (assuming they exist)'
@@ -398,6 +437,9 @@ def gen_cutouts(setupdic,extractids,Nextractions,sourceids_init,sourcedat_init,
         else:
             if verbose: print ' >>> Skipping generating the cutout source catalogs (assume they exist)'
 
+    if not verbosefull:
+        if verbose: print '\n   done'
+
     if verbose:
         print '=================================================================================================='
         print ' TDOSE: Done cutting out sub cubes and postage stamps       '+\
@@ -411,10 +453,6 @@ def gen_cutouts(setupdic,extractids,Nextractions,sourceids_init,sourcedat_init,
         else:
             ds9string = ds9string.replace('xxregionxx',' ')
         print ds9string
-        print '=================================================================================================='
-
-    if not verbosefull:
-        if verbose: print '\n   done'
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
                    save_init_model_output=True,clobber=True,verbose=True,verbosefull=True):
@@ -582,6 +620,7 @@ def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobb
 
     return paramPSF
 
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=True,plotS2Nspectra=True,verbose=True):
     """
 

@@ -15,8 +15,8 @@ import pdb
 import warnings
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='gauss',fit_source_scales=True,
-                  noisecube='None',save_modelcube=True,cubename='tdose_model_cube_output_RENAME.fits',clobber=True,
-                  outputhdr='None',model_layers=None,optimize_method='matrix',returnresidual=None,verbose=True,
+                  noisecube=None,save_modelcube=True,cubename='tdose_model_cube_output_RENAME.fits',clobber=True,
+                  outputhdr=None,model_layers=None,optimize_method='matrix',returnresidual=None,verbose=True,
                   loopverbose=False):
     """
     Generate full model of data cube
@@ -78,7 +78,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
         layer_scales   = np.zeros([Nsource,datashape[0]])
         model_cube_out = np.zeros(datashape)
 
-        if noisecube == 'None':
+        if noisecube is None:
             if verbose: ' - WARNING No sqrt(variance) cube provide for the data cube so using a ' \
                         'cube of 1s in flux optimization'
             noisecube = np.ones(datashape)
