@@ -808,7 +808,6 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
                 if type(keyvalue) == str:
                     keyvalue = keyvalue.replace('Angstrom','A')
                 hducutout.header.append((key,keyvalue,keyvalue),end=True)
-                print keyvalue
         hducutout.header.append(('EXTNAME ',cx            ,' '),end=True)
         hdulist.append(hducutout)
 
