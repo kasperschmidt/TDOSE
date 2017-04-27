@@ -87,93 +87,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if verbose: print '=================================================================================================='
         if verbose: print ' TDOSE: Generate cutouts around sources to extract          '+\
                           '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
-        cut_images = []
-        cut_cubes  = []
-        for oo, cutoutid in enumerate(extractids):
-            if verbose:
-                infostr = ' - Cutting out object '+str("%4.f" % (oo+1))+' / '+\
-                          str("%4.f" % Nextractions)+' with ID = '+str(cutoutid)+'           '+tu.get_now_string()
-                if verbosefull:
-                    print infostr
-                else:
-                    sys.stdout.write("%s\r" % infostr)
-                    sys.stdout.flush()
-
-            objent = np.where(sourceids_init == cutoutid)[0]
-            if len(objent) != 1:
-                sys.exit(' ---> More than one (or no) match in source catalog to ID '+str(cutoutid))
-
-            ra          = sourcedat_init[setupdic['sourcecat_racol']][objent]
-            dec         = sourcedat_init[setupdic['sourcecat_deccol']][objent]
-
-
-            cutstr, cutoutsize, cut_img, cut_cube, cut_noise, cut_sourcecat = tdose.get_datinfo(cutoutid,setupdic)
-            cut_images.append(cut_img)
-
-            if performcutout:
-                if setupdic['data_cube'] == setupdic['noise_cube']:
-                    cutouts   = tu.extract_subcube(setupdic['data_cube'],ra,dec,cutoutsize,cut_cube,
-                                                   cubeext=[setupdic['cube_extension'],setupdic['noise_extension']],clobber=True,
-                                                   imgfiles=[setupdic['ref_image']],imgexts=[setupdic['img_extension']],
-                                                   imgnames=[cut_img],verbose=verbosefull)
-                else:
-                    cutouts   = tu.extract_subcube(setupdic['data_cube'],ra,dec,cutoutsize,cut_cube,
-                                                   cubeext=[setupdic['cube_extension']],clobber=True,
-                                                   imgfiles=[setupdic['ref_image']],imgexts=[setupdic['img_extension']],
-                                                   imgnames=[cut_img],verbose=verbosefull)
-
-                    cutouts   = tu.extract_subcube(setupdic['noise_cube'],ra,dec,cutoutsize,cut_noise,
-                                                   cubeext=[setupdic['noise_extension']],clobber=True,
-                                                   imgfiles=None,imgexts=None,imgnames=None,verbose=verbosefull)
-            else:
-                if verbose: print ' >>> Skipping cutting out images and cubes (assuming they exist)'
-
-            # --- SUB-SOURCE CAT ---
-            if generatesourcecat:
-                obj_in_cut_fov = np.where( (sourcedat_init[setupdic['sourcecat_racol']] < (ra + cutoutsize[0]/2./3600.)) &
-                                           (sourcedat_init[setupdic['sourcecat_racol']] > (ra - cutoutsize[0]/2./3600.)) &
-                                           (sourcedat_init[setupdic['sourcecat_deccol']] < (dec + cutoutsize[1]/2./3600.)) &
-                                           (sourcedat_init[setupdic['sourcecat_deccol']] > (dec - cutoutsize[1]/2./3600.)) )[0]
-                Ngoodobj      = len(obj_in_cut_fov)
-
-                cutout_hdr    = pyfits.open(cut_img)[setupdic['img_extension']].header
-                cut_sourcedat = sourcedat_init[obj_in_cut_fov].copy()
-                storearr      = np.zeros(Ngoodobj,dtype=cut_sourcedat.columns) # define structure array to store to fits file
-                for ii in np.arange(Ngoodobj):
-                    striphdr   = tu.strip_header(cutout_hdr.copy())
-                    wcs_in     = wcs.WCS(striphdr)
-                    skycoord   = SkyCoord(cut_sourcedat[ii][setupdic['sourcecat_racol']],
-                                          cut_sourcedat[ii][setupdic['sourcecat_deccol']], frame='icrs', unit='deg')
-                    pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in)
-                    cut_sourcedat[ii][setupdic['sourcecat_xposcol']] = pixcoord[0]
-                    cut_sourcedat[ii][setupdic['sourcecat_yposcol']] = pixcoord[1]
-
-                    storearr[ii] = np.vstack(cut_sourcedat)[ii,:]
-
-                astropy.io.fits.writeto(cut_sourcecat,storearr,header=None,clobber=clobber)
-
-                # Create region file... ?
-
-            else:
-                if verbose: print ' >>> Skipping generating the cutout source catalogs (assume they exist)'
-
-        if verbose:
-            print '=================================================================================================='
-            print ' TDOSE: Done cutting out sub cubes and postage stamps       '+\
-                  '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
-            print ' - To open resulting images in DS9 execute the following command '
-            ds9string = ' ds9 '+setupdic['ref_image']+' xxregionxx '+\
-                        ' '.join(cut_images)+' -lock frame wcs -tile grid layout '+str(len(cut_images)+1)+' 1 &'
-            regname   = setupdic['source_catalog'].replace('.fits','.reg')
-            if os.path.isfile(regname):
-                ds9string = ds9string.replace('xxregionxx',' -region '+regname+' ')
-            else:
-                ds9string = ds9string.replace('xxregionxx',' ')
-            print ds9string
-            print '=================================================================================================='
-
-        if not verbosefull:
-            if verbose: print '\n   done'
+        tdose.gen_cutouts(setupdic,extractids,Nextractions,sourceids_init,sourcedat_init,
+                          performcutout=performcutout,generatesourcecat=generatesourcecat,clobber=clobber,
+                          verbose=verbose,verbosefull=verbosefull,start_time=start_time)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print '=================================================================================================='
     if verbose: print ' TDOSE: Defining and loading data for extractions           '+\
@@ -231,50 +147,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             names.append(namestr)
 
         if modelrefimage:
-            if setupdic['gauss_guess'] is None:
-                param_initguess = None
-            else:
-                objects   = pyfits.open(sourcecat)[1].data['id'].tolist()
-
-                if save_init_model_output:
-                    saveDS9region = True
-                    savefitsimage = True
-                    savefitstable = True
-                    ds9regionname = refimg.replace('.fits','_tdose_initial_model_ds9region.reg')
-                    fitsimagename = refimg.replace('.fits','_tdose_initial_model_image.fits')
-                    fitstablename = refimg.replace('.fits','_tdose_initial_model_objparam.fits')
-                else:
-                    saveDS9region = False
-                    savefitsimage = False
-                    savefitstable = False
-
-                paramlist = tu.gen_paramlist_from_SExtractorfile(setupdic['gauss_guess'],imgheader=img_hdr,clobber=clobber,
-                                                                 objects=objects,
-                                                                 idcol=setupdic['gauss_guess_idcol'],
-                                                                 racol=setupdic['gauss_guess_racol'],
-                                                                 deccol=setupdic['gauss_guess_deccol'],
-                                                                 aimg=setupdic['gauss_guess_aimg'],
-                                                                 bimg=setupdic['gauss_guess_bimg'],
-                                                                 angle=setupdic['gauss_guess_angle'],
-                                                                 fluxscale=setupdic['gauss_guess_fluxscale'],
-                                                                 fluxfactor=setupdic['gauss_guess_fluxfactor'],
-                                                                 Nsigma=setupdic['gauss_guess_Nsigma'],
-                                                                 verbose=verbosefull,
-                                                                 saveDS9region=saveDS9region,ds9regionname=ds9regionname,
-                                                                 savefitsimage=savefitsimage,fitsimagename=fitsimagename,
-                                                                 savefitstable=savefitstable,fitstablename=fitstablename)
-                param_initguess = paramlist
-
-            pinit, fit    = tmf.gen_fullmodel(img_data,sourcecat,verbose=verbosefull,
-                                              xpos_col=setupdic['sourcecat_xposcol'],ypos_col=setupdic['sourcecat_yposcol'],
-                                              datanoise=None,sigysigxangle=None,
-                                              fluxscale=setupdic['sourcecat_fluxcol'],generateimage=modelimg,
-                                              generateresidualimage=True,clobber=clobber,outputhdr=img_hdr,
-                                              param_initguess=param_initguess)
-
-            tu.model_ds9region(modelparam,regionfile,img_wcs,color='cyan',width=2,Nsigma=2,textlist=names,
-                               fontsize=12,clobber=clobber)
-
+            tdose.model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
+                                 save_init_model_output=save_init_model_output,clobber=clobber,verbose=verbose,
+                                 verbosefull=verbosefull)
         else:
             if verbosefull: print ' >>> Skipping modeling reference image (assume models exist)'
 
@@ -308,65 +183,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if verbosefull: print '--------------------------------------------------------------------------------------------------'
         if verbosefull: print ' TDOSE: Defining PSF as FWHM = p0 + p1(lambda-7000A)        '+\
                               '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
-
         if definePSF or modeldatacube:
-            if setupdic['psf_FWHM_evolve'].lower() == 'linear':
-                fwhm_p0     = setupdic['psf_FWHMp0']
-                fwhm_p1     = setupdic['psf_FWHMp1']
-                fwhm_vec    = fwhm_p0 + fwhm_p1 * (cube_waves - 7000.0)
-                sigmas      = fwhm_vec/2.35482/cube_scales[0]
-            else:
-                sys.exit(' ---> '+setupdic['psf_FWHM_evolve']+' is an invalid choice for the psf_FWHM_evolve setup parameter ')
-
-            if setupdic['psf_type'].lower() == 'gauss':
-                xpos,ypos,fluxscale,angle = 0.0, 0.0, 1.0, 0.0
-                paramPSF                  = []
-                for layer in np.arange(cube_data.shape[0]):
-                    sigma = sigmas[layer]
-                    paramPSF.append([xpos,ypos,fluxscale,sigma,sigma,angle])
-                paramPSF  = np.asarray(paramPSF)
-            else:
-                sys.exit(' ---> '+setupdic['psf_type']+' is an invalid choice for the psf_type setup parameter ')
-
-            if setupdic['psf_savecube'] and (oo == 0):
-                psfcubename = setupdic['models_directory']+'/'+datacube.split('/')[-1].replace('.fits','_tdose_psfcube.fits')
-                if verbose: print ' - Storing PSF cube to fits file \n   '+psfcubename
-
-                if os.path.isfile(psfcubename) & (clobber == False):
-                    if verbose: print ' ---> TDOSE WARNING: PSF cube already exists and clobber = False so skipping step'
-                else:
-                    psfcube = cube_data*0.0
-                    for ll in np.arange(len(cube_waves)):
-                        if verbosefull:
-                            infostr = '   Building PSF in layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % len(cube_waves))+''
-                            sys.stdout.write("%s\r" % infostr)
-                            sys.stdout.flush()
-
-                        if setupdic['psf_type'].lower() == 'gauss':
-                            mu_psf    = paramPSF[ll][0:2]
-                            cov_psf   = tu.build_2D_cov_matrix(paramPSF[ll][4],paramPSF[ll][3],paramPSF[ll][5],verbose=False)
-                            psfimg    = tu.gen_2Dgauss(np.asarray(cube_data.shape[1:]).tolist(),cov_psf,1.0,
-                                                       show2Dgauss=False,verbose=False)
-                        else:
-                            sys.exit(' ---> '+setupdic['psf_type']+' is an invalid choice for the psf_type setup parameter ')
-
-                        psfcube[ll,:,:] = psfimg
-
-                    if 'XTENSION' in cube_hdr.keys():
-                        hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
-                        hducube        = pyfits.ImageHDU(psfcube,header=cube_hdr)
-                        hducube.header.append(('PSF_P0',    setupdic['psf_FWHMp0'],' '),end=True)
-                        hducube.header.append(('PSF_P1',    setupdic['psf_FWHMp1'],' '),end=True)
-                        hdus           = [hduprim,hducube]
-                    else:
-                        hducube = pyfits.PrimaryHDU(psfcube,header=cube_hdr)
-                        hducube.header.append(('PSF_P0',    setupdic['psf_FWHMp0'],' '),end=True)
-                        hducube.header.append(('PSF_P1',    setupdic['psf_FWHMp1'],' '),end=True)
-                        hdus           = [hducube]
-
-                    hdulist = pyfits.HDUList(hdus)
-                    hdulist.writeto(psfcubename,clobber=clobber)
-
+            paramPSF = tdose.define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,
+                                        clobber=clobber,verbose=verbose,verbosefull=verbosefull)
         else:
             if verbosefull: print ' >>> Skipping defining PSF of data cube (assume it is defined)'
 
@@ -378,50 +197,10 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                       datacube.split('/')[-1].replace('.fits','_'+setupdic['model_cube_ext']+'.fits')
         rescubename = setupdic['models_directory']+'/'+\
                       datacube.split('/')[-1].replace('.fits','_'+setupdic['residual_cube_ext']+'.fits')
-        pdb.set_trace()
+
         if modeldatacube:
-
-            if setupdic['model_cube_layers'] == 'all':
-                layers = None
-            elif type(setupdic['model_cube_layers']) == list:
-                layers = np.arange(setupdic['model_cube_layers'][0],setupdic['model_cube_layers'][1]+1,1)
-            else:
-                layerinfo = np.genfromtxt(setupdic['model_cube_layers'],dtype=None,comments='#')
-
-                try:
-                    layer_ids            = layerinfo[:,0].astype(float)
-                    structuredlayerarray = False
-                except:
-                    layer_ids            = layerinfo['f0'].astype(float)
-                    structuredlayerarray = True
-
-                objent = np.where(layer_ids == extid)[0]
-
-                if len(objent) > 1:
-                    sys.exit(' ---> More than one match in '+setupdic['model_cube_layers']+' for object '+str(extid))
-                elif len(objent) == 0:
-                    sys.exit(' ---> No match in '+setupdic['model_cube_layers']+' for object '+str(extid))
-                else:
-                    if structuredlayerarray:
-                        if layerinfo['f1'][objent] == 'all':
-                            layers = None
-                        else:
-                            layers = [int(layerinfo['f1'][objent]),int(layerinfo['f2'][objent])]
-                            layers = np.arange(layers[0],layers[1]+1,1)
-                    else:
-                        layers = layerinfo[objent,1:][0].astype(float).tolist()
-                        layers = np.arange(layers[0],layers[1]+1,1)
-
-            optimizer    = setupdic['model_cube_optimizer']
-            paramtype    = setupdic['source_model']
-            psfparamtype = setupdic['psf_type']
-
-            cube_model, layer_scales = tmc.gen_fullmodel(cube_data,paramCUBE,paramPSF,paramtype=paramtype,
-                                                         psfparamtype=psfparamtype,noisecube=cube_noise,save_modelcube=True,
-                                                         cubename=modcubename,clobber=clobber,
-                                                         fit_source_scales=True,outputhdr=cube_hdr,verbose=verbosefull,
-                                                         returnresidual=rescubename,optimize_method=optimizer,model_layers=layers)
-
+            model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_noise,paramCUBE,cube_hdr,paramPSF,
+                           clobber=clobber,verbose=verbose,verbosefull=verbosefull)
         else:
             if verbosefull: print ' >>> Skipping modeling of data cube (assume it exists)'
 
@@ -502,36 +281,8 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if verbose: print '=================================================================================================='
         if verbose: print ' TDOSE: Plotting extracted spectra                          '+\
                           '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
-        showspec        = False
-
-        for key in SAD.keys():
-            spec = specoutputdir+setupdic['spec1D_name']+'_'+key+'.fits'
-            id   = spec.split('_')[-1].split('.')[0]
-
-            if plot1Dspectra:
-                xrange = setupdic['plot_1Dspec_xrange']
-                yrange = setupdic['plot_1Dspec_yrange']
-
-                tes.plot_1Dspecs([spec],colors=['green'],labels=[id],plotSNcurve=False,
-                                 plotname=spec.replace('.fits','_'+setupdic['plot_1Dspec_ext']+'.pdf'),showspecs=showspec,
-                                 shownoise=setupdic['plot_1Dspec_shownoise'],xrange=xrange,yrange=yrange,
-                                 comparisonspecs=None,comp_colors=['dummy'],comp_labels=['dummy'],
-                                 comp_wavecol='dummy',comp_fluxcol='dummy',comp_errcol='dummy')
-            else:
-                if verbosefull: print ' >>> Skipping plotting 1D spectra '
-
-            if plotS2Nspectra:
-                xrange = setupdic['plot_S2Nspec_xrange']
-                yrange = setupdic['plot_S2Nspec_yrange']
-
-                tes.plot_1Dspecs([spec],colors=['green'],labels=[id],plotSNcurve=True,
-                                 plotname=spec.replace('.fits','_'+setupdic['plot_S2Nspec_ext']+'.pdf'),showspecs=showspec,
-                                 shownoise='dummy',xrange=xrange,yrange=yrange,
-                                 comparisonspecs=None,comp_colors=['dummy'],comp_labels=['dummy'],
-                                 comp_wavecol='dummy',comp_fluxcol='dummy',comp_errcol='dummy')
-            else:
-                if verbosefull: print ' >>> Skipping plotting S/N spectra '
-
+        if setupdic['plot_generate']:
+            plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=plot1Dspectra,plotS2Nspectra=plotS2Nspectra,verbose=verbosefull)
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbose:
             print '=================================================================================================='
@@ -574,6 +325,296 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
 ==================================================================================================
  """
+def gen_cutouts(setupdic,extractids,Nextractions,sourceids_init,sourcedat_init,
+                performcutout=True,generatesourcecat=True,clobber=False,verbose=True,verbosefull=True,start_time=0.0):
+    """
+    Generate cutouts of reference image and data cube
+
+    """
+    cut_images = []
+    cut_cubes  = []
+    for oo, cutoutid in enumerate(extractids):
+        if verbose:
+            infostr = ' - Cutting out object '+str("%4.f" % (oo+1))+' / '+\
+                      str("%4.f" % Nextractions)+' with ID = '+str(cutoutid)+'           '+tu.get_now_string()
+            if verbosefull:
+                print infostr
+            else:
+                sys.stdout.write("%s\r" % infostr)
+                sys.stdout.flush()
+
+        objent = np.where(sourceids_init == cutoutid)[0]
+        if len(objent) != 1:
+            sys.exit(' ---> More than one (or no) match in source catalog to ID '+str(cutoutid))
+
+        ra          = sourcedat_init[setupdic['sourcecat_racol']][objent]
+        dec         = sourcedat_init[setupdic['sourcecat_deccol']][objent]
+
+
+        cutstr, cutoutsize, cut_img, cut_cube, cut_noise, cut_sourcecat = tdose.get_datinfo(cutoutid,setupdic)
+        cut_images.append(cut_img)
+
+        if performcutout:
+            if setupdic['data_cube'] == setupdic['noise_cube']:
+                cutouts   = tu.extract_subcube(setupdic['data_cube'],ra,dec,cutoutsize,cut_cube,
+                                               cubeext=[setupdic['cube_extension'],setupdic['noise_extension']],clobber=True,
+                                               imgfiles=[setupdic['ref_image']],imgexts=[setupdic['img_extension']],
+                                               imgnames=[cut_img],verbose=verbosefull)
+            else:
+                cutouts   = tu.extract_subcube(setupdic['data_cube'],ra,dec,cutoutsize,cut_cube,
+                                               cubeext=[setupdic['cube_extension']],clobber=True,
+                                               imgfiles=[setupdic['ref_image']],imgexts=[setupdic['img_extension']],
+                                               imgnames=[cut_img],verbose=verbosefull)
+
+                cutouts   = tu.extract_subcube(setupdic['noise_cube'],ra,dec,cutoutsize,cut_noise,
+                                               cubeext=[setupdic['noise_extension']],clobber=True,
+                                               imgfiles=None,imgexts=None,imgnames=None,verbose=verbosefull)
+        else:
+            if verbose: print ' >>> Skipping cutting out images and cubes (assuming they exist)'
+
+        # --- SUB-SOURCE CAT ---
+        if generatesourcecat:
+            obj_in_cut_fov = np.where( (sourcedat_init[setupdic['sourcecat_racol']] < (ra + cutoutsize[0]/2./3600.)) &
+                                       (sourcedat_init[setupdic['sourcecat_racol']] > (ra - cutoutsize[0]/2./3600.)) &
+                                       (sourcedat_init[setupdic['sourcecat_deccol']] < (dec + cutoutsize[1]/2./3600.)) &
+                                       (sourcedat_init[setupdic['sourcecat_deccol']] > (dec - cutoutsize[1]/2./3600.)) )[0]
+            Ngoodobj      = len(obj_in_cut_fov)
+
+            cutout_hdr    = pyfits.open(cut_img)[setupdic['img_extension']].header
+            cut_sourcedat = sourcedat_init[obj_in_cut_fov].copy()
+            storearr      = np.zeros(Ngoodobj,dtype=cut_sourcedat.columns) # define structure array to store to fits file
+            for ii in np.arange(Ngoodobj):
+                striphdr   = tu.strip_header(cutout_hdr.copy())
+                wcs_in     = wcs.WCS(striphdr)
+                skycoord   = SkyCoord(cut_sourcedat[ii][setupdic['sourcecat_racol']],
+                                      cut_sourcedat[ii][setupdic['sourcecat_deccol']], frame='icrs', unit='deg')
+                pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in)
+                cut_sourcedat[ii][setupdic['sourcecat_xposcol']] = pixcoord[0]
+                cut_sourcedat[ii][setupdic['sourcecat_yposcol']] = pixcoord[1]
+
+                storearr[ii] = np.vstack(cut_sourcedat)[ii,:]
+
+            astropy.io.fits.writeto(cut_sourcecat,storearr,header=None,clobber=clobber)
+        else:
+            if verbose: print ' >>> Skipping generating the cutout source catalogs (assume they exist)'
+
+    if verbose:
+        print '=================================================================================================='
+        print ' TDOSE: Done cutting out sub cubes and postage stamps       '+\
+              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+        print ' - To open resulting images in DS9 execute the following command '
+        ds9string = ' ds9 '+setupdic['ref_image']+' xxregionxx '+\
+                    ' '.join(cut_images)+' -lock frame wcs -tile grid layout '+str(len(cut_images)+1)+' 1 &'
+        regname   = setupdic['source_catalog'].replace('.fits','.reg')
+        if os.path.isfile(regname):
+            ds9string = ds9string.replace('xxregionxx',' -region '+regname+' ')
+        else:
+            ds9string = ds9string.replace('xxregionxx',' ')
+        print ds9string
+        print '=================================================================================================='
+
+    if not verbosefull:
+        if verbose: print '\n   done'
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
+                   save_init_model_output=True,clobber=True,verbose=True,verbosefull=True):
+    """
+    Modeling the refernce image
+
+    """
+    if setupdic['gauss_guess'] is None:
+        param_initguess = None
+    else:
+        objects   = pyfits.open(sourcecat)[1].data['id'].tolist()
+
+        if save_init_model_output:
+            saveDS9region = True
+            savefitsimage = True
+            savefitstable = True
+            ds9regionname = refimg.replace('.fits','_tdose_initial_model_ds9region.reg')
+            fitsimagename = refimg.replace('.fits','_tdose_initial_model_image.fits')
+            fitstablename = refimg.replace('.fits','_tdose_initial_model_objparam.fits')
+        else:
+            saveDS9region = False
+            savefitsimage = False
+            savefitstable = False
+            ds9regionname = ' '
+            fitsimagename = ' '
+            fitstablename = ' '
+
+        paramlist = tu.gen_paramlist_from_SExtractorfile(setupdic['gauss_guess'],imgheader=img_hdr,clobber=clobber,
+                                                         objects=objects,
+                                                         idcol=setupdic['gauss_guess_idcol'],
+                                                         racol=setupdic['gauss_guess_racol'],
+                                                         deccol=setupdic['gauss_guess_deccol'],
+                                                         aimg=setupdic['gauss_guess_aimg'],
+                                                         bimg=setupdic['gauss_guess_bimg'],
+                                                         angle=setupdic['gauss_guess_angle'],
+                                                         fluxscale=setupdic['gauss_guess_fluxscale'],
+                                                         fluxfactor=setupdic['gauss_guess_fluxfactor'],
+                                                         Nsigma=setupdic['gauss_guess_Nsigma'],
+                                                         verbose=verbosefull,
+                                                         saveDS9region=saveDS9region,ds9regionname=ds9regionname,
+                                                         savefitsimage=savefitsimage,fitsimagename=fitsimagename,
+                                                         savefitstable=savefitstable,fitstablename=fitstablename)
+        param_initguess = paramlist
+
+    pinit, fit    = tmf.gen_fullmodel(img_data,sourcecat,verbose=verbosefull,
+                                      xpos_col=setupdic['sourcecat_xposcol'],ypos_col=setupdic['sourcecat_yposcol'],
+                                      datanoise=None,sigysigxangle=None,
+                                      fluxscale=setupdic['sourcecat_fluxcol'],generateimage=modelimg,
+                                      generateresidualimage=True,clobber=clobber,outputhdr=img_hdr,
+                                      param_initguess=param_initguess)
+
+    tu.model_ds9region(modelparam,regionfile,img_wcs,color='cyan',width=2,Nsigma=2,textlist=names,
+                       fontsize=12,clobber=clobber)
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_noise,paramCUBE,cube_hdr,paramPSF,
+                   clobber=False,verbose=True,verbosefull=True):
+    """
+    Modeling the data cube
+
+    """
+    if setupdic['model_cube_layers'] == 'all':
+        layers = None
+    elif type(setupdic['model_cube_layers']) == list:
+        layers = np.arange(setupdic['model_cube_layers'][0],setupdic['model_cube_layers'][1]+1,1)
+    else:
+        layerinfo = np.genfromtxt(setupdic['model_cube_layers'],dtype=None,comments='#')
+
+        try:
+            layer_ids            = layerinfo[:,0].astype(float)
+            structuredlayerarray = False
+        except:
+            layer_ids            = layerinfo['f0'].astype(float)
+            structuredlayerarray = True
+
+        objent = np.where(layer_ids == extid)[0]
+
+        if len(objent) > 1:
+            sys.exit(' ---> More than one match in '+setupdic['model_cube_layers']+' for object '+str(extid))
+        elif len(objent) == 0:
+            sys.exit(' ---> No match in '+setupdic['model_cube_layers']+' for object '+str(extid))
+        else:
+            if structuredlayerarray:
+                if layerinfo['f1'][objent] == 'all':
+                    layers = None
+                else:
+                    layers = [int(layerinfo['f1'][objent]),int(layerinfo['f2'][objent])]
+                    layers = np.arange(layers[0],layers[1]+1,1)
+            else:
+                layers = layerinfo[objent,1:][0].astype(float).tolist()
+                layers = np.arange(layers[0],layers[1]+1,1)
+
+    optimizer    = setupdic['model_cube_optimizer']
+    paramtype    = setupdic['source_model']
+    psfparamtype = setupdic['psf_type']
+
+    cube_model, layer_scales = tmc.gen_fullmodel(cube_data,paramCUBE,paramPSF,paramtype=paramtype,
+                                                 psfparamtype=psfparamtype,noisecube=cube_noise,save_modelcube=True,
+                                                 cubename=modcubename,clobber=clobber,
+                                                 fit_source_scales=True,outputhdr=cube_hdr,verbose=verbosefull,
+                                                 returnresidual=rescubename,optimize_method=optimizer,model_layers=layers)
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobber=False,verbose=True,verbosefull=True):
+    """
+    Defining the PSF model to convolve reference image with
+
+    """
+    if setupdic['psf_FWHM_evolve'].lower() == 'linear':
+        fwhm_p0     = setupdic['psf_FWHMp0']
+        fwhm_p1     = setupdic['psf_FWHMp1']
+        fwhm_vec    = fwhm_p0 + fwhm_p1 * (cube_waves - 7000.0)
+        sigmas      = fwhm_vec/2.35482/cube_scales[0]
+    else:
+        sys.exit(' ---> '+setupdic['psf_FWHM_evolve']+' is an invalid choice for the psf_FWHM_evolve setup parameter ')
+
+    if setupdic['psf_type'].lower() == 'gauss':
+        xpos,ypos,fluxscale,angle = 0.0, 0.0, 1.0, 0.0
+        paramPSF                  = []
+        for layer in np.arange(cube_data.shape[0]):
+            sigma = sigmas[layer]
+            paramPSF.append([xpos,ypos,fluxscale,sigma,sigma,angle])
+        paramPSF  = np.asarray(paramPSF)
+    else:
+        sys.exit(' ---> '+setupdic['psf_type']+' is an invalid choice for the psf_type setup parameter ')
+
+    if setupdic['psf_savecube']:
+        psfcubename = setupdic['models_directory']+'/'+datacube.split('/')[-1].replace('.fits','_tdose_psfcube.fits')
+        if verbose: print ' - Storing PSF cube to fits file \n   '+psfcubename
+
+        if os.path.isfile(psfcubename) & (clobber == False):
+            if verbose: print ' ---> TDOSE WARNING: PSF cube already exists and clobber = False so skipping step'
+        else:
+            psfcube = cube_data*0.0
+            for ll in np.arange(len(cube_waves)):
+                if verbosefull:
+                    infostr = '   Building PSF in layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % len(cube_waves))+''
+                    sys.stdout.write("%s\r" % infostr)
+                    sys.stdout.flush()
+
+                if setupdic['psf_type'].lower() == 'gauss':
+                    mu_psf    = paramPSF[ll][0:2]
+                    cov_psf   = tu.build_2D_cov_matrix(paramPSF[ll][4],paramPSF[ll][3],paramPSF[ll][5],verbose=False)
+                    psfimg    = tu.gen_2Dgauss(np.asarray(cube_data.shape[1:]).tolist(),cov_psf,1.0,
+                                               show2Dgauss=False,verbose=False)
+                else:
+                    sys.exit(' ---> '+setupdic['psf_type']+' is an invalid choice for the psf_type setup parameter ')
+
+                psfcube[ll,:,:] = psfimg
+
+            if 'XTENSION' in cube_hdr.keys():
+                hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
+                hducube        = pyfits.ImageHDU(psfcube,header=cube_hdr)
+                hducube.header.append(('PSF_P0',    setupdic['psf_FWHMp0'],' '),end=True)
+                hducube.header.append(('PSF_P1',    setupdic['psf_FWHMp1'],' '),end=True)
+                hdus           = [hduprim,hducube]
+            else:
+                hducube = pyfits.PrimaryHDU(psfcube,header=cube_hdr)
+                hducube.header.append(('PSF_P0',    setupdic['psf_FWHMp0'],' '),end=True)
+                hducube.header.append(('PSF_P1',    setupdic['psf_FWHMp1'],' '),end=True)
+                hdus           = [hducube]
+
+            hdulist = pyfits.HDUList(hdus)
+            hdulist.writeto(psfcubename,clobber=clobber)
+
+    return paramPSF
+
+def plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=True,plotS2Nspectra=True,verbose=True):
+    """
+
+    """
+    showspec        = False
+
+    for key in SAD.keys():
+        spec = specoutputdir+setupdic['spec1D_name']+'_'+key+'.fits'
+        id   = spec.split('_')[-1].split('.')[0]
+
+        if plot1Dspectra:
+            xrange = setupdic['plot_1Dspec_xrange']
+            yrange = setupdic['plot_1Dspec_yrange']
+
+            tes.plot_1Dspecs([spec],colors=['green'],labels=[id],plotSNcurve=False,
+                             plotname=spec.replace('.fits','_'+setupdic['plot_1Dspec_ext']+'.pdf'),showspecs=showspec,
+                             shownoise=setupdic['plot_1Dspec_shownoise'],xrange=xrange,yrange=yrange,
+                             comparisonspecs=None,comp_colors=['dummy'],comp_labels=['dummy'],
+                             comp_wavecol='dummy',comp_fluxcol='dummy',comp_errcol='dummy')
+        else:
+            if verbose: print ' >>> Skipping plotting 1D spectra '
+
+        if plotS2Nspectra:
+            xrange = setupdic['plot_S2Nspec_xrange']
+            yrange = setupdic['plot_S2Nspec_yrange']
+
+            tes.plot_1Dspecs([spec],colors=['green'],labels=[id],plotSNcurve=True,
+                             plotname=spec.replace('.fits','_'+setupdic['plot_S2Nspec_ext']+'.pdf'),showspecs=showspec,
+                             shownoise='dummy',xrange=xrange,yrange=yrange,
+                             comparisonspecs=None,comp_colors=['dummy'],comp_labels=['dummy'],
+                             comp_wavecol='dummy',comp_fluxcol='dummy',comp_errcol='dummy')
+        else:
+            if verbose: print ' >>> Skipping plotting S/N spectra '
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def modify_cube(modifysetupfile='./tdose_setup_template_modify.txt',verbose=True):
