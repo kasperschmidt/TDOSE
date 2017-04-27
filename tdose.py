@@ -202,6 +202,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         cube_hdr      = pyfits.open(datacube)[setupdic['cube_extension']].header
         cube_wcs2D    = tu.WCS3DtoWCS2D(wcs.WCS(tu.strip_header(cube_hdr.copy())))
         cube_scales   = wcs.utils.proj_plane_pixel_scales(cube_wcs2D)*3600.0
+        cube_waves    = np.arange(cube_hdr['NAXIS3'])*cube_hdr['CD3_3']+cube_hdr['CRVAL3']
 
         img_data      = pyfits.open(refimg)[setupdic['img_extension']].data
         img_hdr       = pyfits.open(refimg)[setupdic['img_extension']].header
@@ -305,21 +306,67 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbosefull: print '--------------------------------------------------------------------------------------------------'
-        if verbosefull: print ' TDOSE: Defining PSF                                        '+\
+        if verbosefull: print ' TDOSE: Defining PSF as FWHM = p0 + p1(lambda-7000A)        '+\
                               '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+
         if definePSF or modeldatacube:
-            print ' >>>>>>> KBS: Enable generating PSF using setup file parameters <<<<<<<<'
-            xpos,ypos,fluxscale,angle = 0.0, 0.0, 1.0, 0.0
-            paramPSF                  = []
-            # according to Bacon+15 (HUDF paper) Moffat PSF FWHM goes from 0.76 arcsec in the blue to 0.61 arcsec in the red
-            # with the MUSE pixel scale this gives a Gauss sigma-dependence (FWHM = 2.35482sigma) of:
-            sigma_blue                = 0.76/2.35482/cube_scales[0]
-            sigma_red                 = 0.61/2.35482/cube_scales[0]
-            sigmas                    = np.arange(sigma_red,sigma_blue,(sigma_blue-sigma_red)/cube_data.shape[0])[::-1]
-            for layer in np.arange(cube_data.shape[0]):
-                sigma = sigmas[layer]
-                paramPSF.append([xpos,ypos,fluxscale,sigma,sigma,angle])
-            paramPSF                  = np.asarray(paramPSF)
+            if setupdic['psf_FWHM_evolve'].lower() == 'linear':
+                fwhm_p0     = setupdic['psf_FWHMp0']
+                fwhm_p1     = setupdic['psf_FWHMp1']
+                fwhm_vec    = fwhm_p0 + fwhm_p1 * (cube_waves - 7000.0)
+                sigmas      = fwhm_vec/2.35482/cube_scales[0]
+            else:
+                sys.exit(' ---> '+setupdic['psf_FWHM_evolve']+' is an invalid choice for the psf_FWHM_evolve setup parameter ')
+
+            if setupdic['psf_type'].lower() == 'gauss':
+                xpos,ypos,fluxscale,angle = 0.0, 0.0, 1.0, 0.0
+                paramPSF                  = []
+                for layer in np.arange(cube_data.shape[0]):
+                    sigma = sigmas[layer]
+                    paramPSF.append([xpos,ypos,fluxscale,sigma,sigma,angle])
+                paramPSF  = np.asarray(paramPSF)
+            else:
+                sys.exit(' ---> '+setupdic['psf_type']+' is an invalid choice for the psf_type setup parameter ')
+
+            if setupdic['psf_savecube'] and (oo == 0):
+                psfcubename = setupdic['models_directory']+'/'+datacube.split('/')[-1].replace('.fits','_tdose_psfcube.fits')
+                if verbose: print ' - Storing PSF cube to fits file \n   '+psfcubename
+
+                if os.path.isfile(psfcubename) & (clobber == False):
+                    if verbose: print ' ---> TDOSE WARNING: PSF cube already exists and clobber = False so skipping step'
+                else:
+                    psfcube = cube_data*0.0
+                    for ll in np.arange(len(cube_waves)):
+                        if verbosefull:
+                            infostr = '   Building PSF in layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % len(cube_waves))+''
+                            sys.stdout.write("%s\r" % infostr)
+                            sys.stdout.flush()
+
+                        if setupdic['psf_type'].lower() == 'gauss':
+                            mu_psf    = paramPSF[ll][0:2]
+                            cov_psf   = tu.build_2D_cov_matrix(paramPSF[ll][4],paramPSF[ll][3],paramPSF[ll][5],verbose=False)
+                            psfimg    = tu.gen_2Dgauss(np.asarray(cube_data.shape[1:]).tolist(),cov_psf,1.0,
+                                                       show2Dgauss=False,verbose=False)
+                        else:
+                            sys.exit(' ---> '+setupdic['psf_type']+' is an invalid choice for the psf_type setup parameter ')
+
+                        psfcube[ll,:,:] = psfimg
+
+                    if 'XTENSION' in cube_hdr.keys():
+                        hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
+                        hducube        = pyfits.ImageHDU(psfcube,header=cube_hdr)
+                        hducube.header.append(('PSF_P0',    setupdic['psf_FWHMp0'],' '),end=True)
+                        hducube.header.append(('PSF_P1',    setupdic['psf_FWHMp1'],' '),end=True)
+                        hdus           = [hduprim,hducube]
+                    else:
+                        hducube = pyfits.PrimaryHDU(psfcube,header=cube_hdr)
+                        hducube.header.append(('PSF_P0',    setupdic['psf_FWHMp0'],' '),end=True)
+                        hducube.header.append(('PSF_P1',    setupdic['psf_FWHMp1'],' '),end=True)
+                        hdus           = [hducube]
+
+                    hdulist = pyfits.HDUList(hdus)
+                    hdulist.writeto(psfcubename,clobber=clobber)
+
         else:
             if verbosefull: print ' >>> Skipping defining PSF of data cube (assume it is defined)'
 
@@ -331,7 +378,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                       datacube.split('/')[-1].replace('.fits','_'+setupdic['model_cube_ext']+'.fits')
         rescubename = setupdic['models_directory']+'/'+\
                       datacube.split('/')[-1].replace('.fits','_'+setupdic['residual_cube_ext']+'.fits')
-
+        pdb.set_trace()
         if modeldatacube:
 
             if setupdic['model_cube_layers'] == 'all':

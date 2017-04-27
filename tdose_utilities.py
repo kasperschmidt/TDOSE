@@ -155,22 +155,23 @@ galfit_model_extension 2                                  # Fits extension conta
 
 model_cutouts          True                               # Perform modeling and spectral extraction on small cutouts of the cube and images to reduce run-time
 
-cutout_sizes           /Users/kschmidt/work/TDOSE/tdose_setup_cutoutsizes.txt # [7,7]                            # Size of cutouts [ra,dec] in arcsec around each source to model.
+cutout_sizes           /Users/kschmidt/work/TDOSE/tdose_setup_cutoutsizes.txt                             # Size of cutouts [ra,dec] in arcsec around each source to model.
                                                           # To use source-specific cutouts provide ascii file containing ID xsize[arcsec] and ysize[arcsec].
 model_image_ext        tdose_modelimage                   # Name extension of fits file containing reference image model. To ignored use None
 model_param_reg        tdose_modelimage_ds9               # Name extension of DS9 region file for reference image model. To ignored use None
 model_image_cube_ext   tdose_modelimage_cubeWCS           # Name extension of fits file containing model image after conversion to cube WCS. To ignored use None.
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - PSF MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
-### USE PSF SETUP AS DESCRIBED IN Herenz+ MW paper; from QC pages
-
-psf_type               gauss                              # Select PSF model to build
-psf_sigma_blue         0.76/2.35482                       # Sigma of PSF at the blue end of the data cube
-psf_sigma_red          0.61/2.35482                       # Sigma of PSF at the red  end of the data cube
-psf_sigma_evolve       linear                             # Evolution of the sigma from blue to red end of data cube
+psf_type               gauss                              # Select PSF model to build. Choices are:
+                                                          #   gauss      Model the PSF as a symmetric Gaussian with sigma = FWHM/2.35482
+psf_FWHM_evolve        linear                             # Evolution of the FWHM from blue to red end of data cube. Choices are:
+                                                          #   linear     FWHM wavelength dependence described as FWHM(lambda) = p0[''] + p1[''/A] * (lambda - 7000A)
+psf_FWHMp0             0.940                              # p0 parameter to use when determining wavelength dependence of PSF
+psf_FWHMp1             -3.182e-5                          # p1 parameter to use when determining wavelength dependence of PSF
+psf_savecube           True                               # To save fits file containing the PSF cube set psf_savecube = True
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - CUBE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
-model_cube_layers      /Users/kschmidt/work/TDOSE/tdose_setup_layers.txt # all # [1100,1180]                # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
+model_cube_layers      /Users/kschmidt/work/TDOSE/tdose_setup_layers.txt                  # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
                                                           # To model source-specific layers provide ascii file containing ID layerlow and layerhigh.
                                                           # If layerlow=all and layerhigh=all all layers will be modeled for particular source
 
