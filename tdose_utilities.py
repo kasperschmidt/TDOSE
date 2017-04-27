@@ -806,8 +806,8 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
             if not key in hducutout.header.keys():
                 keyvalue = hdrs_all[cc][key]
                 if type(keyvalue) == str:
-                    keyvalue = keyvalue.replace('Angstrom','A')
-                hducutout.header.append((key,keyvalue,keyvalue),end=True)
+                    keycomment = keyvalue.replace('Angstrom','A')
+                hducutout.header.append((key,keyvalue,keycomment),end=True)
         hducutout.header.append(('EXTNAME ',cx            ,' '),end=True)
         hdulist.append(hducutout)
 
