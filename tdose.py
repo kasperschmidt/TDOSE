@@ -161,7 +161,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                            refimg.split('/')[-1].replace('.fits','_'+setupdic['model_image_cube_ext']+'_'+
                                                          setupdic['source_model']+'.fits')
         paramREF      = tu.build_paramarray(modelparam,verbose=verbosefull)
-        paramCUBE     = tu.convert_paramarray(paramREF,img_hdr,cube_hdr,verbose=verbosefull)
+        paramCUBE     = tu.convert_paramarray(paramREF,img_hdr,cube_hdr,type=setupdic['source_model'].lower(),verbose=verbosefull)
 
         if refimagemodel2cubewcs:
             cubehdu       = pyfits.PrimaryHDU(cube_data[0,:,:])
@@ -174,8 +174,8 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 else:
                     cubehdu.header.append((key,cubewcshdr[key],cubewcshdr[key]),end=True)
 
-            tmf.save_modelimage(cubewcsimg,paramCUBE,cube_data.shape[1:],param_init=False,clobber=clobber,
-                                outputhdr=cubehdu.header,verbose=verbosefull)
+            tmf.save_modelimage(cubewcsimg,paramCUBE,cube_data.shape[1:],modeltype=setupdic['source_model'].lower(),
+                                param_init=False,clobber=clobber,outputhdr=cubehdu.header,verbose=verbosefull)
 
         else:
             if verbose: print ' >>> Skipping converting reference image model to cube WCS frame (assume models exist)'
