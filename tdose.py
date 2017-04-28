@@ -653,7 +653,7 @@ def plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=True,plotS2Nspectra=Tr
     showspec        = False
 
     for key in SAD.keys():
-        spec = specoutputdir+setupdic['spec1D_name']+'_'+key+'.fits'
+        spec = specoutputdir+setupdic['spec1D_name']+'_'+setupdic['source_model']+'_'+key+'.fits'
         id   = spec.split('_')[-1].split('.')[0]
 
         if plot1Dspectra:
