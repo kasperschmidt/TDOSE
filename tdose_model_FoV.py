@@ -32,38 +32,53 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Loading source catalog info to build inital guess of paramters for model fit'
-    if verbose: print '   Will use x position, y position,',
-    if fluxscale is not None:
-        if verbose: print ' fluxscale',
-    if sigysigxangle is not None:
-        if verbose: print ' sigysigxangle',
-    if verbose: print ' in initial guess'
-    if param_initguess is None:
-        param_init   = tmf.gen_paramlist(sourcecatalog,xpos_col=xpos_col,ypos_col=ypos_col,
-                                         sigysigxangle=sigysigxangle,fluxscale=fluxscale,verbose=verbose)
-    else:
-        param_init   = param_initguess
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if modeltype == 'gauss':
+    if modeltype.lower() == 'gauss':
+        if param_initguess is None:
+            if verbose: print ' - Loading source catalog info to build inital guess of paramters for model fit'
+            if verbose: print '   Will use x position, y position,',
+            if fluxscale is not None:
+                if verbose: print ' fluxscale',
+            if sigysigxangle is not None:
+                if verbose: print ' sigysigxangle',
+            if verbose: print ' in initial guess'
+            param_init   = tmf.gen_paramlist(sourcecatalog,xpos_col=xpos_col,ypos_col=ypos_col,
+                                             sigysigxangle=sigysigxangle,fluxscale=fluxscale,verbose=verbose)
+        else:
+            if verbose: print ' - Using the intitial guess provided for model fit'
+            param_init   = param_initguess
+
         fit_output      = tmf.model_objects_gauss(param_init,dataimg,optimizer=optimizer,datanoise=datanoise,
                                                   verbose=verbose,show_residualimg=show_residualimg)
-    elif modeltype == 'galfit':
+    elif modeltype.lower() == 'galfit':
+        if param_initguess is not None:
+            if verbose: print (' TDOSE WARNING: Initial guess is not enabled for modeltype = galfit; setting param_initguess = None')
+            param_init  = None
+
         galfitparamfile = sourcecatalog
         fit_output      = tmf.model_objects_galfit(dataimg,galfitparamfile,verbose=verbose,show_residualimg=show_residualimg)
+
+    elif modeltype.lower() == 'aperture':
+        if verbose: print ' - Building paramter list from provided aperture parameters'
+        paramlist     = tmf.gen_paramlist_aperture(sourcecatalog,sigysigxangle,pixval=fluxscale,
+                                                   xpos_col=xpos_col,ypos_col=ypos_col,verbose=verbose)
+
+        fit_output      = paramlist, 'dummy'
+        param_init      = paramlist
     else:
         sys.exit(' ---> "modeltype"='+modeltype+' is an invalid choice of modeling setup so aborting')
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if type(generateimage) == str:
-        tmf.save_modelimage(generateimage,fit_output[0],dataimg.shape,param_init=param_init,
+        tmf.save_modelimage(generateimage,fit_output[0],dataimg.shape,modeltype=modeltype,param_init=param_init,
                             verbose=verbose,verbosemodel=verbose,clobber=clobber,outputhdr=outputhdr)
-        tmf.save_modelimage(generateimage.replace('.fits','_initial.fits'),param_init,dataimg.shape,param_init=False,
-                            verbose=verbose,verbosemodel=verbose,clobber=clobber,outputhdr=outputhdr)
+        if modeltype.lower() != 'aperture':
+            tmf.save_modelimage(generateimage.replace('.fits','_initial.fits'),param_init,dataimg.shape,modeltype=modeltype,
+                                param_init=False,verbose=verbose,verbosemodel=verbose,clobber=clobber,outputhdr=outputhdr)
 
         if generateresidualimage:
-            tmf.save_modelimage(generateimage.replace('.fits','_residual.fits'),fit_output[0],dataimg.shape,param_init=param_init,
-                                verbose=verbose,verbosemodel=verbose,clobber=clobber,outputhdr=outputhdr,dataresidual=dataimg)
+            tmf.save_modelimage(generateimage.replace('.fits','_residual.fits'),fit_output[0],dataimg.shape,modeltype=modeltype,
+                                param_init=param_init,verbose=verbose,verbosemodel=verbose,clobber=clobber,outputhdr=outputhdr,
+                                dataresidual=dataimg)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Storing fitted source paramters as fits table and returning output'
@@ -97,7 +112,7 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
 
     return param_init, fit_output
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def save_modelimage(outname,paramlist,imgsize,param_init=False,dataresidual=None,
+def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False,dataresidual=None,
                     clobber=False,outputhdr=None,verbose=True, verbosemodel=False):
     """
     Generate and save a fits file containing the model image obtained from modeling multiple gaussians
@@ -107,8 +122,18 @@ def save_modelimage(outname,paramlist,imgsize,param_init=False,dataresidual=None
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Generate model image from input paramters'
-    xgrid, ygrid = tu.gen_gridcomponents(imgsize)
-    modelimg     = tmf.modelimage_multigauss((xgrid,ygrid), paramlist, showmodelimg=False, verbose=verbosemodel)
+
+    if modeltype.lower() == 'gauss':
+        xgrid, ygrid = tu.gen_gridcomponents(imgsize)
+        modelimg     = tmf.modelimage_multigauss((xgrid,ygrid), paramlist, showmodelimg=False, verbose=verbosemodel)
+    elif modeltype.lower() == 'galfit':
+        sys.exit(' ---> modeltype = galfit not enabled for save_modelimage yet; sorry...')
+    elif modeltype.lower() == 'aperture':
+        xgrid, ygrid = tu.gen_gridcomponents(imgsize)
+        modelimg     = tmf.modelimage_aperture((xgrid,ygrid), paramlist, showmodelimg=False, verbose=verbosemodel)
+    else:
+        sys.exit(' ---> "modeltype"='+modeltype+' is an invalid choice of modeling setup so aborting')
+
 
     if dataresidual is not None:
         modelimg = dataresidual - modelimg
@@ -223,6 +248,45 @@ def gen_paramlist(sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=No
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         #            [yposition,xposition,fluxscale,sigmay,sigmax,angle]
         objlist    = [ypos,     xpos,     fs,       sigy,  sigx,  angle]
+        paramlist  = paramlist + objlist
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    paramlist_arr = np.asarray(paramlist)
+    return paramlist_arr
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_paramlist_aperture(sourcecatalog,radius_pix,pixval=None,xpos_col='xpos',ypos_col='ypos',verbose=True):
+    """
+    Generating parameter list for image modeling
+
+    --- INPUT ---
+
+    """
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Loading source catalog information to build parameter list for'
+    try:
+        sourcedat = pyfits.open(sourcecatalog)[1].data
+    except:
+        sys.exit(' ---> Problems loading fits source catalog for mock cube')
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    Nobjects   = len(sourcedat)
+    if verbose: print ' - Assembling paramter list for '+str(Nobjects)+' found in catalog'
+    paramlist = []
+    for oo in xrange(Nobjects):
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        xpos       = sourcedat[xpos_col][oo]
+        ypos       = sourcedat[ypos_col][oo]
+
+        if len(radius_pix) == 1:
+            radius     = radius_pix
+        else:
+            radius     = radius_pix
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        if pixval is not None:
+            pv = pixval[oo]
+        else:
+            pv = 1.0
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #            [yposition,xposition,radius,pixval]
+        objlist    = [ypos,     xpos,     radius,    pv]
         paramlist  = paramlist + objlist
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     paramlist_arr = np.asarray(paramlist)
@@ -364,7 +428,7 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, useroll=Fals
     param           N x 6 long vector with the paremeters for generated N Gaussians. The paremeters needed are:
                         [yposition,xposition,fluxscale,sigmay,sigmax,angle] x N
     imgsize         Size of image to model the Gaussians in
-    showmodelimg    Displaye the model image?
+    showmodelimg    Display the model image?
     useroll         Position model image in full FoV using a roll in the array; no interpolation so no sub-pixel
                     precision (i.e., the pixel positions are rounded when performing the roll/positioning)
     verbose         Toggle verbosity
@@ -383,7 +447,7 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, useroll=Fals
     """
     Ngauss  = len(param)/6.0
     if Ngauss != np.round(len(param)/6.0):
-        sys.exit(' ---> The number of parameters is not a multiple of 6 in residual_multigauss()')
+        sys.exit(' ---> The number of parameters is not a multiple of 6 in modelimage_multigauss()')
 
     if verbose: print ' - Generating model for multiple ('+str(Ngauss)+') gaussians '
     if xgrid.shape != ygrid.shape:
@@ -405,6 +469,55 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, useroll=Fals
         else:
             gauss2D_positioned = tu.shift_2Dprofile(gauss2Dimg,paramset[0:2]-1.0,showprofiles=False)
         modelimage         = modelimage + gauss2D_positioned
+
+    if verbose: print '\n   done'
+    if showmodelimg:
+        plt.imshow(modelimage,interpolation='none', vmin=1e-5, vmax=np.max(modelimage), norm=mpl.colors.LogNorm())
+        plt.title('Model Image')
+        plt.show()
+
+    return modelimage
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def modelimage_aperture((xgrid,ygrid), param, showmodelimg=False, verbose=True, verbosefull=False):
+    """
+    Build model image of N apertures where param contains the parameters for each aperture
+
+    --- INPUT ---
+    param           N x 4 long vector with the paremeters for the N apertures to generate. The paremeters needed are:
+                        [yposition,xposition,radius,pixelvalues] x N
+    imgsize         Size of image to model the apertures in
+    showmodelimg    Display the model image?
+    useroll         Position model image in full FoV using a roll in the array; no interpolation so no sub-pixel
+                    precision (i.e., the pixel positions are rounded when performing the roll/positioning)
+    verbose         Toggle verbosity
+    verbosefull     Toggle verbosity showing all details despite lengthy
+
+    --- EXAMPLE OF USE ---
+    import tdose_model_FoV as tmf
+    xgrid, ygrid = tu.gen_gridcomponents((500,1000))
+    param      = np.asarray([305,515,50,99,    120,100,100,999])
+    modelimage = tmf.modelimage_aperture((xgrid,ygrid), param, showmodelimg=True, verbose=True)
+
+    """
+    Naper  = len(param)/4.0
+    if Naper != np.round(len(param)/4.0):
+        sys.exit(' ---> The number of parameters is not a multiple of 4 in modelimage_aperture()')
+
+    if verbose: print ' - Generating model for multiple ('+str(Naper)+') apertures '
+    if xgrid.shape != ygrid.shape:
+        sys.exit(' shapes of xgrid and ygrid in modelimage_aperture do not matach')
+    imgsize    = xgrid.shape
+    modelimage = np.zeros(imgsize)
+    for psets in np.arange(int(Naper)):
+        if verbose:
+            infostr = '   Inserting model of object '+str("%5.f" % (psets+1))+' / '+str("%5.f" % Naper)+'    '
+            sys.stdout.write("%s\r" % infostr)
+            sys.stdout.flush()
+
+        paramset    = param[psets*4:psets*4+4]
+        apertureimg = tu.gen_aperture(imgsize,paramset[0],paramset[1],paramset[2],pixval=paramset[3],
+                                      showaperture=False,verbose=verbosefull)
+        modelimage  = modelimage + apertureimg
 
     if verbose: print '\n   done'
     if showmodelimg:
