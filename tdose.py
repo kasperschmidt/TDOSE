@@ -126,14 +126,14 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         img_scales    = wcs.utils.proj_plane_pixel_scales(img_wcs)*3600.0
 
         modelimg      = setupdic['models_directory']+'/'+\
-                        refimg.split('/')[-1].replace('.fits','_'+setupdic['model_image_ext']+'.fits')
+                        refimg.split('/')[-1].replace('.fits','_'+setupdic['model_image_ext']+'_'+setupdic['source_model']+'.fits')
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbosefull: print '--------------------------------------------------------------------------------------------------'
         if verbosefull: print ' TDOSE: Model reference image                               '+\
                               '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
         regionfile    = setupdic['models_directory']+'/'+\
-                        refimg.split('/')[-1].replace('.fits','_'+setupdic['model_param_reg']+'.reg')
+                        refimg.split('/')[-1].replace('.fits','_'+setupdic['model_param_reg']+'_'+setupdic['source_model']+'.reg')
         modelparam    = modelimg.replace('.fits','_objparam.fits') # output from refernce image modeling
 
         names         = []
@@ -158,7 +158,8 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if verbosefull: print ' TDOSE: Convert ref. image model to cube WCS                '+\
                               '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
         cubewcsimg       = setupdic['models_directory']+'/'+\
-                           refimg.split('/')[-1].replace('.fits','_'+setupdic['model_image_cube_ext']+'.fits')
+                           refimg.split('/')[-1].replace('.fits','_'+setupdic['model_image_cube_ext']+'_'+
+                                                         setupdic['source_model']+'.fits')
         paramREF      = tu.build_paramarray(modelparam,verbose=verbosefull)
         paramCUBE     = tu.convert_paramarray(paramREF,img_hdr,cube_hdr,verbose=verbosefull)
 
@@ -330,36 +331,36 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
             ds9cmd = ds9cmd+'-lock frame wcs -tile grid layout '+str(Nframes)+' 1 &'
             print ds9cmd
-            print '============================================================================================'
+            print '=================================================================================================='
 
     if verbose:
         print """
-                                                .''.
-                      .''.             *''*    :_\/_:     .
-                     :_\/_:   .    .:.*_\/_*   : /\ :  .'.:.'.
-                 .''.: /\ : _\(/_  ':'* /\ *  : '..'.  -=:o:=-
-                :_\/_:'.:::. /)\*''*  .|.* '.\'/.'_\(/_'.':'.'
-                : /\ : :::::  '*_\/_* | |  -= o =- /)\    '  *
-                 '..'  ':::'   * /\ * |'|  .'/.\'.  '._____
-                     *        __*..* |  |     :      |.   |' .---|
-                      _*   .-'   '-. |  |     .--'|  ||   | _|   |
-                   .-'|  _.|  |    ||   '-__  |   |  |    ||     |
-                   |' | |.    |    ||       | |   |  |    ||     |
-                ___|  '-'     '    ""       '-'   '-.'    '`     |____
+                                                   .''.
+                         .''.             *''*    :_\/_:     .
+                        :_\/_:   .    .:.*_\/_*   : /\ :  .'.:.'.
+                    .''.: /\ : _\(/_  ':'* /\ *  : '..'.  -=:o:=-
+                   :_\/_:'.:::. /)\*''*  .|.* '.\'/.'_\(/_'.':'.'
+                   : /\ : :::::  '*_\/_* | |  -= o =- /)\    '  *
+                    '..'  ':::'   * /\ * |'|  .'/.\'.  '._____
+                        *        __*..* |  |     :      |.   |' .---|
+                         _*   .-'   '-. |  |     .--'|  ||   | _|   |
+                      .-'|  _.|  |    ||   '-__  |   |  |    ||     |
+                      |' | |.    |    ||       | |   |  |    ||     |
+                   ___|  '-'     '    ""       '-'   '-.'    '`     |____
 
-                  _________   _____       ______     _____     ______
-                 |__    __|| |  __ \\\\    /  __  \\\\  / ____\\\\  |  ___||
-                    |  ||    | || \ \\\\   | || | ||  \ \\\\__    | ||__
-                    |  ||    | || | ||   | || | ||   \__  \\\\  |  __||
-                    |  ||    | ||_/ //   | ||_| ||   ___\  \\\\ | ||___
-                    |__||    |_____//    \_____//   |______// |_____||
+                     _________   _____       ______     _____     ______
+                    |__    __|| |  __ \\\\    /  __  \\\\  / ____\\\\  |  ___||
+                       |  ||    | || \ \\\\   | || | ||  \ \\\\__    | ||__
+                       |  ||    | || | ||   | || | ||   \__  \\\\  |  __||
+                       |  ||    | ||_/ //   | ||_| ||   ___\  \\\\ | ||___
+                       |__||    |_____//    \_____//   |______// |_____||
 
-                    _____      ______     __    __    ______    ___
-                   |  __ \\\\   /  __  \\\\  |  \\\\ |  ||  |  ___||  |  ||
-                   | || \ \\\\  | || | ||  |   \\\\|  ||  | ||__    |  ||
-                   | || | ||  | || | ||  |        ||  |  __||   |__||
-                   | ||_/ //  | ||_| ||  |  ||\   ||  | ||___    __
-                   |_____//   \_____//   |__|| \__||  |_____||  |__||
+                       _____      ______     __    __    ______    ___
+                      |  __ \\\\   /  __  \\\\  |  \\\\ |  ||  |  ___||  |  ||
+                      | || \ \\\\  | || | ||  |   \\\\|  ||  | ||__    |  ||
+                      | || | ||  | || | ||  |        ||  |  __||   |__||
+                      | ||_/ //  | ||_| ||  |  ||\   ||  | ||___    __
+                      |_____//   \_____//   |__|| \__||  |_____||  |__||
 
 ==================================================================================================
  """
@@ -459,47 +460,65 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
     Modeling the refernce image
 
     """
-    if setupdic['gauss_guess'] is None:
-        param_initguess = None
-    else:
-        objects   = pyfits.open(sourcecat)[1].data['id'].tolist()
-
-        if save_init_model_output:
-            saveDS9region = True
-            savefitsimage = True
-            savefitstable = True
-            ds9regionname = refimg.replace('.fits','_tdose_initial_model_ds9region.reg')
-            fitsimagename = refimg.replace('.fits','_tdose_initial_model_image.fits')
-            fitstablename = refimg.replace('.fits','_tdose_initial_model_objparam.fits')
+    if setupdic['source_model'].lower() == 'gauss':
+        sigysigxangle = None
+        fluxscale     = setupdic['sourcecat_fluxcol']
+        if setupdic['gauss_guess'] is None:
+            param_initguess = None
         else:
-            saveDS9region = False
-            savefitsimage = False
-            savefitstable = False
-            ds9regionname = ' '
-            fitsimagename = ' '
-            fitstablename = ' '
+            objects   = pyfits.open(sourcecat)[1].data['id'].tolist()
 
-        paramlist = tu.gen_paramlist_from_SExtractorfile(setupdic['gauss_guess'],imgheader=img_hdr,clobber=clobber,
-                                                         objects=objects,
-                                                         idcol=setupdic['gauss_guess_idcol'],
-                                                         racol=setupdic['gauss_guess_racol'],
-                                                         deccol=setupdic['gauss_guess_deccol'],
-                                                         aimg=setupdic['gauss_guess_aimg'],
-                                                         bimg=setupdic['gauss_guess_bimg'],
-                                                         angle=setupdic['gauss_guess_angle'],
-                                                         fluxscale=setupdic['gauss_guess_fluxscale'],
-                                                         fluxfactor=setupdic['gauss_guess_fluxfactor'],
-                                                         Nsigma=setupdic['gauss_guess_Nsigma'],
-                                                         verbose=verbosefull,
-                                                         saveDS9region=saveDS9region,ds9regionname=ds9regionname,
-                                                         savefitsimage=savefitsimage,fitsimagename=fitsimagename,
-                                                         savefitstable=savefitstable,fitstablename=fitstablename)
-        param_initguess = paramlist
+            if save_init_model_output:
+                saveDS9region = True
+                savefitsimage = True
+                savefitstable = True
+                ds9regionname = refimg.replace('.fits','_tdose_initial_model_ds9region.reg')
+                fitsimagename = refimg.replace('.fits','_tdose_initial_model_image.fits')
+                fitstablename = refimg.replace('.fits','_tdose_initial_model_objparam.fits')
+            else:
+                saveDS9region = False
+                savefitsimage = False
+                savefitstable = False
+                ds9regionname = ' '
+                fitsimagename = ' '
+                fitstablename = ' '
 
-    pinit, fit    = tmf.gen_fullmodel(img_data,sourcecat,verbose=verbosefull,
+            paramlist = tu.gen_paramlist_from_SExtractorfile(setupdic['gauss_guess'],imgheader=img_hdr,clobber=clobber,
+                                                             objects=objects,
+                                                             idcol=setupdic['gauss_guess_idcol'],
+                                                             racol=setupdic['gauss_guess_racol'],
+                                                             deccol=setupdic['gauss_guess_deccol'],
+                                                             aimg=setupdic['gauss_guess_aimg'],
+                                                             bimg=setupdic['gauss_guess_bimg'],
+                                                             angle=setupdic['gauss_guess_angle'],
+                                                             fluxscale=setupdic['gauss_guess_fluxscale'],
+                                                             fluxfactor=setupdic['gauss_guess_fluxfactor'],
+                                                             Nsigma=setupdic['gauss_guess_Nsigma'],
+                                                             verbose=verbosefull,
+                                                             saveDS9region=saveDS9region,ds9regionname=ds9regionname,
+                                                             savefitsimage=savefitsimage,fitsimagename=fitsimagename,
+                                                             savefitstable=savefitstable,fitstablename=fitstablename)
+            param_initguess = paramlist
+    elif setupdic['source_model'].lower() == 'galfit':
+        sys.exit(' ---> source_model == galfit is not enabled yet; sorry...')
+    elif setupdic['source_model'].lower() == 'aperture':
+        sigysigxangle    = None
+        param_initguess  = None
+        pixscales        = wcs.utils.proj_plane_pixel_scales(img_wcs)*3600.0
+        pixscaleunique   = np.unique(pixscales)
+        if len(pixscaleunique) != 1:
+            sys.exit(' ---> The pixel scale in the x and y direction of image are different')
+        else:
+            sigysigxangle =  setupdic['aperture_size'] / pixscaleunique          # radius in pixels
+            fluxscale     =  pyfits.open(sourcecat)[1].data['id'].astype(float)  # pixel values
+    else:
+        sys.exit(' ---> Setting source_model == '+setupdic['source_model']+' is not a valid entry')
+
+
+    pinit, fit    = tmf.gen_fullmodel(img_data,sourcecat,modeltype=setupdic['source_model'],verbose=verbosefull,
                                       xpos_col=setupdic['sourcecat_xposcol'],ypos_col=setupdic['sourcecat_yposcol'],
-                                      datanoise=None,sigysigxangle=None,
-                                      fluxscale=setupdic['sourcecat_fluxcol'],generateimage=modelimg,
+                                      datanoise=None,sigysigxangle=sigysigxangle,
+                                      fluxscale=fluxscale,generateimage=modelimg,
                                       generateresidualimage=True,clobber=clobber,outputhdr=img_hdr,
                                       param_initguess=param_initguess)
 
