@@ -571,6 +571,28 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
                                                      sourcescale=[1.0],verbose=False)
                 out_cube[ss,ll,:,:]  = layer_img * layer_scales[ss,ll]
         if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
+    elif paramtype == 'aperture':
+        if verbose: print ' - Set up output source model cube based on aperture parameters and sub-cube input shape  '
+        Nsource      = int(len(sourceparam)/4.0)
+        params       = np.reshape(sourceparam,[Nsource,4])
+        if Nsource == 1:
+            params   = params[0]
+        out_cube     = np.zeros([Nsource,cubeshape[0],cubeshape[1],cubeshape[2]])
+        xgrid, ygrid = tu.gen_gridcomponents(cubeshape[1:])
+
+        if verbose: print ' - Loop over sources and layers to fill output cube with data '
+        if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
+        for ss in xrange(Nsource):
+            for ll in xrange(Nlayers):
+                if verbose:
+                    infostr = '   Generating layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % cubeshape[0])+\
+                              ' in source cube '+str("%6.f" % (ss+1))+' / '+str("%6.f" % Nsource)
+                    sys.stdout.write("%s\r" % infostr)
+                    sys.stdout.flush()
+
+                layer_img           = tmf.modelimage_aperture((xgrid,ygrid), params, showmodelimg=False, verbose=False)
+                out_cube[ss,ll,:,:] = layer_img * layer_scales[ss,ll]
+        if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
     else:
         sys.exit(' ---> Invalid parameter type ('+paramtype+') provided to gen_source_model_cube()')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
