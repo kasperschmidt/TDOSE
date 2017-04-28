@@ -432,7 +432,41 @@ def perform_2Dconvolution(cube,kernels,use_fftconvolution=False,verbose=True):
         cube_convolved[zz,:,:] = layer_convolved
 
     return cube_convolved
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_aperture(imgsize,ypos,xpos,radius,pixval=1,showaperture=False,verbose=True):
+    """
+    Generating an aperture image
 
+    --- INPUT ---
+    imgsize       The dimensions of the array to return. Expects [y-size,x-size].
+                  The aperture will be positioned in the center of a (+/-x-size/2., +/-y-size/2) sized array
+    ypos          Pixel position in the y direction
+    xpos          Pixel position in the x direction
+    radius        Radius of aperture in pixels
+    showaperture  Display image of generated aperture
+    verbose       Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    apertureimg  = tu.gen_aperture([20,40],10,5,10,showaperture=True)
+    apertureimg  = tu.gen_aperture([2000,4000],900,1700,150,showaperture=True)
+
+    """
+    if verbose: print ' - Generating aperture in image (2D array)'
+    y , x    = np.ogrid[-ypos:imgsize[0]-ypos, -xpos:imgsize[1]-xpos]
+    mask     = x*x + y*y <= radius**2.
+    aperture = np.zeros(imgsize)
+
+    if verbose: print ' - Assigning pixel value '+str(pixval)+' to aperture'
+    aperture[mask] = pixval
+
+    if showaperture:
+        if verbose: print ' - Displaying resulting image of aperture'
+        plt.imshow(aperture,interpolation='none')
+        plt.title('Generated aperture')
+        plt.show()
+
+    return aperture
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
     """
