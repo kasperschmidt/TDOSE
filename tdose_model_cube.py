@@ -230,12 +230,9 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
     elif paramtype == 'aperture':
         if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
         Nsource        = int(len(sourceparam)/4.0)
-        params         = np.reshape(sourceparam,[Nsource,4])
-        if Nsource == 1:
-            params     = params[0]
         datashape      = datacube.shape
         xgrid, ygrid   = tu.gen_gridcomponents(datashape[1:])
-        model_img      = tmf.modelimage_aperture((xgrid,ygrid), params, showmodelimg=False, verbose=loopverbose)
+        model_img      = tmf.modelimage_aperture((xgrid,ygrid), sourceparam, showmodelimg=False, verbose=loopverbose)
         layer_scales   = np.ones([Nsource,datashape[0]])
         model_cube_out = np.repeat(model_img[np.newaxis, :, :], datashape[0], axis=0)
         if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
@@ -575,8 +572,6 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
         if verbose: print ' - Set up output source model cube based on aperture parameters and sub-cube input shape  '
         Nsource      = int(len(sourceparam)/4.0)
         params       = np.reshape(sourceparam,[Nsource,4])
-        if Nsource == 1:
-            params   = params[0]
         out_cube     = np.zeros([Nsource,cubeshape[0],cubeshape[1],cubeshape[2]])
         xgrid, ygrid = tu.gen_gridcomponents(cubeshape[1:])
 
@@ -590,7 +585,7 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
                     sys.stdout.write("%s\r" % infostr)
                     sys.stdout.flush()
 
-                layer_img           = tmf.modelimage_aperture((xgrid,ygrid), params, showmodelimg=False, verbose=False)
+                layer_img           = tmf.modelimage_aperture((xgrid,ygrid), params[ss], showmodelimg=False, verbose=False)
                 out_cube[ss,ll,:,:] = layer_img * layer_scales[ss,ll]
         if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
     else:
