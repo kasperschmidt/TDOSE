@@ -82,30 +82,39 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Storing fitted source paramters as fits table and returning output'
-    tablename = generateimage.replace('.fits','_objparam.fits')
-
-    objnumbers = np.arange(len(fit_output[0])/6)+1
-    c01 = pyfits.Column(name='obj',            format='D', unit='',       array=objnumbers)
-    c02 = pyfits.Column(name='xpos',           format='D', unit='PIXELS', array=fit_output[0][1::6])
-    c03 = pyfits.Column(name='ypos',           format='D', unit='PIXELS', array=fit_output[0][0::6])
-    c04 = pyfits.Column(name='fluxscale',      format='D', unit='',       array=fit_output[0][2::6])
-    c05 = pyfits.Column(name='xsigma',         format='D', unit='PIXELS', array=fit_output[0][4::6])
-    c06 = pyfits.Column(name='ysigma',         format='D', unit='PIXELS', array=fit_output[0][3::6])
-    c07 = pyfits.Column(name='angle',          format='D', unit='DEGREES',array=fit_output[0][5::6])
-    c08 = pyfits.Column(name='xpos_init',      format='D', unit='PIXELS', array=param_init[1::6])
-    c09 = pyfits.Column(name='ypos_init',      format='D', unit='PIXELS', array=param_init[0::6])
-    c10 = pyfits.Column(name='fluxscale_init', format='D', unit='',       array=param_init[2::6])
-    c11 = pyfits.Column(name='xsigma_init',    format='D', unit='PIXELS', array=param_init[4::6])
-    c12 = pyfits.Column(name='ysigma_init',    format='D', unit='PIXELS', array=param_init[3::6])
-    c13 = pyfits.Column(name='angle_init',     format='D', unit='DEGREES',array=param_init[5::6])
-
-    coldefs = pyfits.ColDefs([c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11,c12,c13])
-
+    tablename  = generateimage.replace('.fits','_objparam.fits')
+    if modeltype.lower() == 'gauss': # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        objnumbers = np.arange(len(fit_output[0])/6)+1
+        c01 = pyfits.Column(name='obj',            format='D', unit='',       array=objnumbers)
+        c02 = pyfits.Column(name='xpos',           format='D', unit='PIXELS', array=fit_output[0][1::6])
+        c03 = pyfits.Column(name='ypos',           format='D', unit='PIXELS', array=fit_output[0][0::6])
+        c04 = pyfits.Column(name='fluxscale',      format='D', unit='',       array=fit_output[0][2::6])
+        c05 = pyfits.Column(name='xsigma',         format='D', unit='PIXELS', array=fit_output[0][4::6])
+        c06 = pyfits.Column(name='ysigma',         format='D', unit='PIXELS', array=fit_output[0][3::6])
+        c07 = pyfits.Column(name='angle',          format='D', unit='DEGREES',array=fit_output[0][5::6])
+        c08 = pyfits.Column(name='xpos_init',      format='D', unit='PIXELS', array=param_init[1::6])
+        c09 = pyfits.Column(name='ypos_init',      format='D', unit='PIXELS', array=param_init[0::6])
+        c10 = pyfits.Column(name='fluxscale_init', format='D', unit='',       array=param_init[2::6])
+        c11 = pyfits.Column(name='xsigma_init',    format='D', unit='PIXELS', array=param_init[4::6])
+        c12 = pyfits.Column(name='ysigma_init',    format='D', unit='PIXELS', array=param_init[3::6])
+        c13 = pyfits.Column(name='angle_init',     format='D', unit='DEGREES',array=param_init[5::6])
+        coldefs = pyfits.ColDefs([c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11,c12,c13])
+    elif modeltype.lower() == 'aperture': # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        objnumbers = np.arange(len(fit_output[0])/4)+1
+        c01 = pyfits.Column(name='obj',            format='D', unit='',       array=objnumbers)
+        c02 = pyfits.Column(name='xpos',           format='D', unit='PIXELS', array=fit_output[0][1::4])
+        c03 = pyfits.Column(name='ypos',           format='D', unit='PIXELS', array=fit_output[0][0::4])
+        c04 = pyfits.Column(name='radius',         format='D', unit='PIXELS', array=fit_output[0][2::4])
+        c05 = pyfits.Column(name='pixvalue',       format='D', unit='',       array=fit_output[0][3::4])
+        c06 = pyfits.Column(name='xpos_init',      format='D', unit='PIXELS', array=param_init[1::4])
+        c07 = pyfits.Column(name='ypos_init',      format='D', unit='PIXELS', array=param_init[0::4])
+        c08 = pyfits.Column(name='radius_init',    format='D', unit='PIXELS', array=param_init[2::4])
+        c09 = pyfits.Column(name='pixvalue_init',  format='D', unit='',       array=param_init[3::4])
+        coldefs = pyfits.ColDefs([c01,c02,c03,c04,c05,c06,c07,c08,c09])
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     th = pyfits.new_table(coldefs) # creating default header
-
     # writing hdrkeys:'---KEY--',                             '----------------MAX LENGTH COMMENT-------------'
-    #th.header.append(('ATRACE  ' , 1.00                      ,'Factor to scale trace to total flux'),end=True)
-    #th.header.append(('RA      ' , spec2D[0].header['RA']    ,'Target R.A.'),end=True)
+    th.header.append(('MODTYPE ', modeltype.lower()          ,'The model type the parameters correspond to    '),end=True)
 
     tbHDU  = pyfits.new_table(coldefs, header=th.header)
     tbHDU.writeto(tablename, clobber=clobber)
@@ -163,27 +172,54 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
     else:
         hduimg = pyfits.PrimaryHDU(modelimg,header=outputhdr)       # creating default fits header
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    Nobj = int(len(paramlist)/6.0)
-    if verbose: print ' - Adding parameters of '+str(Nobj)+' objects used to generate model to header '
+    if modeltype.lower() == 'gauss':
+        Nparam = 6
+        Nobj   = int(len(paramlist)/Nparam)
+        if verbose: print ' - Adding gaussian parameters of '+str(Nobj)+' objects used to generate model to header '
 
-    for oo in xrange(Nobj):
-        objno = str("%.4d" % (oo+1))
-        yposition,xposition,fluxscale,sigmay,sigmax,angle = paramlist[oo*6:oo*6+6]
-        hduimg.header.append(('xp'+objno, xposition, 'Obj'+objno+': x position'),end=True)
-        hduimg.header.append(('yp'+objno, yposition, 'Obj'+objno+': y position'),end=True)
-        hduimg.header.append(('fs'+objno, fluxscale, 'Obj'+objno+': flux scale applied to Gauss'),end=True)
-        hduimg.header.append(('xs'+objno, sigmax,    'Obj'+objno+': Standard deviation in xpos'),end=True)
-        hduimg.header.append(('ys'+objno, sigmay,    'Obj'+objno+': Standard deviation in ypos'),end=True)
-        hduimg.header.append(('an'+objno, angle,     'Obj'+objno+': Rotation angle of Gauss [deg]'),end=True)
+        for oo in xrange(Nobj):
+            objno = str("%.4d" % (oo+1))
+            yposition,xposition,fluxscale,sigmay,sigmax,angle = paramlist[oo*Nparam:oo*Nparam+Nparam]
+            hduimg.header.append(('xp'+objno, xposition, 'Obj'+objno+': x position'),end=True)
+            hduimg.header.append(('yp'+objno, yposition, 'Obj'+objno+': y position'),end=True)
+            hduimg.header.append(('fs'+objno, fluxscale, 'Obj'+objno+': flux scale applied to Gauss'),end=True)
+            hduimg.header.append(('xs'+objno, sigmax,    'Obj'+objno+': Standard deviation in xpos'),end=True)
+            hduimg.header.append(('ys'+objno, sigmay,    'Obj'+objno+': Standard deviation in ypos'),end=True)
+            hduimg.header.append(('an'+objno, angle,     'Obj'+objno+': Rotation angle of Gauss [deg]'),end=True)
 
-        if type(param_init) == np.ndarray:
-            yposition,xposition,fluxscale,sigmay,sigmax,angle = param_init[oo*6:oo*6+6]
-            hduimg.header.append(('xp'+objno+'_i', xposition, 'Obj'+objno+': Initial x position'),end=True)
-            hduimg.header.append(('yp'+objno+'_i', yposition, 'Obj'+objno+': Initial y position'),end=True)
-            hduimg.header.append(('fs'+objno+'_i', fluxscale, 'Obj'+objno+': Initial flux scale applied to Gauss'),end=True)
-            hduimg.header.append(('xs'+objno+'_i', sigmax,    'Obj'+objno+': Initial Standard deviation in xpos'),end=True)
-            hduimg.header.append(('ys'+objno+'_i', sigmay,    'Obj'+objno+': Initial Standard deviation in ypos'),end=True)
-            hduimg.header.append(('an'+objno+'_i', angle,     'Obj'+objno+': Initial Rotation angle of Gauss [deg]'),end=True)
+            if type(param_init) == np.ndarray:
+                yposition,xposition,fluxscale,sigmay,sigmax,angle = param_init[oo*Nparam:oo*Nparam+Nparam]
+                hduimg.header.append(('xp'+objno+'_i', xposition, 'Obj'+objno+': Initial x position'),end=True)
+                hduimg.header.append(('yp'+objno+'_i', yposition, 'Obj'+objno+': Initial y position'),end=True)
+                hduimg.header.append(('fs'+objno+'_i', fluxscale, 'Obj'+objno+': Initial flux scale applied to Gauss'),end=True)
+                hduimg.header.append(('xs'+objno+'_i', sigmax,    'Obj'+objno+': Initial Standard deviation in xpos'),end=True)
+                hduimg.header.append(('ys'+objno+'_i', sigmay,    'Obj'+objno+': Initial Standard deviation in ypos'),end=True)
+                hduimg.header.append(('an'+objno+'_i', angle,     'Obj'+objno+': Initial Rotation angle of Gauss [deg]'),end=True)
+    elif modeltype.lower() == 'galfit':
+        sys.exit(' ---> modeltype = galfit not enabled for save_modelimage yet; sorry...')
+    elif modeltype.lower() == 'aperture':
+        Nparam = 4
+        Nobj   = int(len(paramlist)/Nparam)
+        if verbose: print ' - Adding aperture parameters of '+str(Nobj)+' objects used to generate model to header '
+
+        for oo in xrange(Nobj):
+            objno = str("%.4d" % (oo+1))
+            yposition,xposition,radius,pixval = paramlist[oo*Nparam:oo*Nparam+Nparam]
+            hduimg.header.append(('xp'+objno, xposition, 'Obj'+objno+': x position'),end=True)
+            hduimg.header.append(('yp'+objno, yposition, 'Obj'+objno+': y position'),end=True)
+            hduimg.header.append(('ra'+objno, radius,    'Obj'+objno+': radius in pixels of aperture'),end=True)
+            hduimg.header.append(('pv'+objno, pixval,    'Obj'+objno+': pixel value of aperture'),end=True)
+
+            if type(param_init) == np.ndarray:
+                yposition,xposition,radius,pixval = param_init[oo*Nparam:oo*Nparam+Nparam]
+                hduimg.header.append(('xp'+objno+'_i', xposition, 'Obj'+objno+': Initial x position'),end=True)
+                hduimg.header.append(('yp'+objno+'_i', yposition, 'Obj'+objno+': Initial y position'),end=True)
+                hduimg.header.append(('ra'+objno+'_i', radius,    'Obj'+objno+': radius in pixels of aperture'),end=True)
+                hduimg.header.append(('pv'+objno+'_i', pixval,    'Obj'+objno+': pixel value of aperture'),end=True)
+    else:
+        sys.exit(' ---> "modeltype"='+modeltype+' is an invalid choice of modeling setup so aborting')
+
+
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     hdulist = pyfits.HDUList([hduimg])       # turn header into to hdulist
     hdulist.writeto(outname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)

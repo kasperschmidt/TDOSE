@@ -660,7 +660,7 @@ def maxlikelihood_multivariateguass(datapoints,mean,covar):
 
     return MLmean, MLcovar
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def convert_paramarray(paramarray,hdr,hdr_new,verbose=True):
+def convert_paramarray(paramarray,hdr,hdr_new,type='gauss',verbose=True):
     """
     Function to convert the pixel-based paramter array from one wcs frame to another
 
@@ -678,21 +678,37 @@ def convert_paramarray(paramarray,hdr,hdr_new,verbose=True):
     if wcs_out.to_header()['WCSAXES'] == 3:
         wcs_out = tu.WCS3DtoWCS2D(wcs_out)
 
-    Nobj      = len(paramarray)/6
     scale_in  = wcs.utils.proj_plane_pixel_scales(wcs_in)*3600.0   # pix scale in arcsec
     scale_out = wcs.utils.proj_plane_pixel_scales(wcs_out)*3600.0  # pix scale in arcsec
 
-    for oo in xrange(Nobj):
-        ypix      = paramarray[oo*6+0]-1.
-        xpix      = paramarray[oo*6+1]-1.
-        skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcs_in)
-        pixcoord  = wcs.utils.skycoord_to_pixel(skycoord,wcs_out)# + np.array([1,1])
-        paramconv[oo*6+0] = pixcoord[1]+1
-        paramconv[oo*6+1] = pixcoord[0]+1
-        paramconv[oo*6+2] = paramarray[oo*6+2]
-        paramconv[oo*6+3] = paramarray[oo*6+3]*scale_in[0]/scale_out[0]
-        paramconv[oo*6+4] = paramarray[oo*6+4]*scale_in[1]/scale_out[1]
-        paramconv[oo*6+5] = paramarray[oo*6+5]
+    if type == 'gauss':
+        Nparam    = 6
+        Nobj      = len(paramarray)/Nparam
+        for oo in xrange(Nobj):
+            ypix      = paramarray[oo*Nparam+0]-1.
+            xpix      = paramarray[oo*Nparam+1]-1.
+            skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcs_in)
+            pixcoord  = wcs.utils.skycoord_to_pixel(skycoord,wcs_out)# + np.array([1,1])
+            paramconv[oo*Nparam+0] = pixcoord[1]
+            paramconv[oo*Nparam+1] = pixcoord[0]
+            paramconv[oo*Nparam+2] = paramarray[oo*Nparam+2]
+            paramconv[oo*Nparam+3] = paramarray[oo*Nparam+3]*scale_in[0]/scale_out[0]
+            paramconv[oo*Nparam+4] = paramarray[oo*Nparam+4]*scale_in[1]/scale_out[1]
+            paramconv[oo*Nparam+5] = paramarray[oo*Nparam+5]
+    elif type == 'aperture':
+        Nparam    = 4
+        Nobj      = len(paramarray)/4
+        for oo in xrange(Nobj):
+            ypix      = paramarray[oo*Nparam+0]-1.
+            xpix      = paramarray[oo*Nparam+1]-1.
+            skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcs_in)
+            pixcoord  = wcs.utils.skycoord_to_pixel(skycoord,wcs_out)# + np.array([1,1])
+            paramconv[oo*Nparam+0] = pixcoord[1]
+            paramconv[oo*Nparam+1] = pixcoord[0]
+            paramconv[oo*Nparam+2] = paramarray[oo*Nparam+2]*scale_in[0]/scale_out[0]
+            paramconv[oo*Nparam+3] = paramarray[oo*Nparam+3]
+    else:
+        sys.exit(' ---> Invalid type = '+type+' of parameters to convert')
 
     return paramconv
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -712,25 +728,49 @@ def build_paramarray(fitstable,returninit=False,verbose=True):
     paramarray = tu.build_paramarray(path+file,verbose=True)
     """
     tabdat     = pyfits.open(fitstable)[1].data
+    tabhdr     = pyfits.open(fitstable)[1].header
+    try:
+        paramtype = tabhdr['MODTYPE']
+    except:
+        if verbose: ' Did not find the keyword "MODTYPE" in the fits header; assuming the parameters are from gaussian models'
+        paramtype = 'gauss'
+
     Nobj       = len(tabdat['obj'])
-    paramarray = np.zeros([Nobj*6])
 
-    for oo in xrange(Nobj):
-        if returninit:
-            paramarray[oo*6+0] = tabdat['ypos_init'][oo]
-            paramarray[oo*6+1] = tabdat['xpos_init'][oo]
-            paramarray[oo*6+2] = tabdat['fluxscale_init'][oo]
-            paramarray[oo*6+3] = tabdat['ysigma_init'][oo]
-            paramarray[oo*6+4] = tabdat['xsigma_init'][oo]
-            paramarray[oo*6+5] = tabdat['angle_init'][oo]
-        else:
-            paramarray[oo*6+0] = tabdat['ypos'][oo]
-            paramarray[oo*6+1] = tabdat['xpos'][oo]
-            paramarray[oo*6+2] = tabdat['fluxscale'][oo]
-            paramarray[oo*6+3] = tabdat['ysigma'][oo]
-            paramarray[oo*6+4] = tabdat['xsigma'][oo]
-            paramarray[oo*6+5] = tabdat['angle'][oo]
-
+    if paramtype == 'gauss':
+        Nparam     = 6
+        paramarray = np.zeros([Nobj*Nparam])
+        for oo in xrange(Nobj):
+            if returninit:
+                paramarray[oo*Nparam+0] = tabdat['ypos_init'][oo]
+                paramarray[oo*Nparam+1] = tabdat['xpos_init'][oo]
+                paramarray[oo*Nparam+2] = tabdat['fluxscale_init'][oo]
+                paramarray[oo*Nparam+3] = tabdat['ysigma_init'][oo]
+                paramarray[oo*Nparam+4] = tabdat['xsigma_init'][oo]
+                paramarray[oo*Nparam+5] = tabdat['angle_init'][oo]
+            else:
+                paramarray[oo*Nparam+0] = tabdat['ypos'][oo]
+                paramarray[oo*Nparam+1] = tabdat['xpos'][oo]
+                paramarray[oo*Nparam+2] = tabdat['fluxscale'][oo]
+                paramarray[oo*Nparam+3] = tabdat['ysigma'][oo]
+                paramarray[oo*Nparam+4] = tabdat['xsigma'][oo]
+                paramarray[oo*Nparam+5] = tabdat['angle'][oo]
+    elif paramtype == 'aperture':
+        Nparam       = 4
+        paramarray = np.zeros([Nobj*Nparam])
+        for oo in xrange(Nobj):
+            if returninit:
+                paramarray[oo*Nparam+0] = tabdat['ypos_init'][oo]
+                paramarray[oo*Nparam+1] = tabdat['xpos_init'][oo]
+                paramarray[oo*Nparam+2] = tabdat['radius_init'][oo]
+                paramarray[oo*Nparam+3] = tabdat['pixvalue_init'][oo]
+            else:
+                paramarray[oo*Nparam+0] = tabdat['ypos'][oo]
+                paramarray[oo*Nparam+1] = tabdat['xpos'][oo]
+                paramarray[oo*Nparam+2] = tabdat['radius'][oo]
+                paramarray[oo*Nparam+3] = tabdat['pixvalue'][oo]
+    else:
+        sys.exit(' ---> Unknown MODTYPE = '+paramtype+' in fits header')
     return paramarray
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def WCS3DtoWCS2D(wcs3d,verbose=True):
