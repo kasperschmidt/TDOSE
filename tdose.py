@@ -185,8 +185,12 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if verbosefull: print ' TDOSE: Defining PSF as FWHM = p0 + p1(lambda-7000A)        '+\
                               '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
         if definePSF or modeldatacube:
-            paramPSF = tdose.define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,
-                                        clobber=clobber,verbose=verbose,verbosefull=verbosefull)
+            if setupdic['source_model'] == 'aperture':
+                if verbose: print ' >>> Skipping defining PSF as source_model = "aperture", i.e., convolution of ref. image model'
+                paramPSF = None
+            else:
+                paramPSF = tdose.define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,
+                                            clobber=clobber,verbose=verbose,verbosefull=verbosefull)
         else:
             if verbose: print ' >>> Skipping defining PSF of data cube (assume it is defined)'
 
@@ -195,19 +199,20 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if verbosefull: print ' TDOSE: Modelling data cube                                 '+\
                               '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
         modcubename = setupdic['models_directory']+'/'+\
-                      datacube.split('/')[-1].replace('.fits','_'+setupdic['model_cube_ext']+'.fits')
+                      datacube.split('/')[-1].replace('.fits','_'+setupdic['model_cube_ext']+'_'+setupdic['source_model']+'.fits')
         rescubename = setupdic['models_directory']+'/'+\
-                      datacube.split('/')[-1].replace('.fits','_'+setupdic['residual_cube_ext']+'.fits')
+                      datacube.split('/')[-1].replace('.fits','_'+setupdic['residual_cube_ext']+'_'+setupdic['source_model']+'.fits')
 
         if modeldatacube:
-            model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_variance,paramCUBE,cube_hdr,paramPSF,
-                           clobber=clobber,verbose=verbose,verbosefull=verbosefull)
+            tdose.model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_variance,paramCUBE,cube_hdr,paramPSF,
+                                 clobber=clobber,verbose=verbose,verbosefull=verbosefull)
         else:
             if verbose: print ' >>> Skipping modeling of data cube (assume it exists)'
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         sourcecubename  = setupdic['models_directory']+'/'+\
-                          datacube.split('/')[-1].replace('.fits','_'+setupdic['source_model_cube']+'.fits')
+                          datacube.split('/')[-1].replace('.fits','_'+setupdic['source_model_cube']+'_'+
+                                                          setupdic['source_model']+'.fits')
 
         if createsourcecube:
             if verbosefull: print '--------------------------------------------------------------------------------------------------'
@@ -269,7 +274,8 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
         if store1Dspectra:
             specfiles  = tes.extract_spectra(model_cube_file,model_cube_ext=setupdic['cube_extension'],
-                                             layer_scale_ext='WAVESCL',clobber=clobber,nameext=setupdic['spec1D_name'],
+                                             layer_scale_ext='WAVESCL',clobber=clobber,
+                                             nameext=setupdic['spec1D_name']+'_'+setupdic['source_model'],
                                              source_association_dictionary=SAD,outputdir=specoutputdir,
                                              variance_cube_file=variance_cube_file,variance_cube_ext=variance_cube_ext,
                                              source_model_cube_file=smc_file,source_cube_ext=smc_ext,verbose=True)

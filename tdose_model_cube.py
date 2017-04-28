@@ -60,6 +60,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Determining parameters and assembling source information'
     if paramtype == 'gauss':
+        if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
         Nsource   = int(len(sourceparam)/6.0)
         params    = np.reshape(sourceparam,[Nsource,6])
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -83,7 +84,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                         'cube of 1s in flux optimization'
             noisecube = np.ones(datashape)
 
-        if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
+
         if model_layers is None:
             layerlist = np.arange(datashape[0])
         else:
@@ -225,6 +226,18 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
             layer_scales[:,ll]     = output_scales
             model_cube_out[ll,:,:] = output_layer
+        if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
+    elif paramtype == 'aperture':
+        if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
+        Nsource        = int(len(sourceparam)/4.0)
+        params         = np.reshape(sourceparam,[Nsource,4])
+        if Nsource == 1:
+            params     = params[0]
+        datashape      = datacube.shape
+        xgrid, ygrid   = tu.gen_gridcomponents(datashape[1:])
+        model_img      = tmf.modelimage_aperture((xgrid,ygrid), params, showmodelimg=False, verbose=loopverbose)
+        layer_scales   = np.ones([Nsource,datashape[0]])
+        model_cube_out = np.repeat(model_img[np.newaxis, :, :], datashape[0], axis=0)
         if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
     else:
         sys.exit(' ---> Invalid parameter type ('+paramtype+') provided to gen_fullmodel()')
