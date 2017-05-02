@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='tdose_spectrum',outputdir='./',clobber=False,
                     variance_cube_file=None,variance_cube_ext='ERROR',source_model_cube_file=None,source_cube_ext='DATA',
-                    model_cube_ext='DATA',layer_scale_ext='WAVESCL',verbose=True):
+                    model_cube_ext='DATA',layer_scale_ext='WAVESCL',data_cube_file=None,verbose=True):
     """
     Assemble the spectra determined by the wavelength layer scaling of the normalized models
     when generating the source model cube
@@ -24,6 +24,7 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='
     variance_cube_file             file containing variance cube of data to be used to estimate nois on 1D spectrum
     variance_cube_ext
     source_model_cube_file
+    data_cube_file                      file containing original data cube used for extraction of aperture spectra
     verbose
 
     --- EXAMPLE OF USE ---
@@ -42,6 +43,13 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='
         variance_cube     = None
         source_model_cube = None
     Nsources = layer_scale_arr.shape[0]
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if data_cube_file is not None:
+        if verbose: print ' - Loading data cube '
+        data_cube  = pyfits.open(data_cube_file)[model_cube_ext].data
+    else:
+        data_cube  = None
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if source_association_dictionary is None:
@@ -79,19 +87,20 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='
             sys.stdout.flush()
 
         sourceoutput = tes.extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=variance_cube,
-                                            source_model_cube=source_model_cube,
+                                            source_model_cube=source_model_cube, data_cube=data_cube,
                                             specname=specname,obj_cube_hdr=obj_cube_hdr,clobber=clobber,verbose=True)
 
     if verbose: print '\n - Done extracting spectra. Returning list of fits files generated'
     return specfiles
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,source_model_cube=None,
-                     specname='tdose_extract_spectra_extractedspec.fits',obj_cube_hdr=None,
+                     specname='tdose_extract_spectra_extractedspec.fits',obj_cube_hdr=None,data_cube=None,
                      clobber=False,verbose=True):
     """
     Extracting a spectrum based on the layer scale image from the model cube provided a list of sources to combine.
     Noise is estimated from the noise cube (of the data)
 
+    If all layer_scales are 1 a data_cube for the extractions is expected
 
     --- INPUT ---
     sourceIDs         The source IDs to combine into spectrum
@@ -105,6 +114,8 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
     specname          Name of file to save spectrum to
     obj_cube_hdr      Provide a template header to save the object cube (from combining the individual source cube)
                       as an extension to the extracted spectrum
+    data_cube         In case all layers scales are 1, it is assumed that the source_model_cube contains a mask for the
+                      spectral extraction, which will then be performed on this data_cube.
     clobber           To overwrite existing files set clobber=True
     verbose           Toggle verbosity
 
@@ -131,42 +142,70 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Assembling object spectrum from source scaling'
     source_ent = np.asarray(sourceIDs).astype(int)
-    if len(source_ent) < 1:
-        spec_1D   = layer_scale_arr[source_ent,:]
+
+    if (layer_scale_arr == 1).all():
+        if verbose: print ' - All layer scales are 1; assuming source model cube contain mask for spectral extraction'
+        object_cube  = np.sum(np.abs(source_model_cube[source_ent,:,:]),axis=0)
+        if data_cube is None:
+            sys.exit(' ---> Did not find a data cube to extrac spectra from as expected')
+
+        object_mask     = (object_cube > 0)
+        invalid_mask    = np.ma.masked_invalid(data_cube).mask
+        comb_mask       = (invalid_mask | object_mask)
+        spec_1D_masked  = np.sum(np.sum(  np.ma.array(data_cube,mask=comb_mask)  ,axis=1),axis=1)
+        spec_1D         = spec_1D_masked.filled(fill_value=0.0)
+
+        if noise_cube is not None:
+            if verbose: print '   Calculating noise as d_spec_k = sqrt( SUMij d_pix_ij**2 ), i.e., as the sqrt of variances summed'
+            invalid_mask_noise = np.ma.masked_invalid(noise_cube).mask
+            comb_mask          = (comb_mask | invalid_mask_noise)
+            variance_1D_masked = np.ma.array(noise_cube,mask=comb_mask)**2
+            noise_1D_masked    = np.sqrt( np.sum( np.sum( variance_1D_masked, axis=1), axis=1) )
+            noise_1D           = noise_1D_masked.filled(fill_value=0.0)
+
+            if verbose: print '   Generating S/N vector'
+            SN_1D         = spec_1D / noise_1D
+        else:
+            if verbose: print ' - No "noise_cube" provided. Setting all errors and S/N values to NaN'
+            SN_1D    = np.zeros(spec_1D.shape)*np.NaN
+            noise_1D = np.zeros(spec_1D.shape)*np.NaN
     else:
-        spec_1D   = np.sum( layer_scale_arr[source_ent,:],axis=0)
+        if verbose: print ' - Some layer scales are different from 1; hence assembling spectra using layer scales'
+        if len(source_ent) < 1:
+            spec_1D   = layer_scale_arr[source_ent,:]
+        else:
+            spec_1D   = np.sum( layer_scale_arr[source_ent,:],axis=0)
 
-    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if noise_cube is not None:
-        if verbose: print ' - Estimate S/N at each wavelength for 1D spectrum (see Eq. 16 of Kamann+2013)'
-        if verbose: print '   Estimating fraction of flux in each pixel wrt. total flux in each layer'
-        object_cube   = np.sum(np.abs(source_model_cube[source_ent,:,:]),axis=0) # summing source models for all source IDs
-        #total_cube    = np.sum(np.abs(source_model_cube),axis=0) # combined model of all sources
-        #layerflux     = np.sum(np.sum(source_model_cube[source_ent,:,:],axis=2),axis=2) # i.e., spec_1D
-        fluxfrac_cube = object_cube / spec_1D[:,None,None]
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        if noise_cube is not None:
+            if verbose: print ' - Estimate S/N at each wavelength for 1D spectrum (see Eq. 16 of Kamann+2013)'
+            if verbose: print '   Estimating fraction of flux in each pixel wrt. total flux in each layer'
+            object_cube   = np.sum(np.abs(source_model_cube[source_ent,:,:]),axis=0) # summing source models for all source IDs
+            #total_cube    = np.sum(np.abs(source_model_cube),axis=0) # combined model of all sources
+            #layerflux     = np.sum(np.sum(source_model_cube[source_ent,:,:],axis=2),axis=2) # i.e., spec_1D
+            fluxfrac_cube = object_cube / spec_1D[:,None,None]
 
-        #fluxfrac_min  = -9999 # 0.1
-        if verbose: print '   Defining pixel mask (ignoring NaN pixels) ' #+\
-        #                  'and pixels with <'+str(fluxfrac_min)+' of total pixel flux in model cube) '
-        # pix_mask      = (fluxfrac_cube < fluxfrac_min)
-        invalid_mask1 = np.ma.masked_invalid(fluxfrac_cube).mask
-        invalid_mask2 = np.ma.masked_invalid(noise_cube).mask
+            #fluxfrac_min  = -9999 # 0.1
+            if verbose: print '   Defining pixel mask (ignoring NaN pixels) ' #+\
+            #                  'and pixels with <'+str(fluxfrac_min)+' of total pixel flux in model cube) '
+            # pix_mask      = (fluxfrac_cube < fluxfrac_min)
+            invalid_mask1 = np.ma.masked_invalid(fluxfrac_cube).mask
+            invalid_mask2 = np.ma.masked_invalid(noise_cube).mask
 
-        # combining mask making sure all individual mask pixels have True for it to be true in combined mask
-        comb_mask     = (invalid_mask1 | invalid_mask2) # | pix_mask
+            # combining mask making sure all individual mask pixels have True for it to be true in combined mask
+            comb_mask     = (invalid_mask1 | invalid_mask2) # | pix_mask
 
-        if verbose: print '   Calculating noise propogated as d_spec_k = 1/sqrt( SUMij (fluxfrac_ij**2 / d_pix_ij**2) )'
-        squared_ratio     = np.ma.array(fluxfrac_cube,mask=comb_mask)**2 / np.ma.array(noise_cube,mask=comb_mask)**2
+            if verbose: print '   Calculating noise propogated as d_spec_k = 1/sqrt( SUMij (fluxfrac_ij**2 / d_pix_ij**2) )'
+            squared_ratio     = np.ma.array(fluxfrac_cube,mask=comb_mask)**2 / np.ma.array(noise_cube,mask=comb_mask)**2
 
-        inv_noise_masked  = np.sqrt( np.sum( np.sum( squared_ratio, axis=1), axis=1) )
-        noise_1D          = (1.0/inv_noise_masked).filled(fill_value=0.0)
-        if verbose: print '   Generating S/N vector'
-        SN_1D         = spec_1D / noise_1D
-
-    else:
-        if verbose: print ' - No "noise_cube" provided. Setting all errors and S/N values to NaN'
-        SN_1D    = np.zeros(spec_1D.shape)*np.NaN
-        noise_1D = np.zeros(spec_1D.shape)*np.NaN
+            inv_noise_masked  = np.sqrt( np.sum( np.sum( squared_ratio, axis=1), axis=1) )
+            noise_1D          = (1.0/inv_noise_masked).filled(fill_value=0.0)
+            if verbose: print '   Generating S/N vector'
+            SN_1D         = spec_1D / noise_1D
+        else:
+            if verbose: print ' - No "noise_cube" provided. Setting all errors and S/N values to NaN'
+            SN_1D    = np.zeros(spec_1D.shape)*np.NaN
+            noise_1D = np.zeros(spec_1D.shape)*np.NaN
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Saving extracted 1D spectrum and source cube to \n   '+specname
@@ -201,7 +240,6 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
     hdulist.writeto(specname, clobber=clobber)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return wavelengths, spec_1D, noise_1D, object_cube
-
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def extract_spectra_viasourcemodelcube(datacube,sourcemodelcube,wavelengths,speclist,specids='None',outputdir='./',
                                        noisecube=False,sourcemodel_hdr='None',verbose=True):
@@ -450,7 +488,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if comparisonspecs is not None:
-        for comparisonspec in comparisonspecs:
+        for cc, comparisonspec in enumerate(comparisonspecs):
             compdat = pyfits.open(comparisonspec)[1].data
 
             if xrange is not None:
@@ -464,12 +502,12 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
             if comp_colors is None:
                 comp_color = None
             else:
-                comp_color = comp_colors[ff]
+                comp_color = comp_colors[cc]
 
             if comp_labels is None:
                 comp_label = comparisonspec
             else:
-                comp_label = comp_labels[ff]
+                comp_label = comp_labels[cc]
 
             if plotSNcurve:
                 plt.plot(compdat[comp_wavecol][goodent],compdat[comp_fluxcol][goodent]/compdat[comp_errcol][goodent],
@@ -484,7 +522,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                          color=comp_color,lw=lthick, label=comp_label)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if skyspecs is not None:
-        for skyspec in skyspecs:
+        for ss, skyspec in enumerate(skyspecs):
             skydat = pyfits.open(skyspec)[1].data
 
             if xrange is not None:
@@ -498,12 +536,12 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
             if sky_colors is None:
                 sky_color = None
             else:
-                sky_color = sky_colors[ff]
+                sky_color = sky_colors[ss]
 
             if sky_labels is None:
                 sky_label = skyspec
             else:
-                sky_label = sky_labels[ff]
+                sky_label = sky_labels[ss]
 
             if plotSNcurve:
                 plt.plot(skydat[sky_wavecol][goodent],skydat[sky_fluxcol][goodent]/skydat[sky_errcol][goodent],

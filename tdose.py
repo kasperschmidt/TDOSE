@@ -278,7 +278,8 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                                              nameext=setupdic['spec1D_name']+'_'+setupdic['source_model'],
                                              source_association_dictionary=SAD,outputdir=specoutputdir,
                                              variance_cube_file=variance_cube_file,variance_cube_ext=variance_cube_ext,
-                                             source_model_cube_file=smc_file,source_cube_ext=smc_ext,verbose=True)
+                                             source_model_cube_file=smc_file,source_cube_ext=smc_ext,
+                                             data_cube_file=datacube,verbose=verbosefull)
 
         else:
             if verbose: print ' >>> Skipping storing 1D spectra to binary fits tables '
