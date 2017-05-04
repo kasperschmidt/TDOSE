@@ -977,12 +977,19 @@ def strip_header(header,verbose=True):
 def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,textlist=None,fontsize=12,
                     clobber=False,verbose=True):
     """
-    Generate a basic DS9 region file based on a model parameters file.
+    Generate a DS9 region file based on a model parameters file.
+    Model type represented by paraneters us determined from fits header.
 
     """
+    tabhdr = pyfits.open(fitstable)[1].header
+    try:
+        paramtype = tabhdr['MODTYPE']
+    except:
+        if verbose: ' Did not find the keyword "MODTYPE" in the fits header; assuming the parameters are from gaussian models'
+        paramtype = 'gauss'
+
     if verbose: print ' - Generating DS9 region file from model paramter file'
     paramarray = tu.build_paramarray(fitstable,verbose=True)
-    Nobj       = len(paramarray)/6
     scale      = wcs.utils.proj_plane_pixel_scales(wcsinfo)*3600.0   # pix scale in arcsec
 
     if not clobber:
@@ -998,25 +1005,38 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
         for tt, obj in enumerate(textstrings):
             textstrings[tt] = obj+': '+textlist[tt]
 
+    if paramtype == 'gauss':
+        Nparam = 6
+    elif paramtype == 'aperture':
+        Nparam = 4
+    else:
+        sys.exit(' ---> Invalid MODEL type keyword provide to tu.model_ds9region()')
+
+    Nobj       = len(paramarray)/Nparam
     if verbose: print ' - Converting to wcs coordinates'
     for oo in xrange(Nobj):
-        ypix      = paramarray[oo*6+0]
-        xpix      = paramarray[oo*6+1]
+        ypix      = paramarray[oo*Nparam+0]
+        xpix      = paramarray[oo*Nparam+1]
         skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcsinfo)
         dec       = skycoord.dec.value
         ra        = skycoord.ra.value
-        fluxscale = paramarray[oo*6+2]
-        sigmay    = paramarray[oo*6+3]*scale[0]/3600.0
-        sigmax    = (paramarray[oo*6+4]*scale[1]*np.cos(np.deg2rad(dec)))/3600.0
-        angle     = paramarray[oo*6+5]
-        #if oo == 4: pdb.set_trace()
-        string = 'ellipse('+str(ra)+','+str(dec)+','+str(Nsigma*sigmax)+','+str(Nsigma*sigmay)+','+str(angle)+') '
+
+        if paramtype == 'gauss':
+            fluxscale = paramarray[oo*Nparam+2]
+            sigmay    = paramarray[oo*Nparam+3]*scale[0]/3600.0
+            sigmax    = (paramarray[oo*Nparam+4]*scale[1]*np.cos(np.deg2rad(dec)))/3600.0
+            angle     = paramarray[oo*Nparam+5]
+            string    = 'ellipse('+str(ra)+','+str(dec)+','+str(Nsigma*sigmax)+','+str(Nsigma*sigmay)+','+str(angle)+') '
+        elif paramtype == 'aperture':
+            radius    = paramarray[oo*Nparam+2]*scale[0]
+            string    = 'circle('+str(ra)+','+str(dec)+','+str(radius)+'") '
+        else:
+            sys.exit(' ---> Invalid MODEL type keyword provide to tu.model_ds9region()')
 
         string = string+' # color='+color+' width='+str(width)+\
                  ' font="times '+str(fontsize)+' bold roman" text={'+textstrings[oo]+'}'
 
         fout.write(string+' \n')
-
     fout.close()
     if verbose: print ' - Saved region file to '+outputfile
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
