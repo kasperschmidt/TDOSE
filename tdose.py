@@ -722,12 +722,12 @@ def get_datinfo(cutoutid,setupdic):
 
     """
     if cutoutid == -9999:
-        cutstr     = None
-        imgsize    = setupdic['cutout_sizes']
-        refimg     = setupdic['ref_image']
-        datacube   = setupdic['data_cube']
-        noisecube  = setupdic['noise_cube']
-        sourcecat  = setupdic['source_catalog']
+        cutstr       = None
+        imgsize      = setupdic['cutout_sizes']
+        refimg       = setupdic['ref_image']
+        datacube     = setupdic['data_cube']
+        variancecube = setupdic['noise_cube']
+        sourcecat    = setupdic['source_catalog']
     else:
         if type(setupdic['cutout_sizes']) == np.str_:
             sizeinfo = np.genfromtxt(setupdic['cutout_sizes'],dtype=None,comments='#')
@@ -745,21 +745,18 @@ def get_datinfo(cutoutid,setupdic):
         cutstr          = ('_id'+str(int(cutoutid))+'_cutout'+str(imgsize[0])+'x'+str(imgsize[1])+'arcsec').replace('.','p')
         img_init_base   = setupdic['ref_image'].split('/')[-1]
         cube_init_base  = setupdic['data_cube'].split('/')[-1]
-        #noise_init_base = setupdic['noise_cube'].split('/')[-1]
+        var_init_base   = setupdic['variance_cube'].split('/')[-1]
 
         cut_img         = setupdic['cutout_directory']+img_init_base.replace('.fits',cutstr+'.fits')
         cut_cube        = setupdic['cutout_directory']+cube_init_base.replace('.fits',cutstr+'.fits')
-        cut_noise       = cut_cube.replace('.fits','_noise.fits')
+        cut_variance    = setupdic['cutout_directory']+var_init_base.replace('.fits',cutstr+'.fits')
         cut_sourcecat   = setupdic['source_catalog'].replace('.fits',cutstr+'.fits')
 
-        refimg     = cut_img
-        datacube   = cut_cube
-        if setupdic['data_cube'] == setupdic['variance_cube']:
-            noisecube  = cut_cube
-        else:
-            noisecube  = cut_noise
-        sourcecat = cut_sourcecat
+        refimg          = cut_img
+        datacube        = cut_cube
+        variancecube    = cut_variance
+        sourcecat       = cut_sourcecat
 
-    return cutstr, imgsize, refimg, datacube, noisecube, sourcecat
 
+    return cutstr, imgsize, refimg, datacube, variancecube, sourcecat
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
