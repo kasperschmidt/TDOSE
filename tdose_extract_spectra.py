@@ -149,7 +149,7 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
         if data_cube is None:
             sys.exit(' ---> Did not find a data cube to extrac spectra from as expected')
 
-        object_mask     = (object_cube > 0)
+        object_mask     = (object_cube == 0) # masking all zeros in object mask
         invalid_mask    = np.ma.masked_invalid(data_cube).mask
         comb_mask       = (invalid_mask | object_mask)
         spec_1D_masked  = np.sum(np.sum(  np.ma.array(data_cube,mask=comb_mask)  ,axis=1),axis=1)
