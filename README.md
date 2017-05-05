@@ -3,6 +3,9 @@
 
 README for the optimal spectral extraction software presented by Schmidt et al. (some day)
 
+TDOSE will be presented in a forthcoming publication (Schmidt et al.), until this publication has apparead, please references the TDOSE GitHub repository (https://github.com/kasperschmidt/GLASSinspectionGUIs) if TDOSE is used. 
+
+
 ## Table of Content
 
 - [Description](#description)
@@ -14,6 +17,7 @@ README for the optimal spectral extraction software presented by Schmidt et al. 
   - [Default Run](#default-run)
 - [Main Keywords in TDOSE](#main-keywords-in-tdose)
 - [References](#references)
+- [Schematic Overview of TDOSE](#schematic-overview-of-tdose)
 
 ## Description
 
@@ -34,20 +38,25 @@ The code is written in python and uses a wide range of default packages included
 
 ### Standard Packages
 
-The following standard packages are imported in one or more of the TDOSE scripts: 
-`os`,
-`sys`,
+The following standard packages are imported in one or more of the TDOSE scripts and therefore needs to be available to run TDOSE successfully: 
 `pdb`,
+`sys`,
 `time`,
 `glob`,
 `numpy`,
-`pylab`,
 `scipy`,
-`...`,
+`shutil`,
+`pyfits`,
+`astropy`,
+`datetime`,
+`warnings`,
+`matplotlib`,
+`subprocess`, and
+`collections`.
 
 ### Special Packages
 
-- `anything?`: The default
+No special Python packages are required to run TDOSE so far.
 
 
 ## Running TDOSE
@@ -79,5 +88,11 @@ TBD
 
 ## References 
 
-- TBD
+- Kamann, Wisotzki and Roth (2013)
+
+## Schematic Overview of TDOSE
+TDOSE_illustration.pdf (displayed below) presents a schemative overview of the different elements, functions and routines making up TDOSE.
+
+![schematicTDOSEoverview](TDOSE_illustration.pdf)
+
 
