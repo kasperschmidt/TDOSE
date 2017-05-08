@@ -112,6 +112,8 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 sys.stdout.flush()
 
         imgstr, imgsize, refimg, datacube, variancecube, sourcecat = tdose.get_datinfo(extid,setupdic)
+        if setupdic['wht_image'] is not None:
+            refimg    = refimg[0]
 
         cube_data     = pyfits.open(datacube)[setupdic['cube_extension']].data
         cube_variance = np.sqrt(pyfits.open(variancecube)[setupdic['variance_extension']].data)
@@ -130,29 +132,32 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbosefull: print '--------------------------------------------------------------------------------------------------'
-        if verbosefull: print ' TDOSE: Model reference image                               '+\
-                              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
-        regionfile    = setupdic['models_directory']+'/'+\
-                        refimg.split('/')[-1].replace('.fits','_'+setupdic['model_param_reg']+'_'+setupdic['source_model']+'.reg')
-        modelparam    = modelimg.replace('.fits','_objparam.fits') # output from refernce image modeling
+        if setupdic['ref_image_model'] is None:
+            if verbosefull: print ' TDOSE: Model reference image                               '+\
+                                  '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+            regionfile    = setupdic['models_directory']+'/'+\
+                            refimg.split('/')[-1].replace('.fits','_'+setupdic['model_param_reg']+'_'+setupdic['source_model']+'.reg')
+            modelparam    = modelimg.replace('.fits','_objparam.fits') # output from refernce image modeling
 
-        names         = []
-        sourceids     = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']]
-        for ii, sid in enumerate(sourceids):
-            if setupdic['sourcecat_parentIDcol'] is not None:
-                parentid = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']][ii]
-                namestr  = str(parentid)+'>>'+str(sid)
+            names         = []
+            sourceids     = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']]
+            for ii, sid in enumerate(sourceids):
+                if setupdic['sourcecat_parentIDcol'] is not None:
+                    parentid = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']][ii]
+                    namestr  = str(parentid)+'>>'+str(sid)
+                else:
+                    namestr  = str(sid)
+                names.append(namestr)
+
+            if modelrefimage:
+                tdose.model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
+                                     save_init_model_output=save_init_model_output,clobber=clobber,verbose=verbose,
+                                     verbosefull=verbosefull)
             else:
-                namestr  = str(sid)
-            names.append(namestr)
-
-        if modelrefimage:
-            tdose.model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
-                                 save_init_model_output=save_init_model_output,clobber=clobber,verbose=verbose,
-                                 verbosefull=verbosefull)
+                if verbose: print ' >>> Skipping modeling reference image (assume models exist)'
         else:
-            if verbose: print ' >>> Skipping modeling reference image (assume models exist)'
-
+            if verbose: print ' >>> Skipping modeling reference image (model provided in setup file)'
+            sys.exit(' ---> Use of the setup parameter ref_image_model is not enabled yet and must be set to "None"; sorry.')
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbosefull: print '--------------------------------------------------------------------------------------------------'
         if verbosefull: print ' TDOSE: Convert ref. image model to cube WCS                '+\
@@ -289,7 +294,8 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if verbose: print ' TDOSE: Plotting extracted spectra                          '+\
                           '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
         if setupdic['plot_generate']:
-            plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=plot1Dspectra,plotS2Nspectra=plotS2Nspectra,verbose=verbosefull)
+            tdose.plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=plot1Dspectra,plotS2Nspectra=plotS2Nspectra,
+                               verbose=verbosefull)
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbose:
             print '=================================================================================================='
@@ -398,19 +404,29 @@ def gen_cutouts(setupdic,extractids,Nextractions,sourceids_init,sourcedat_init,
 
 
         cutstr, cutoutsize, cut_img, cut_cube, cut_variance, cut_sourcecat = tdose.get_datinfo(cutoutid,setupdic)
-        cut_images.append(cut_img)
+
+        if setupdic['wht_image'] is None:
+            imgfiles = [setupdic['ref_image']]
+            imgexts  = [setupdic['img_extension']]
+            cut_images.append(cut_img)
+        else:
+            imgfiles = [setupdic['ref_image'],setupdic['wht_image']]
+            imgexts  = [setupdic['img_extension'],setupdic['wht_extension']]
+            cut_images.append(cut_img[0])
+
+
 
         if performcutout:
             if setupdic['data_cube'] == setupdic['variance_cube']:
                 cutouts   = tu.extract_subcube(setupdic['data_cube'],ra,dec,cutoutsize,cut_cube,
                                                cubeext=[setupdic['cube_extension'],setupdic['variance_extension']],clobber=clobber,
-                                               imgfiles=[setupdic['ref_image']],imgexts=[setupdic['img_extension']],
-                                               imgnames=[cut_img],verbose=verbosefull)
+                                               imgfiles=imgfiles,imgexts=imgexts,
+                                               imgnames=cut_img,verbose=verbosefull)
             else:
                 cutouts   = tu.extract_subcube(setupdic['data_cube'],ra,dec,cutoutsize,cut_cube,
                                                cubeext=[setupdic['cube_extension']],clobber=clobber,
-                                               imgfiles=[setupdic['ref_image']],imgexts=[setupdic['img_extension']],
-                                               imgnames=[cut_img],verbose=verbosefull)
+                                               imgfiles=imgfiles,imgexts=imgexts,
+                                               imgnames=cut_img,verbose=verbosefull)
 
                 cutouts   = tu.extract_subcube(setupdic['variance_cube'],ra,dec,cutoutsize,cut_variance,
                                                cubeext=[setupdic['variance_extension']],clobber=clobber,
@@ -752,7 +768,13 @@ def get_datinfo(cutoutid,setupdic):
         cut_variance    = setupdic['cutout_directory']+var_init_base.replace('.fits',cutstr+'.fits')
         cut_sourcecat   = setupdic['source_catalog'].replace('.fits',cutstr+'.fits')
 
-        refimg          = cut_img
+        if setupdic['wht_image'] is None:
+            refimg          = cut_img
+        else:
+            wht_init_base   = setupdic['wht_image'].split('/')[-1]
+            wht_img         = setupdic['cutout_directory']+wht_init_base.replace('.fits',cutstr+'.fits')
+            refimg          = [cut_img,wht_img]
+
         datacube        = cut_cube
         variancecube    = cut_variance
         sourcecat       = cut_sourcecat
