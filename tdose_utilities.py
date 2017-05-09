@@ -1482,6 +1482,10 @@ def galfit_run(galfitinputfile,verbose=True,galfitverbose=False,noskyest=False):
 
     if verbose: print '   ----------- GALFIT run started on '+tu.get_now_string()+' ----------- '
     process = subprocess.Popen(runcmd, stdout=subprocess.PIPE, shell=True, bufsize=1, universal_newlines=True)
+    crashed = False
+    Niter   = 'None' # resetting counter
+    Ncount  = 'None' # resetting counter
+
     while True:
         line = process.stdout.readline()
         #for line in iter(process.stdout.readline, ''):
@@ -1492,9 +1496,28 @@ def galfit_run(galfitinputfile,verbose=True,galfitverbose=False,noskyest=False):
             fout = open(outputfile,'a')
             fout.write(line)
             fout.close()
+
+            if verbose:
+                if 'Iteration :' in line:
+                    Niter  = line.split('Iteration : ')[1][:3]
+                if 'COUNTDOWN =' in line:
+                    Ncount = line.split('COUNTDOWN = ')[1][:3]
+
+                if (Niter != 'None') & (Ncount != 'None'):
+                    infostr = '   GALFIT Iteration '+str("%6.f" % float(Niter))+' at countdown '+str("%6.f" % float(Ncount))
+                    sys.stdout.write("%s\r" % infostr)
+                    sys.stdout.flush()
+                    Niter  = 'None' # resetting counter
+                    Ncount = 'None' # resetting counter
+
+            if 'Doh!  GALFIT crashed' in line:
+                crashed = True
         else:
             break
-    if verbose: print '   ----------- GALFIT run finished on '+tu.get_now_string()+' ----------- '
+
+    if crashed:
+        if verbose: print '\n WARNING - looks like galfit crashed with a mushroom cloud...'
+    if verbose: print '\n   ----------- GALFIT run finished on '+tu.get_now_string()+' ----------- '
 
     if verbose: print ' - Renaming and moving output files to image directory :'
     if os.path.isfile('./fit.log'):
@@ -1508,7 +1531,7 @@ def galfit_run(galfitinputfile,verbose=True,galfitverbose=False,noskyest=False):
             shutil.move(ff,galfitinputfile.replace('.txt','_'+ff.split('/')[-1].replace('.',''))+'result.txt')
 
     if verbose: print ' - Moving back to '+currentdir
-    os.chdir(datapath)
+    os.chdir(currentdir)
 
     return outputfile
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
