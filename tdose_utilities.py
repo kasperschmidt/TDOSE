@@ -1327,9 +1327,9 @@ def galfit_buildinput_fromparamlist(filename,paramlist,dataimg,sigmaimg='none',p
         fout =  open(filename, 'w')
 
         # NB Using no absolute paths as this can cause "Abort trap: 6" crash
-        image2model      = dataimg.split('/')[-1]
+        image2model      = dataimg #.split('/')[-1]
         outputimg        = filename.replace('.txt','_galfitoutput.fits').split('/')[-1]
-        sigmaimage       = sigmaimg.split('/')[-1]
+        sigmaimage       = sigmaimg #.split('/')[-1]
         psfimage         = psfimg.split('/')[-1]
         psfsampling      = '1'
         badpiximage      = badpiximg.split('/')[-1]
@@ -1437,6 +1437,73 @@ P) %s               # Choose: 0=optimize, 1=model, 2=imgblock, 3=subcomps
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbose: print '\n   done; closing output file'
         fout.close()
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def galfit_buildinput_multiGaussTemplate(filename,dataimg,Ngauss=4,gaussspacing=3,sigmays=[2],sigmaxs=[2],fluxscales=[22],angles=[0.0],
+                                         sigmaimg='none',psfimg='none',badpiximg='none',
+                                         imgregion='full',imgext=0,convolvebox=[150,150],magzeropoint=26.5,
+                                         platescale=[0.03,0.03],clobber=False,verbose=True):
+    """
+    Assemble a galfit input file from a TDOSE parameter list
+
+    --- INPUT ---
+    import tdose_utilities as tu
+
+    outputpath  = '/Volumes/DATABCKUP2/MUSE-Wide/galfitresults/'
+    cutoutpath  = '/Volumes/DATABCKUP2/TDOSEextractions/tdose_cutouts/'
+    dataimage   = cutoutpath+'acs_814w_candels-cdfs-02_cut_v1.0_id8685_cutout7p0x7p0arcsec.fits'
+    sigmaimg    = cutoutpath+'acs_814w_candels-cdfs-02_wht_cut_v1.0_id9262_cutout6p0x6p0arcsec_sigma_smooth_gaussSig3pix.fits'
+    psfimg      = outputpath+'imgblock_6475_acs_814w_extension2.fits'
+    outputfile  = outputpath+'galfit_inputfile_'+dataimage.split('/')[-1].replace('.fits','.txt')
+
+    tu.galfit_buildinput_multiGaussTemplate(outputfile,dataimage,Ngauss=9,gaussspacing=5,sigmaimg=sigmaimg,psfimg=psfimg,clobber=True)
+
+    """
+    if verbose: print(' - Building parameter list for '+str(Ngauss)+' gaussian components ')
+    paramlist      = np.ones(Ngauss*6)
+    imgshape       = pyfits.open(dataimg)[imgext].data.shape
+
+    Ngaussperrow   = np.ceil(np.sqrt(Ngauss))
+    positiongrid   = gen_gridcomponents([Ngaussperrow*gaussspacing,Ngaussperrow*gaussspacing])
+
+    ylowcorner     = np.round(imgshape[0]/2.)-(Ngaussperrow*gaussspacing/2.)
+    xlowcorner     = np.round(imgshape[1]/2.)-(Ngaussperrow*gaussspacing/2.)
+
+
+    ids    = []
+    Nparam = 6
+    for oo in xrange(Ngauss):
+        objno = str("%.4d" % (oo+1))
+        ids.append(objno)
+
+        yposition = ylowcorner + np.floor(oo/Ngaussperrow)*gaussspacing
+        xposition = xlowcorner + (oo/Ngaussperrow - int(oo/Ngaussperrow)) * Ngaussperrow * gaussspacing
+        if len(fluxscales) == 1:
+            fluxscale = fluxscales[0]
+        else:
+            fluxscale = fluxscales[oo]
+
+        if len(sigmays) == 1:
+            sigmay = sigmays[0]
+        else:
+            sigmay = sigmays[oo]
+
+        if len(sigmays) == 1:
+            sigmax = sigmaxs[0]
+        else:
+            sigmax = sigmaxs[oo]
+
+        if len(angles) == 1:
+            angle = angles[0]
+        else:
+            angle = angles[oo]
+
+        paramlist[oo*Nparam:oo*Nparam+Nparam] = [yposition,xposition,fluxscale,sigmay,sigmax,angle]
+
+    if verbose: print(' - Build galfit template input using tu.galfit_buildinput_fromparamlist()')
+    tu.galfit_buildinput_fromparamlist(filename,paramlist,dataimg,objecttype='gaussian',sigmaimg=sigmaimg,psfimg=psfimg,ids=ids,
+                                       imgregion=imgregion,badpiximg=badpiximg,platescale=platescale,magzeropoint=magzeropoint,
+                                       convolvebox=convolvebox,imgext=imgext,clobber=clobber,verbose=verbose)
+
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def galfit_run(galfitinputfile,verbose=True,galfitverbose=False,noskyest=False):
     """
