@@ -260,7 +260,25 @@ sources_action         remove                             # Indicate how to modi
         fout = open(outputfile,'w')
         fout.write(setuptemplate)
         fout.close()
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def duplicate_setup_template_MUSEWide(setuptemplate,outputdirectory,clobber=False,verbose=True):
+    """
+    Take a setuptemplate generated with generate_setup_template() and duplicate it and
+    fill it out for the MUSE-Wide fields, i.e., update PSF info, field names, image names, source lists, etc.
 
+    --- INPUT ---
+    setuptemplate
+    outputdirectory
+    clobber              Overwrite existing files?
+    verbose              Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+
+    """
+    if verbose: print ' --- tdose_utilities.duplicate_setup_template_MUSEWide() --- '
+    sys.exit(' ---> Function not build yet')
+    return None
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def build_2D_cov_matrix(sigmax,sigmay,angle,verbose=True):
     """
