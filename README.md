@@ -1,6 +1,8 @@
 
 # Three Dimensional Optimal Spectral Extraction (TDOSE)
 
+[//]: # "![TDOSE logo](TDOSElogo.png =250x)"
+
 README for the optimal spectral extraction software TDOSE.
 
 [//]: # "presented by Schmidt et al. (some day)"
@@ -8,6 +10,7 @@ README for the optimal spectral extraction software TDOSE.
 TDOSE will be presented in a forthcoming publication (Schmidt et al.), until this publication has apparead, please references the TDOSE GitHub repository (https://github.com/kasperschmidt/GLASSinspectionGUIs) if you find TDOSE useful. 
 
 ## Table of Content
+<a href="url"><img src="TDOSElogo.png" align="right" height="200" ></a>
 
 - [Description](#description)
 - [Script Overview](#script-overview)
