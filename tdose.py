@@ -133,28 +133,59 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbosefull: print '--------------------------------------------------------------------------------------------------'
         if setupdic['ref_image_model'] is None:
-            if verbosefull: print ' TDOSE: Model reference image                               '+\
-                                  '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
-            regionfile    = setupdic['models_directory']+'/'+\
-                            refimg.split('/')[-1].replace('.fits','_'+setupdic['model_param_reg']+'_'+setupdic['source_model']+'.reg')
-            modelparam    = modelimg.replace('.fits','_objparam.fits') # output from refernce image modeling
+            FoV_modelexists = False
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if setupdic['source_model'] == 'galfit':
+                if verbosefull: print ' Looking for galfit model of source ... ',
+                model_file    = setupdic['galfit_directory']+'galfit_'+\
+                                setupdic['ref_image'].split('/')[-1].replace('.fits','_output.fits')
 
-            names         = []
-            sourceids     = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']]
-            for ii, sid in enumerate(sourceids):
-                if setupdic['sourcecat_parentIDcol'] is not None:
-                    parentid = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']][ii]
-                    namestr  = str(parentid)+'>>'+str(sid)
+                if os.path.isfile(model_file):
+                    if verbosefull: print 'found it, so it will be used'
+                    FoV_modelexists = True
+                    FoV_modelfile   = model_file
+                    FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['galfit_model_extension']]
                 else:
-                    namestr  = str(sid)
-                names.append(namestr)
+                    if verbosefull: print 'did not find it, so will generate gaussian TDOSE model'
+                sys.exit(' ---> Loading parameters and building model from galfit output is not enabled yet; sorry.')
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if setupdic['source_model'] == 'modelimg':
+                if verbosefull: print ' Looking for model of source in ref)image... ',
+                model_file    = setupdic['modelimg_directory']+'model_'+\
+                                setupdic['ref_image'].split('/')[-1]
 
-            if modelrefimage:
-                tdose.model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
-                                     save_init_model_output=save_init_model_output,clobber=clobber,verbose=verbose,
-                                     verbosefull=verbosefull)
-            else:
-                if verbose: print ' >>> Skipping modeling reference image (assume models exist)'
+                if os.path.isfile(setupdic['source_model']):
+                    if verbosefull: print 'found it, so it will be used'
+                    FoV_modelexists = True
+                    FoV_modelfile   = model_file
+                    FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']]
+                else:
+                    if not FoV_modelexists:
+                        if verbosefull: print 'did not find it, so will generate gaussian TDOSE model'
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if not FoV_modelexists:
+                if verbosefull: print ' TDOSE: Model reference image                               '+\
+                                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+                regionfile    = setupdic['models_directory']+'/'+\
+                                refimg.split('/')[-1].replace('.fits','_'+setupdic['model_param_reg']+'_'+setupdic['source_model']+'.reg')
+                modelparam    = modelimg.replace('.fits','_objparam.fits') # output from refernce image modeling
+
+                names         = []
+                sourceids     = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']]
+                for ii, sid in enumerate(sourceids):
+                    if setupdic['sourcecat_parentIDcol'] is not None:
+                        parentid = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']][ii]
+                        namestr  = str(parentid)+'>>'+str(sid)
+                    else:
+                        namestr  = str(sid)
+                    names.append(namestr)
+
+                if modelrefimage:
+                    tdose.model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
+                                         save_init_model_output=save_init_model_output,clobber=clobber,verbose=verbose,
+                                         verbosefull=verbosefull)
+                else:
+                    if verbose: print ' >>> Skipping modeling reference image (assume models exist)'
         else:
             if verbose: print ' >>> Skipping modeling reference image (model provided in setup file)'
             sys.exit(' ---> Use of the setup parameter ref_image_model is not enabled yet and must be set to "None"; sorry.')
@@ -165,23 +196,30 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         cubewcsimg       = setupdic['models_directory']+'/'+\
                            refimg.split('/')[-1].replace('.fits','_'+setupdic['model_image_cube_ext']+'_'+
                                                          setupdic['source_model']+'.fits')
-        paramREF      = tu.build_paramarray(modelparam,verbose=verbosefull)
-        paramCUBE     = tu.convert_paramarray(paramREF,img_hdr,cube_hdr,type=setupdic['source_model'].lower(),verbose=verbosefull)
+        if not FoV_modelexists:
+            paramREF      = tu.build_paramarray(modelparam,verbose=verbosefull)
+            paramCUBE     = tu.convert_paramarray(paramREF,img_hdr,cube_hdr,type=setupdic['source_model'].lower(),verbose=verbosefull)
+        elif FoV_modelexists:
+            paramCUBE    = FoV_modeldata
+            modelimgsize = FoV_modelfile
+            sys.exit(' ---> convert model to WCS (pixel scale) of IFU... not enabled yet')
 
         if refimagemodel2cubewcs:
-            cubehdu       = pyfits.PrimaryHDU(cube_data[0,:,:])
-            cubewcshdr    = cube_wcs2D.to_header()
-            for key in cubewcshdr:
-                if key == 'PC1_1':
-                    cubehdu.header.append(('CD1_1',cubewcshdr[key],cubewcshdr[key]),end=True)
-                elif key == 'PC2_2':
-                    cubehdu.header.append(('CD2_2',cubewcshdr[key],cubewcshdr[key]),end=True)
-                else:
-                    cubehdu.header.append((key,cubewcshdr[key],cubewcshdr[key]),end=True)
+            if not FoV_modelexists:
+                cubehdu       = pyfits.PrimaryHDU(cube_data[0,:,:])
+                cubewcshdr    = cube_wcs2D.to_header()
+                for key in cubewcshdr:
+                    if key == 'PC1_1':
+                        cubehdu.header.append(('CD1_1',cubewcshdr[key],cubewcshdr[key]),end=True)
+                    elif key == 'PC2_2':
+                        cubehdu.header.append(('CD2_2',cubewcshdr[key],cubewcshdr[key]),end=True)
+                    else:
+                        cubehdu.header.append((key,cubewcshdr[key],cubewcshdr[key]),end=True)
 
-            tmf.save_modelimage(cubewcsimg,paramCUBE,cube_data.shape[1:],modeltype=setupdic['source_model'].lower(),
+                    modelimgsize = cube_data.shape[1:]
+
+            tmf.save_modelimage(cubewcsimg,paramCUBE,modelimgsize,modeltype=setupdic['source_model'].lower(),
                                 param_init=False,clobber=clobber,outputhdr=cubehdu.header,verbose=verbosefull)
-
         else:
             if verbose: print ' >>> Skipping converting reference image model to cube WCS frame (assume models exist)'
 
@@ -377,6 +415,8 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
 ==================================================================================================
  """
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_cutouts(setupdic,extractids,Nextractions,sourceids_init,sourcedat_init,
                 performcutout=True,generatesourcecat=True,clobber=False,verbose=True,verbosefull=True,start_time=0.0):
     """
