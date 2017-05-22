@@ -234,14 +234,3 @@ def gen_source_cube(position,scale,sourcetype,spectype,cube_dim=[10,60,30],verbo
 
     return sourcecube_out
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def gen_spectrum(size,mean,std,scale,verbose=True):
-    """
-    Generating a 2D gaussian with specified parameters
-
-    --- INPUT ---
-
-    --- EXAMPLE OF USE ---
-
-    """
-
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
