@@ -135,8 +135,8 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
     if modeltype.lower() == 'gauss':
         xgrid, ygrid = tu.gen_gridcomponents(imgsize)
         modelimg     = tmf.modelimage_multigauss((xgrid,ygrid), paramlist, showmodelimg=False, verbose=verbosemodel)
-    elif modeltype.lower() == 'galfit':
-        sys.exit(' ---> modeltype = galfit not enabled for save_modelimage yet; sorry...')
+    elif (modeltype.lower() == 'galfit') or (modeltype.lower() == 'modelimg'):
+        modelimg     = paramlist
     elif modeltype.lower() == 'aperture':
         xgrid, ygrid = tu.gen_gridcomponents(imgsize)
         modelimg     = tmf.modelimage_aperture((xgrid,ygrid), paramlist, showmodelimg=False, verbose=verbosemodel)
@@ -195,8 +195,8 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
                 hduimg.header.append(('xs'+objno+'_i', sigmax,    'Obj'+objno+': Initial Standard deviation in xpos'),end=True)
                 hduimg.header.append(('ys'+objno+'_i', sigmay,    'Obj'+objno+': Initial Standard deviation in ypos'),end=True)
                 hduimg.header.append(('an'+objno+'_i', angle,     'Obj'+objno+': Initial Rotation angle of Gauss [deg]'),end=True)
-    elif modeltype.lower() == 'galfit':
-        sys.exit(' ---> modeltype = galfit not enabled for save_modelimage yet; sorry...')
+    elif (modeltype.lower() == 'galfit') or (modeltype.lower() == 'modelimg'):
+        hduimg.header.append(('model',imgsize , 'File model comes from'),end=True)
     elif modeltype.lower() == 'aperture':
         Nparam = 4
         Nobj   = int(len(paramlist)/Nparam)
