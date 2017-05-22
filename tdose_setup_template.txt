@@ -1,0 +1,128 @@
+
+#-------------------------------------------------START OF TDOSE SETUP-------------------------------------------------
+#
+# Template for TDOSE (http://github.com/kasperschmidt/TDOSE) setup file
+# Generated with tdose_utilities.generate_setup_template() on 2017-05-21 23:11
+# The spectral extraction using this setup is run with tdose.perform_extraction()
+#
+# - - - - - - - - - - - - - - - - - - - - - - - - - - DATA INPUT  - - - - - - - - - - - - - - - - - - - - - - - - - - -
+data_cube              /path/datacube.fits                # Path and name of fits file containing data cube to extract spectra from
+cube_extension         DATA_DCBGC                         # Name or number of fits extension containing data cube
+
+variance_cube          /path/variancecube.fits            # Path and name of fits file containing variance cube to use for extraction
+variance_extension     VARCUBE                            # Name or number of fits extension containing noise cube
+
+ref_image              /path/referenceimage.fits          # Path and name of fits file containing image to use as reference when creating source model
+img_extension          0                                  # Name or number of fits extension containing reference image
+
+wht_image              /path/refimage_wht.fits            # Path and name of fits file containing weight map of reference image (only cut out; useful for galfit modeling)
+wht_extension          0                                  # Name or number of fits extension containing weight map
+
+ref_image_model        None                               # If a model of the reference image exists provide it here.
+                                                          # If a model is provided the PSF convolution and flux optimization is done numerically. 
+model_extension        0                                  # Name or number of fits extension containing reference image model                                                            
+
+source_catalog         /path/tdose_sourcecat.fits         # Path and name of source catalog containing sources to extract spectra for
+sourcecat_IDcol        id                                 # Column containing source IDs in source_catalog
+sourcecat_xposcol      x_image                            # Column containing x pixel position in source_catalog
+sourcecat_yposcol      y_image                            # Column containing y pixel position in source_catalog
+sourcecat_racol        ra                                 # Column containing ra  position in source_catalog (used to position cutouts if model_cutouts = True)
+sourcecat_deccol       dec                                # Column containing dec position in source_catalog (used to position cutouts if model_cutouts = True)
+sourcecat_fluxcol      fluxscale                          # Column containing dec position in source_catalog (used to position cutouts if model_cutouts = True)
+sourcecat_parentIDcol  None                               # Column containing parent source IDs grouping source IDs into objects. Set to None to used id column
+                                                          # corresponding to assigning each source to a single object
+                                                          # if not None the parentid is used to group source models when storing 1D spectra. All models keep sources separate.
+# - - - - - - - - - - - - - - - - - - - - - - - - OUTPUT DIRECTORIES  - - - - - - - - - - - - - - - - - - - - - - - - -
+
+models_directory       /path/tdose_models/                # Directory to store the modeling output from TDOSE in
+cutout_directory       /path/tdose_cutouts/               # Directory to store image and cube cutouts in if model_cutouts=True
+spec1D_directory       /path/tdose_spectra/               # Output directory to store spectra in.
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - CUTOUT SETUP  - - - - - - - - - - - - - - - - - - - - - - - - - -
+model_cutouts          True                               # Perform modeling and spectral extraction on small cutouts of the cube and images to reduce run-time
+cutout_sizes           /path/tdose_setup_cutoutsizes.txt  # Size of cutouts [ra,dec] in arcsec around each source to model. 
+                                                          # To use source-specific cutouts provide ascii file containing ID xsize[arcsec] and ysize[arcsec].
+
+# - - - - - - - - - - - - - - - - - - - - - - - - SOURCE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
+model_image_ext        tdose_modelimage                   # Name extension of fits file containing reference image model. To ignored use None
+model_param_reg        tdose_modelimage_ds9               # Name extension of DS9 region file for reference image model. To ignored use None
+model_image_cube_ext   tdose_modelimage_cubeWCS           # Name extension of fits file containing model image after conversion to cube WCS. To ignored use None.
+
+source_model           gauss                              # The source model to use for sources. Choices are:
+                                                          #   gauss          Each source is modeled as a multivariate gaussian using the source_catalog input as starting point
+                                                          #   galfit         The sources in the field-of-view are defined based on GALFIT header parameters; if all components are        # Not enabled yet
+                                                                             Gaussians an analytical convolution is performed. Otherwise numerical convolution is used.                   # Not enabled yet
+                                                          #   modelimg       A model image exists, e.g., obtained with Galfit, in modelimg_directory. This prevents dis-entangling of     # Not enabled yet
+                                                                             different objects, i.e., the provided model image is assumed to represent the 1 object in the field-of-view. # Not enabled yet
+                                                                             If the model image is not found a gaussian model of the FoV (source_model=gauss) is performed instead        # Not enabled yet
+                                                          #   aperture       A simple aperture extraction on the datacubes is performed, i.e., no modeling of sources.
+
+# - - - - - - - - - - - - - - - - - - - - - - - - GAUSS MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
+gauss_guess            /path/sextractoroutput.fits        # To base initial guess of gaussian parameters on a SExtractor output provide SExtractor output fits file here
+                                                          # If gauss_initguess=None the positions and flux scale provided in source_catalog will be used.
+gauss_guess_idcol      ID                                 # Column of IDs in gauss_guess SExtractor file
+gauss_guess_racol      RA                                 # Column of RAs in gauss_guess SExtractor file
+gauss_guess_deccol     DEC                                # Column of Decs in gauss_guess SExtractor file
+gauss_guess_aimg       A_IMAGE                            # Column of major axis in gauss_guess SExtractor file
+gauss_guess_bimg       B_IMAGE                            # Column of minor axis in gauss_guess SExtractor file
+gauss_guess_angle      THETA_IMAGE                        # Column of angle in gauss_guess SExtractor file
+gauss_guess_fluxscale  ACS_F814W_FLUX                     # Column of flux in gauss_guess SExtractor file to us for scaling
+gauss_guess_fluxfactor 3                                  # Factor to apply to flux scale in initial Gauss parameter guess
+gauss_guess_Nsigma     1                                  # Number of sigmas to include in initial Gauss parameter guess
+
+# - - - - - - - - - - - - - - - - - - - - - - - - GALFIT MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
+galfit_directory       /path/models_galfit/               # If source_model = galfit provide path to directory containing galfit models.
+                                                          # TDOSE will look for galfit_*ref_image*_output.fits (incl. the cutout string if model_cutouts=True)
+                                                          # If no model is found a source_model=gauss run on the object will be performed instead.
+galfit_model_extension 2                                  # Fits extension containing galfit model with model parameters of each source in header.
+
+# - - - - - - - - - - - - - - - - - - - - - - - - MODEL IMAGE SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
+modelimg_directory    /path/models_cutouts/               # If source_model = modelimg provide the path to directory containing the individual source models
+                                                          # TDOSE will look for model_*ref_image*.fits (incl. the cutout string if model_cutouts=True)
+                                                          # If no model is found (and no galfit model is found) a source_model=gauss run on the object will be performed instead.
+modelimg_extension     2                                  # Fits extension containing model
+
+# - - - - - - - - - - - - - - - - - - - - - - - - APERTURE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - 
+aperture_size          0.5                                # Radius of apertures to use given in arc seconds
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - PSF MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
+psf_type               gauss                              # Select PSF model to build. Choices are:
+                                                          #   gauss      Model the PSF as a symmetric Gaussian with sigma = FWHM/2.35482
+psf_FWHM_evolve        linear                             # Evolution of the FWHM from blue to red end of data cube. Choices are:
+                                                          #   linear     FWHM wavelength dependence described as FWHM(lambda) = p0[''] + p1[''/A] * (lambda - 7000A)
+psf_FWHMp0             0.940                              # p0 parameter to use when determining wavelength dependence of PSF
+psf_FWHMp1             -3.182e-5                          # p1 parameter to use when determining wavelength dependence of PSF
+psf_savecube           True                               # To save fits file containing the PSF cube set psf_savecube = True
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - CUBE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
+model_cube_layers      'all'                              # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
+                                                          # To model source-specific layers provide ascii file containing ID layerlow and layerhigh.
+                                                          # If layerlow=all and layerhigh=all all layers will be modeled for particular source
+model_cube_optimizer   matrix                             # The optimizer to use when matching flux levels in cube layers: 
+                                                          #   matrix      Optimize fluxes analytically using matrix algebra to minimize chi squared of the equation set comparing model and data in each layer.
+                                                          #   curvefit    Optimize fluxes numerically using least square fitting from scipy.optimize.curve_fit(). 
+                                                          #               Only enabled for analytic convolution of Gaussian source models.
+                                                          #   lstsq       Optimize fluxes analytically using scipy.linalg.lstsq().
+
+model_cube_ext         tdose_modelcube                    # Name extension of fits file containing model data cube.
+residual_cube_ext      tdose_modelcube_residual           # Name extension of fits file containing residual between model data cube and data. To ignored use None.
+source_model_cube      tdose_source_modelcube             # Name extension of fits file containing source model cube (used to modify data cube).
+
+# - - - - - - - - - - - - - - - - - - - - - - - - SPECTRAL EXTRACTION - - - - - - - - - - - - - - - - - - - - - - - - -
+sources_to_extract     [8685,9262,10195,29743]            # Sources in source_catalog to extract 1D spectra for.
+                                                          # If sourcecat_parentIDcol os not None all associated spectra are included in stored object spectra
+                                                          # If set to 'all', 1D spectra for all sources in source_catalog is produced (without grouping according to parents).
+                                                          # For long list of objects provide ascii file containing containing ids (here parent grouping will be performed)
+spec1D_name            tdose_spectrum                     # Name extension to use for extracted 1D spectra
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - PLOTTING  - - - - - - - - - - - - - - - - - - - - - - - - - - -
+plot_generate          True                               # Indicate whether to generate plots or not
+plot_1Dspec_ext        fluxplot                           # Name extension of pdf file containing plot of 1D spectrum
+plot_1Dspec_xrange     [4800,9300]                        # Range of x-axes (wavelength) for plot of 1D spectra
+plot_1Dspec_yrange     [-100,1500]                        # Range of y-axes (flux) for plot of 1D spectra
+plot_1Dspec_shownoise  True                               # Indicate whether to show the noise envelope in plot or not
+
+plot_S2Nspec_ext       S2Nplot                            # Name extension of pdf file containing plot of S/N spectrum
+plot_S2Nspec_xrange    [4800,9300]                        # Range of x-axes (wavelength) for plot of S2N spectra
+plot_S2Nspec_yrange    [-1,15]                            # Range of y-axes (S2N) for plot of S2N spectra
+#--------------------------------------------------END OF TDOSE SETUP--------------------------------------------------
