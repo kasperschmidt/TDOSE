@@ -11,6 +11,7 @@ import tdose_model_cube as tmc
 import matplotlib as mpl
 import matplotlib.pylab as plt
 import tdose_model_FoV as tmf
+import astropy.convolution
 import pdb
 import warnings
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -25,12 +26,15 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
     datacube           Data cube to generate model for
     sourceparam        List of parameters describing sources to generate model for.
                        The expected format of the list is set by paramtype
+                       A complete model can also be provide in a 2D numby array.
+                       In this case paramtype should be set to 'model'
     psfparam           Wavelength dependent psf paramters to use for modeling.
     paramtype          The format expected in the sourceparam keyword is determined by this value.
                        Choose between:
                           'gauss'    Expects a source paramter list dividable by 6 containing the paramters
                                      [yposition,xposition,fluxscale,sigmay,sigmax,angle] for each source. I.e,
                                      the length of the list should be Nobjects * 6
+                          'model'    A full 2D model of the field-of-view is provided to source param
     psfparamtype       The format expected in the psfparam keyword is determined by this value
                        Choose between:
                           'gauss'    Expects a (Nlayer,6) array of paramters
@@ -101,24 +105,39 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                 sys.stdout.write("%s\r" % infostr)
                 sys.stdout.flush()
 
+            if (sourceparam == 'gauss') and (psfparamtype == 'gauss'):
+                analytic_conv = True
+
             if psfparamtype == 'gauss':
                 mu_psf    = psfparam[ll][0:2]
                 cov_psf   = tu.build_2D_cov_matrix(psfparam[ll][4],psfparam[ll][3],psfparam[ll][5],verbose=loopverbose)
+                if analytic_conv:
+                    psfscale  = 1 # 1 returns normalized gaussian
+                    img_psf  = tu.gen_2Dgauss(mu_psf,cov_psf,psfscale,show2Dgauss=False)
+
+            elif psfparamtype == 'moffat':
+                sys.exit(' ---> Numerical convolution and parameter handling of a "'+psfparamtype+'" PSF is not enabled yet; sorry')
             else:
                 sys.exit(' ---> PSF parameter type "'+psfparamtype+'" not enabled')
 
-            if loopverbose: print ' - Build convolved covariance matrixes'
-            mu_objs_conv   = np.zeros([Nsource,2])
-            cov_objs_conv  = np.zeros([Nsource,2,2])
-            for nn in xrange(Nsource):
-                muconv, covarconv     = tu.analytic_convolution_gaussian(mu_objs[nn,:],cov_objs[nn,:,:],mu_psf,cov_psf)
-                mu_objs_conv[nn,:]    = muconv
-                cov_objs_conv[nn,:,:] = covarconv
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if analytic_conv:
+                if loopverbose: print ' - Performing analytic convolution of Gaussian sources; Build convolved covariance matrixes'
+                mu_objs_conv   = np.zeros([Nsource,2])
+                cov_objs_conv  = np.zeros([Nsource,2,2])
+                for nn in xrange(Nsource):
+                    muconv, covarconv     = tu.analytic_convolution_gaussian(mu_objs[nn,:],cov_objs[nn,:,:],mu_psf,cov_psf)
+                    mu_objs_conv[nn,:]    = muconv
+                    cov_objs_conv[nn,:,:] = covarconv
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            else:
+                if loopverbose: print ' - Performing numerical convolution of sources in-loop'
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
             if loopverbose: print ' - Build layer image'
 
             if fit_source_scales:
-                if loopverbose: print ' - Optimize flux scaling of each source in full image numerically '
+                if loopverbose: print ' - Checking if any pixels need to be masked out '
                 if ( len(np.where(np.isfinite(datacube[ll,:,:].ravel()) == True )[0]) != len(datacube[ll,:,:].ravel()) ) or \
                         ( len(np.where(np.isfinite(noisecube[ll,:,:].ravel()) == True )[0]) != len(noisecube[ll,:,:].ravel()) ):
                     if loopverbose: print '   Found non-finite values in cubes so generating mask to ignore those in modeling '
@@ -134,11 +153,13 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                     datacube_layer  = datacube_layer.filled(fill_value=0.0)
                     noisecube_layer = noisecube_layer.filled(fill_value=1.0)
                 else:
+                    comb_mask       = None
                     datacube_layer  = datacube[ll,:,:]
                     noisecube_layer = noisecube[ll,:,:]
 
                 #-------------------------------------------------------------------------------------------------------
-                if 'curvefit' in optimize_method_list:
+                if ('curvefit' in optimize_method_list) & (analytic_conv == True):
+                    if loopverbose: print ' - Optimize flux scaling of each source in full image numerically '
                     scalesCFIT, covsCFIT  = tmc.optimize_source_scale_gauss(datacube_layer,
                                                                             np.ones(datashape[1:]), # noise always ones
                                                                             mu_objs_conv,cov_objs_conv,
@@ -151,9 +172,38 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                     output_scales  = scalesCFIT
                 #-------------------------------------------------------------------------------------------------------
                 if ('matrix' in optimize_method_list) or ('lstsq' in optimize_method_list):
+                    if loopverbose: print ' - Optimize flux scaling of each source in full image analytically ',
                     for ss in xrange(Nsource):
-                        img_model  = tmc.gen_image(datashape[1:],mu_objs_conv[ss],cov_objs_conv[ss],sourcescale=[1.0],
-                                                   verbose=False)
+                        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                        if analytic_conv:
+                            img_model  = tmc.gen_image(datashape[1:],mu_objs_conv[ss],cov_objs_conv[ss],sourcescale=[1.0],
+                                                       verbose=False)
+                        else:
+                            if psfparamtype == 'gauss':
+                                psfscale   = 1 # 1 returns normalized gaussian
+                                img_psf    = tu.gen_2Dgauss(datashape[1:],cov_psf,psfscale,show2Dgauss=False)
+                                kerneltype = img_psf
+                            elif psfparamtype == 'kernel_gauss':
+                                kernel_sigma = mu_psf[0]
+                                kerneltype   = astropy.convolution.Gaussian2DKernel(kernel_sigma)
+                            elif psfparamtype == 'kernel_moffat':
+                                kernel_alpha = 1
+                                kernel_gamma = 2
+                                kerneltype   = astropy.convolution.Moffat2DKernel(kernel_gamma,kernel_alpha)
+                                sys.exit(' ---> psfparamtype=kernel_moffat in tdose_model_cube() not enabled')
+                            else:
+                                sys.exit(' ---> Invalid psfparamtype in tdose_model_cube() not enabled')
+
+
+                            if paramtype == 'model':
+                                inputmodel = sourceparam
+                            else:
+                                sys.exit(' ---> Building of model for numerical intergration is not enabled yet')
+
+                            img_model  = tu.numerical_convolution_image(inputmodel,kerneltype,saveimg=True,imgmask=comb_mask,
+                                                                        fill_value=0.0,norm_kernel=True,convolveFFT=False,
+                                                                        verbose=loopverbose)
+                        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                         img_model  = img_model/noisecube_layer
                         modelravel = img_model.ravel()
                         if ss == 0:
@@ -169,6 +219,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
                     #---------------------------------------------------------------------------------------------------
                     if 'matrix' in optimize_method_list:
+                        if loopverbose: print 'using matrix algebra '
                         ATA        = Atrans.dot(A)
                         ATd        = Atrans.dot(dataravel)
                         ATAinv     = np.linalg.inv(ATA)
@@ -181,6 +232,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                         output_scales  = scalesMTX
                     #---------------------------------------------------------------------------------------------------
                     if 'lstsq' in optimize_method_list:
+                        if loopverbose: print 'using scipy.linalg.lstsq() '
                         LSQout     = scipy.linalg.lstsq(A,dataravel)
                         scalesLSQ  = LSQout[0]
 
@@ -515,12 +567,16 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
     cubeshape       Cube dimensions of source model cubes to generate for each object [Nlayes,ydim,xdim]
     sourceparam     List of parameters describing sources to generate model for.
                     The expected format of the list is set by paramtype
+                    A complete model can also be provide in a 2D numby array.
+                    In this case paramtype should be set to 'model'
     psfparam        Wavelength dependent psf paramters to use for modeling.
     paramtype       The format expected in the sourceparam keyword is determined by this value.
                     Choose between:
-                       'gauss'    Expects a source paramter list dividable by 6 containing the paramters
-                                  [yposition,xposition,fluxscale,sigmay,sigmax,angle] for each source. I.e,
-                                  the length of the list should be Nobjects * 6
+                        'gauss'    Expects a source paramter list dividable by 6 containing the paramters
+                                   [yposition,xposition,fluxscale,sigmay,sigmax,angle] for each source. I.e,
+                                   the length of the list should be Nobjects * 6
+                        'aperture' The model is based on an aperture extraction
+                        'model'    A full 2D model of the field-of-view is provided to source param
     psfparamtype    The format expected in the psfparam keyword is determined by this value
                     Choose between:
                        'gauss'    Expects a (Nlayer,6) array of paramters
@@ -587,6 +643,24 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
 
                 layer_img           = tmf.modelimage_aperture((xgrid,ygrid), params[ss], showmodelimg=False, verbose=False)
                 out_cube[ss,ll,:,:] = layer_img * layer_scales[ss,ll]
+        if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
+
+    elif paramtype == 'model':
+        if verbose: print ' - Set up output source model cube based on Gaussian parameters and sub-cube input shape  '
+        Nsource   = 1
+        out_cube  = np.zeros([Nsource,cubeshape[0],cubeshape[1],cubeshape[2]])
+
+        if verbose: print ' - Loop over sources and layers to fill output cube with data '
+        if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
+        for ss in xrange(Nsource):
+            for ll in xrange(Nlayers):
+                if verbose:
+                    infostr = '   Generating layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % cubeshape[0])+\
+                              ' in source cube '+str("%6.f" % (ss+1))+' / '+str("%6.f" % Nsource)
+                    sys.stdout.write("%s\r" % infostr)
+                    sys.stdout.flush()
+                layer_img            = sourceparam
+                out_cube[ss,ll,:,:]  = layer_img * layer_scales[ss,ll]
         if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
     else:
         sys.exit(' ---> Invalid parameter type ('+paramtype+') provided to gen_source_model_cube()')
