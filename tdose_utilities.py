@@ -5,6 +5,7 @@ import datetime
 import sys
 from astropy import wcs
 from astropy import units
+from astropy import convolution
 from astropy.coordinates import SkyCoord
 from astropy.wcs.utils import pixel_to_skycoord
 from astropy.nddata import Cutout2D
@@ -110,16 +111,23 @@ def generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=Fals
 # The spectral extraction using this setup is run with tdose.perform_extraction()
 #
 # - - - - - - - - - - - - - - - - - - - - - - - - - - DATA INPUT  - - - - - - - - - - - - - - - - - - - - - - - - - - -
-data_cube              /Volumes/DATABCKUP2/MUSE-Wide/datacubes_dcbgc/DATACUBE_candels-cdfs-02_v1.0_dcbgc.fits                    # Path and name of fits file containing data cube to extract spectra from
+data_cube              /path/datacube.fits                # Path and name of fits file containing data cube to extract spectra from
 cube_extension         DATA_DCBGC                         # Name or number of fits extension containing data cube
 
-variance_cube          /Volumes/DATABCKUP2/MUSE-Wide/datacubes_dcbgc/DATACUBE_candels-cdfs-02_v1.0_dcbgc.fits                   # Path and name of fits file containing variance cube to use for extraction
-variance_extension     STAT                              # Name or number of fits extension containing noise cube
+variance_cube          /path/variancecube.fits            # Path and name of fits file containing variance cube to use for extraction
+variance_extension     VARCUBE                            # Name or number of fits extension containing noise cube
 
-ref_image              /Volumes/DATABCKUP2/MUSE-Wide/hst_cutouts/acs_814w_candels-cdfs-02_cut_v1.0.fits              # Path and name of fits file containing image to use as reference when creating source model
+ref_image              /path/referenceimage.fits          # Path and name of fits file containing image to use as reference when creating source model
 img_extension          0                                  # Name or number of fits extension containing reference image
 
-source_catalog         /Volumes/DATABCKUP2/TDOSEextractions/tdose_sourcecats/catalog_photometry_candels-cdfs-02_tdose_sourcecat.fits               # Path and name of source catalog containing sources to extract spectra for
+wht_image              /path/refimage_wht.fits            # Path and name of fits file containing weight map of reference image (only cut out; useful for galfit modeling)
+wht_extension          0                                  # Name or number of fits extension containing weight map
+
+ref_image_model        None                               # If a model of the reference image exists provide it here.
+                                                          # If a model is provided the PSF convolution and flux optimization is done numerically.
+model_extension        0                                  # Name or number of fits extension containing reference image model
+
+source_catalog         /path/tdose_sourcecat.fits         # Path and name of source catalog containing sources to extract spectra for
 sourcecat_IDcol        id                                 # Column containing source IDs in source_catalog
 sourcecat_xposcol      x_image                            # Column containing x pixel position in source_catalog
 sourcecat_yposcol      y_image                            # Column containing y pixel position in source_catalog
@@ -131,19 +139,31 @@ sourcecat_parentIDcol  None                               # Column containing pa
                                                           # if not None the parentid is used to group source models when storing 1D spectra. All models keep sources separate.
 # - - - - - - - - - - - - - - - - - - - - - - - - OUTPUT DIRECTORIES  - - - - - - - - - - - - - - - - - - - - - - - - -
 
-models_directory       /Volumes/DATABCKUP2/TDOSEextractions/tdose_models/                  # Directory to store the modeling output from TDOSE in
-cutout_directory       /Volumes/DATABCKUP2/TDOSEextractions/tdose_cutouts/                 # Directory to store image and cube cutouts in if model_cutouts=True
-spec1D_directory       /Volumes/DATABCKUP2/TDOSEextractions/tdose_spectra/                 # Output directory to store spectra in.
+models_directory       /path/tdose_models/                # Directory to store the modeling output from TDOSE in
+cutout_directory       /path/tdose_cutouts/               # Directory to store image and cube cutouts in if model_cutouts=True
+spec1D_directory       /path/tdose_spectra/               # Output directory to store spectra in.
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - CUTOUT SETUP  - - - - - - - - - - - - - - - - - - - - - - - - - -
+model_cutouts          True                               # Perform modeling and spectral extraction on small cutouts of the cube and images to reduce run-time
+cutout_sizes           /path/tdose_setup_cutoutsizes.txt  # Size of cutouts [ra,dec] in arcsec around each source to model.
+                                                          # To use source-specific cutouts provide ascii file containing ID xsize[arcsec] and ysize[arcsec].
 
 # - - - - - - - - - - - - - - - - - - - - - - - - SOURCE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
 model_image_ext        tdose_modelimage                   # Name extension of fits file containing reference image model. To ignored use None
 model_param_reg        tdose_modelimage_ds9               # Name extension of DS9 region file for reference image model. To ignored use None
 model_image_cube_ext   tdose_modelimage_cubeWCS           # Name extension of fits file containing model image after conversion to cube WCS. To ignored use None.
 
-source_model           gauss                              # The source model to use for sources: [gauss, galfit, mog (not enabled)]
+source_model           gauss                              # The source model to use for sources. Choices are:
+                                                          #   gauss          Each source is modeled as a multivariate gaussian using the source_catalog input as starting point
+                                                          #   galfit         The sources in the field-of-view are defined based on GALFIT header parameters; if all components are        # Not enabled yet
+                                                                             Gaussians an analytical convolution is performed. Otherwise numerical convolution is used.                   # Not enabled yet
+                                                          #   modelimg       A model image exists, e.g., obtained with Galfit, in modelimg_directory. This prevents dis-entangling of     # Not enabled yet
+                                                                             different objects, i.e., the provided model image is assumed to represent the 1 object in the field-of-view. # Not enabled yet
+                                                                             If the model image is not found a gaussian model of the FoV (source_model=gauss) is performed instead        # Not enabled yet
+                                                          #   aperture       A simple aperture extraction on the datacubes is performed, i.e., no modeling of sources.
 
 # - - - - - - - - - - - - - - - - - - - - - - - - GAUSS MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
-gauss_guess            /Volumes/DATABCKUP2/MUSE-Wide/catalogs_photometry/catalog_photometry_candels-cdfs-02.fits                               # To base initial guess of gaussian parameters on a SExtractor output provide SExtractor output fits file here
+gauss_guess            /path/sextractoroutput.fits        # To base initial guess of gaussian parameters on a SExtractor output provide SExtractor output fits file here
                                                           # If gauss_initguess=None the positions and flux scale provided in source_catalog will be used.
 gauss_guess_idcol      ID                                 # Column of IDs in gauss_guess SExtractor file
 gauss_guess_racol      RA                                 # Column of RAs in gauss_guess SExtractor file
@@ -156,13 +176,19 @@ gauss_guess_fluxfactor 3                                  # Factor to apply to f
 gauss_guess_Nsigma     1                                  # Number of sigmas to include in initial Gauss parameter guess
 
 # - - - - - - - - - - - - - - - - - - - - - - - - GALFIT MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
-galfit_result          None                               # If source_model = galfit provide the path and name of fits file containing galfit results
-galfit_model_extension 2                                  # Fits extension containing galfit model with model parameters of each source in header
+galfit_directory       /path/models_galfit/               # If source_model = galfit provide path to directory containing galfit models.
+                                                          # TDOSE will look for galfit_*ref_image*_output.fits (incl. the cutout string if model_cutouts=True)
+                                                          # If no model is found a source_model=gauss run on the object will be performed instead.
+galfit_model_extension 2                                  # Fits extension containing galfit model with model parameters of each source in header.
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - CUTOUT SETUP  - - - - - - - - - - - - - - - - - - - - - - - - - -
-model_cutouts          True                               # Perform modeling and spectral extraction on small cutouts of the cube and images to reduce run-time
-cutout_sizes           /Users/kschmidt/work/TDOSE/tdose_setup_cutoutsizes.txt                             # Size of cutouts [ra,dec] in arcsec around each source to model.
-                                                          # To use source-specific cutouts provide ascii file containing ID xsize[arcsec] and ysize[arcsec].
+# - - - - - - - - - - - - - - - - - - - - - - - - MODEL IMAGE SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
+modelimg_directory    /path/models_cutouts/               # If source_model = modelimg provide the path to directory containing the individual source models
+                                                          # TDOSE will look for model_*ref_image*.fits (incl. the cutout string if model_cutouts=True)
+                                                          # If no model is found (and no galfit model is found) a source_model=gauss run on the object will be performed instead.
+modelimg_extension     2                                  # Fits extension containing model
+
+# - - - - - - - - - - - - - - - - - - - - - - - - APERTURE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - -
+aperture_size          0.5                                # Radius of apertures to use given in arc seconds
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - PSF MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
 psf_type               gauss                              # Select PSF model to build. Choices are:
@@ -174,18 +200,21 @@ psf_FWHMp1             -3.182e-5                          # p1 parameter to use 
 psf_savecube           True                               # To save fits file containing the PSF cube set psf_savecube = True
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - CUBE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
-model_cube_layers      /Users/kschmidt/work/TDOSE/tdose_setup_layers.txt                  # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
+model_cube_layers      'all'                              # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
                                                           # To model source-specific layers provide ascii file containing ID layerlow and layerhigh.
                                                           # If layerlow=all and layerhigh=all all layers will be modeled for particular source
-
-model_cube_optimizer   matrix                             # The optimizer to use when matching flux levels in cube layers: [matrix,curvet,lstsq]
+model_cube_optimizer   matrix                             # The optimizer to use when matching flux levels in cube layers:
+                                                          #   matrix      Optimize fluxes analytically using matrix algebra to minimize chi squared of the equation set comparing model and data in each layer.
+                                                          #   curvefit    Optimize fluxes numerically using least square fitting from scipy.optimize.curve_fit().
+                                                          #               Only enabled for analytic convolution of Gaussian source models.
+                                                          #   lstsq       Optimize fluxes analytically using scipy.linalg.lstsq().
 
 model_cube_ext         tdose_modelcube                    # Name extension of fits file containing model data cube.
 residual_cube_ext      tdose_modelcube_residual           # Name extension of fits file containing residual between model data cube and data. To ignored use None.
 source_model_cube      tdose_source_modelcube             # Name extension of fits file containing source model cube (used to modify data cube).
 
 # - - - - - - - - - - - - - - - - - - - - - - - - SPECTRAL EXTRACTION - - - - - - - - - - - - - - - - - - - - - - - - -
-sources_to_extract     /Users/kschmidt/work/TDOSE/tdose_setup_objects.txt # [8685,10195,29743]                 # Sources in source_catalog to extract 1D spectra for.
+sources_to_extract     [8685,9262,10195,29743]            # Sources in source_catalog to extract 1D spectra for.
                                                           # If sourcecat_parentIDcol os not None all associated spectra are included in stored object spectra
                                                           # If set to 'all', 1D spectra for all sources in source_catalog is produced (without grouping according to parents).
                                                           # For long list of objects provide ascii file containing containing ids (here parent grouping will be performed)
@@ -200,7 +229,7 @@ plot_1Dspec_shownoise  True                               # Indicate whether to 
 
 plot_S2Nspec_ext       S2Nplot                            # Name extension of pdf file containing plot of S/N spectrum
 plot_S2Nspec_xrange    [4800,9300]                        # Range of x-axes (wavelength) for plot of S2N spectra
-plot_S2Nspec_yrange    [-1,60]                            # Range of y-axes (S2N) for plot of S2N spectra
+plot_S2Nspec_yrange    [-1,15]                            # Range of y-axes (S2N) for plot of S2N spectra
 #--------------------------------------------------END OF TDOSE SETUP--------------------------------------------------
 
 """ % (tu.get_now_string())
@@ -241,18 +270,17 @@ def generate_setup_template_modify(outputfile='./tdose_setup_template_modify.txt
 # Cube modifications are run independent of tdose.perform_extraction() with tdose.modify_cube()
 #
 # - - - - - - - - - - - - - - - - - - - - - - - - -  MODIFYING CUBE - - - - - - - - - - - - - - - - - - - - - - - - - -
-data_cube              /Volumes/DATABCKUP2/TDOSEextractions/tdose_cutouts/DATACUBE_candels-cdfs-02_v1.0_dcbgc_id8685_cutout9p0x12p0arcsec.fits                    # Path and name of fits file containing data cube to modify
+data_cube              /path/datacube.fits                # Path and name of fits file containing data cube to modify
 cube_extension         DATA_DCBGC                         # Name or number of fits extension containing data cube
-source_model_cube      /Volumes/DATABCKUP2/TDOSEextractions/tdose_models/DATACUBE_candels-cdfs-02_v1.0_dcbgc_id8685_cutout9p0x12p0arcsec_tdose_source_modelcube.fits                    # Path and name of fits file containing source model cube
+source_model_cube      /path/tdose_source_modelcube.fits  # Path and name of fits file containing source model cube
 source_extension       DATA_DCBGC                         # Name or number of fits extension containing source model cube
 
 modyified_cube         tdose_modified_datacube            # Name extension of file containing modified data cube.
 
-                                                          # should be removed ( in "objects" will be removed.
 modify_sources_list    [1,2,5]                            # List of IDs of sources to remove from data cube using source model cube.
                                                           # For long list of IDs provide path and name of file containing IDs (only)
 sources_action         remove                             # Indicate how to modify the data cube. Chose between:
-                                                          #    'remove'     Sources in modify_sources_list are removed from data cube (default)
+                                                          #    'remove'     Sources in modify_sources_list are removed from data cube
                                                           #    'keep'       All sources except the sources in modify_sources_list are removed from data cube
 #----------------------------------------------END OF TDOSE MODIFY SETUP----------------------------------------------
 
@@ -649,6 +677,48 @@ def analytic_convolution_gaussian(mu1,covar1,mu2,covar2):
     return muconv, covarconv
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def numerical_convolution_image(imgarray,kerneltype,saveimg=True,imgmask=None,fill_value=0.0,
+                                norm_kernel=False,convolveFFT=False,verbose=True):
+    """
+    Perform numerical convolution on numpy array (image)
+
+    --- INPUT ---
+    imgarray      numpy array containing image to convolve
+    kerneltype    Provide either a numpy array containing the kernel or an astropy kernel
+                  to use for the convolution. E.g.,
+                      astropy.convolution.Moffat2DKernel()
+                      astropy.convolution.Gaussian2DKernel()
+    saveimg       Save image of convolved imgarray
+    imgmask       Mask of image array to apply during convolution
+    fill_value    Fill value to use in convolution
+    norm_kernel   To normalize the convolution kernel set this keyword to True
+    convolveFFT   To convolve the image in fourier space set convolveFFT=True
+    verbose       Toggle verbosity
+
+    """
+    if kerneltype is np.array:
+        kernel    = kerneltype
+        kernelstr = 'numpy array'
+    else:
+        kernel    = kerneltype
+        kernelstr = 'astropy Guass/Moffat'
+
+    if verbose: print ' - Convolving image with a '+kernelstr+' kernel using astropy convolution routines'
+
+    if convolveFFT:
+        img_conv = convolution.convolve_fft(imgarray, kernel, boundary='fill',
+                                            fill_value=fill_value,normalize_kernel=norm_kernel, mask=imgmask,
+                                            crop=True, return_fft=False, fft_pad=None,
+                                            psf_pad=None, interpolate_nan=False, quiet=False,
+                                            ignore_edge_zeros=False, min_wt=0.0)
+    else:
+        img_conv = convolution.convolve(imgarray, kernel, boundary='fill',
+                                        fill_value=fill_value, normalize_kernel=norm_kernel, mask=imgmask)
+    if saveimg:
+        sys.exit(' ---> Saving convolved image is not enabled yet')
+
+    return img_conv
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def maxlikelihood_multivariateguass(datapoints,mean,covar):
     """
     Return the mean vector and co-variance matrix for the analytic maximum likelihood estimate of
@@ -670,7 +740,7 @@ def maxlikelihood_multivariateguass(datapoints,mean,covar):
     MLmean, MLcovar = maxlikelihood_multivariateguass(dataimg,mean,covmatrix)
 
     """
-    datapoints = data.ravel()
+    datapoints = datapoints.ravel()
     Npix       = len(datapoints)
 
     MLmean  = 1.0/Npix * np.sum( datapoints )
