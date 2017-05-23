@@ -79,7 +79,10 @@ The following standard packages are imported in one or more of the TDOSE scripts
 ### Special Packages
 
 The follwoing 'special packages' also needs to be accessible to Python to run TDOSE:
-`astropy`.
+
+`astropy`: http://www.astropy.org. Can be installed with pip. Used extensively throughout TDOSE. 
+
+`reproject`: https://reproject.readthedocs.io. Used to project model of reference image to IFU WCS when the model is not a set of simple gaussians that can be build from scratch (i.e., when `source_model = modelimg` in the setup file)
 
 ## Running TDOSE
 
