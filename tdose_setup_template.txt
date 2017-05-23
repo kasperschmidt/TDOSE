@@ -51,10 +51,10 @@ model_image_cube_ext   tdose_modelimage_cubeWCS           # Name extension of fi
 source_model           gauss                              # The source model to use for sources. Choices are:
                                                           #   gauss          Each source is modeled as a multivariate gaussian using the source_catalog input as starting point
                                                           #   galfit         The sources in the field-of-view are defined based on GALFIT header parameters; if all components are        # Not enabled yet
-                                                                             Gaussians an analytical convolution is performed. Otherwise numerical convolution is used.                   # Not enabled yet
+                                                          #                  Gaussians an analytical convolution is performed. Otherwise numerical convolution is used.                   # Not enabled yet
                                                           #   modelimg       A model image exists, e.g., obtained with Galfit, in modelimg_directory. This prevents dis-entangling of     # Not enabled yet
-                                                                             different objects, i.e., the provided model image is assumed to represent the 1 object in the field-of-view. # Not enabled yet
-                                                                             If the model image is not found a gaussian model of the FoV (source_model=gauss) is performed instead        # Not enabled yet
+                                                          #                  different objects, i.e., the provided model image is assumed to represent the 1 object in the field-of-view. # Not enabled yet
+                                                          #                  If the model image is not found a gaussian model of the FoV (source_model=gauss) is performed instead        # Not enabled yet
                                                           #   aperture       A simple aperture extraction on the datacubes is performed, i.e., no modeling of sources.
 
 # - - - - - - - - - - - - - - - - - - - - - - - - GAUSS MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
