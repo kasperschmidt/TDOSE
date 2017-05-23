@@ -9,6 +9,7 @@ import collections
 import astropy
 from astropy import wcs
 from astropy.coordinates import SkyCoord
+from reproject import reproject_interp
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 import tdose
 import tdose_utilities as tu
@@ -140,28 +141,34 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 model_file    = setupdic['galfit_directory']+'galfit_'+\
                                 setupdic['ref_image'].split('/')[-1].replace('.fits','_output.fits')
 
+                if setupdic['model_cutouts']:
+                    model_file = model_file.replace('.fits',imgstr+'.fits')
+
                 if os.path.isfile(model_file):
                     if verbosefull: print 'found it, so it will be used'
                     FoV_modelexists = True
                     FoV_modelfile   = model_file
-                    FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['galfit_model_extension']]
+                    FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['galfit_model_extension']].data
                 else:
                     if verbosefull: print 'did not find it, so will generate gaussian TDOSE model'
-                sys.exit(' ---> Loading parameters and building model from galfit output is not enabled yet; sorry.')
+                sys.exit(' ---> Loading parameters and building model from galfit output is not enabled yet; sorry. '
+                         'If you have the model try the source_model = modelimg setup')
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if setupdic['source_model'] == 'modelimg':
-                if verbosefull: print ' Looking for model of source in ref)image... ',
+                if verbosefull: print ' Looking for ref_image model of source in "modelimg_directory"... ',
                 model_file    = setupdic['modelimg_directory']+'model_'+\
                                 setupdic['ref_image'].split('/')[-1]
+                if setupdic['model_cutouts']:
+                    model_file = model_file.replace('.fits',imgstr+'.fits')
 
-                if os.path.isfile(setupdic['source_model']):
+                if os.path.isfile(model_file):
                     if verbosefull: print 'found it, so it will be used'
                     FoV_modelexists = True
                     FoV_modelfile   = model_file
-                    FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']]
+                    FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
                 else:
-                    if not FoV_modelexists:
-                        if verbosefull: print 'did not find it, so will generate gaussian TDOSE model'
+                    if verbosefull: print 'did not find the model\n    '+model_file+'\n   so will skip object '+extid
+                    continue
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if not FoV_modelexists:
                 if verbosefull: print ' TDOSE: Model reference image                               '+\
@@ -200,29 +207,32 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             paramREF      = tu.build_paramarray(modelparam,verbose=verbosefull)
             paramCUBE     = tu.convert_paramarray(paramREF,img_hdr,cube_hdr,type=setupdic['source_model'].lower(),verbose=verbosefull)
         elif FoV_modelexists:
-            paramCUBE    = FoV_modeldata
-            modelimgsize = FoV_modelfile
-            sys.exit(' ---> convert model to WCS (pixel scale) of IFU... not enabled yet')
+            modelimgsize = model_file
+            # pdb.set_trace()
+            # sys.exit(' ---> convert model to WCS (pixel scale) of IFU... not enabled yet')
 
         if refimagemodel2cubewcs:
-            if not FoV_modelexists:
-                cubehdu       = pyfits.PrimaryHDU(cube_data[0,:,:])
-                cubewcshdr    = cube_wcs2D.to_header()
-                for key in cubewcshdr:
-                    if key == 'PC1_1':
-                        cubehdu.header.append(('CD1_1',cubewcshdr[key],cubewcshdr[key]),end=True)
-                    elif key == 'PC2_2':
-                        cubehdu.header.append(('CD2_2',cubewcshdr[key],cubewcshdr[key]),end=True)
-                    else:
-                        cubehdu.header.append((key,cubewcshdr[key],cubewcshdr[key]),end=True)
+            cubehdu       = pyfits.PrimaryHDU(cube_data[0,:,:])
+            cubewcshdr    = cube_wcs2D.to_header()
+            for key in cubewcshdr:
+                if key == 'PC1_1':
+                    cubehdu.header.append(('CD1_1',cubewcshdr[key],cubewcshdr[key]),end=True)
+                elif key == 'PC2_2':
+                    cubehdu.header.append(('CD2_2',cubewcshdr[key],cubewcshdr[key]),end=True)
+                else:
+                    cubehdu.header.append((key,cubewcshdr[key],cubewcshdr[key]),end=True)
 
+            if not FoV_modelexists:
                     modelimgsize = cube_data.shape[1:]
+            else:
+                projected_image, footprint = reproject_interp( (FoV_modeldata, img_wcs), cube_wcs2D, shape_out=cube_data.shape[1:])
+                paramCUBE    = projected_image
+                #paramCUBE    = tu.reshape_array(FoV_modeldata,cube_data.shape[1:],pixcombine='sum')
 
             tmf.save_modelimage(cubewcsimg,paramCUBE,modelimgsize,modeltype=setupdic['source_model'].lower(),
                                 param_init=False,clobber=clobber,outputhdr=cubehdu.header,verbose=verbosefull)
         else:
             if verbose: print ' >>> Skipping converting reference image model to cube WCS frame (assume models exist)'
-
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbosefull: print '--------------------------------------------------------------------------------------------------'
         if verbosefull: print ' TDOSE: Defining PSF as FWHM = p0 + p1(lambda-7000A)        '+\
