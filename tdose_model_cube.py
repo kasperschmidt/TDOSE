@@ -63,19 +63,22 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Determining parameters and assembling source information'
-    if paramtype == 'gauss':
+    if (paramtype == 'gauss') or (paramtype == 'modelimg'):
         if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
-        Nsource   = int(len(sourceparam)/6.0)
-        params    = np.reshape(sourceparam,[Nsource,6])
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbose: print ' - Assembling covariance matrixes for '+str(Nsource)+' Gaussian source in parameter list'
-        mu_objs   = np.zeros([Nsource,2])
-        cov_objs  = np.zeros([Nsource,2,2])
-        for nn in xrange(Nsource):
-            mu_objs[nn,:]    = params[nn][0:2]
-            cov_obj          = tu.build_2D_cov_matrix(params[nn][4],params[nn][3],params[nn][5],verbose=False)
-            cov_objs[nn,:,:] = cov_obj
-
+        if paramtype == 'gauss':
+            Nsource   = int(len(sourceparam)/6.0)
+            params    = np.reshape(sourceparam,[Nsource,6])
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if verbose: print ' - Assembling covariance matrixes for '+str(Nsource)+' Gaussian source in parameter list'
+            mu_objs   = np.zeros([Nsource,2])
+            cov_objs  = np.zeros([Nsource,2,2])
+            for nn in xrange(Nsource):
+                mu_objs[nn,:]    = params[nn][0:2]
+                cov_obj          = tu.build_2D_cov_matrix(params[nn][4],params[nn][3],params[nn][5],verbose=False)
+                cov_objs[nn,:,:] = cov_obj
+        elif paramtype == 'modelimg':
+            Nsource = 1
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         datashape = datacube.shape
         if verbose: print ' - Looping over '+str(datashape[0])+' wavelength layers, convolve sources with'
@@ -199,6 +202,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                             else:
                                 sys.exit(' ---> Building of model for numerical intergration is not enabled yet')
 
+                            sys.exit(' ---> Numerical convolution is not enabled yet, sorry')
                             img_model  = tu.numerical_convolution_image(inputmodel,kerneltype,saveimg=True,imgmask=comb_mask,
                                                                         fill_value=0.0,norm_kernel=True,convolveFFT=False,
                                                                         verbose=loopverbose)
