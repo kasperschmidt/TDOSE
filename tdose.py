@@ -472,7 +472,7 @@ def gen_cutouts(setupdic,extractids,Nextractions,sourceids_init,sourcedat_init,
                                                cubeext=[setupdic['variance_extension']],clobber=clobber,
                                                imgfiles=None,imgexts=None,imgnames=None,verbose=verbosefull)
         else:
-            if verbose: print ' >>> Skipping cutting out images and cubes (assuming they exist)'
+            if verbose: print ' >>> Skipping cutting out images and cubes (assuming they exist)                                 '
 
         # --- SUB-SOURCE CAT ---
         if generatesourcecat:
@@ -481,8 +481,7 @@ def gen_cutouts(setupdic,extractids,Nextractions,sourceids_init,sourcedat_init,
                                        (sourcedat_init[setupdic['sourcecat_deccol']] < (dec + cutoutsize[1]/2./3600.)) &
                                        (sourcedat_init[setupdic['sourcecat_deccol']] > (dec - cutoutsize[1]/2./3600.)) )[0]
             Ngoodobj      = len(obj_in_cut_fov)
-
-            cutout_hdr    = pyfits.open(cut_img)[setupdic['img_extension']].header
+            cutout_hdr    = pyfits.open(cut_images[oo])[setupdic['img_extension']].header
             cut_sourcedat = sourcedat_init[obj_in_cut_fov].copy()
             storearr      = np.zeros(Ngoodobj,dtype=cut_sourcedat.columns) # define structure array to store to fits file
             for ii in np.arange(Ngoodobj):
