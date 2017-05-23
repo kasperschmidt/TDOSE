@@ -105,16 +105,16 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                 sys.stdout.write("%s\r" % infostr)
                 sys.stdout.flush()
 
-            if (sourceparam == 'gauss') and (psfparamtype == 'gauss'):
+            analytic_conv = False
+            if (paramtype == 'gauss') & (psfparamtype == 'gauss'):
                 analytic_conv = True
 
             if psfparamtype == 'gauss':
                 mu_psf    = psfparam[ll][0:2]
                 cov_psf   = tu.build_2D_cov_matrix(psfparam[ll][4],psfparam[ll][3],psfparam[ll][5],verbose=loopverbose)
-                if analytic_conv:
-                    psfscale  = 1 # 1 returns normalized gaussian
-                    img_psf  = tu.gen_2Dgauss(mu_psf,cov_psf,psfscale,show2Dgauss=False)
-
+                # if not analytic_conv:
+                #     psfscale  = 1 # 1 returns normalized gaussian
+                #     img_psf   = tu.gen_2Dgauss(mu_psf,cov_psf,psfscale,show2Dgauss=False)
             elif psfparamtype == 'moffat':
                 sys.exit(' ---> Numerical convolution and parameter handling of a "'+psfparamtype+'" PSF is not enabled yet; sorry')
             else:
@@ -122,7 +122,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if analytic_conv:
-                if loopverbose: print ' - Performing analytic convolution of Gaussian sources; Build convolved covariance matrixes'
+                if verbose & (ll==0): print ' - Performing analytic convolution of Gaussian sources; Build convolved covariance matrixes'
                 mu_objs_conv   = np.zeros([Nsource,2])
                 cov_objs_conv  = np.zeros([Nsource,2,2])
                 for nn in xrange(Nsource):
@@ -131,7 +131,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                     cov_objs_conv[nn,:,:] = covarconv
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             else:
-                if loopverbose: print ' - Performing numerical convolution of sources in-loop'
+                if verbose & (ll==0): print ' - Performing numerical convolution of sources in-loop'
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
             if loopverbose: print ' - Build layer image'
@@ -194,8 +194,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                             else:
                                 sys.exit(' ---> Invalid psfparamtype in tdose_model_cube() not enabled')
 
-
-                            if paramtype == 'model':
+                            if paramtype != 'model':
                                 inputmodel = sourceparam
                             else:
                                 sys.exit(' ---> Building of model for numerical intergration is not enabled yet')
