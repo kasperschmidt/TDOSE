@@ -1754,3 +1754,21 @@ def galfit_results2paramlist(galfitresults,verbose=True):
     fin.close()
     return paramlist
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def reshape_array(array, newsize, pixcombine='sum'):
+    """
+    Reshape an array to a give size using either the sum, mean or median of the pixels binned
+
+    Note that the old array dimensions have to be multiples of the new array dimensions
+
+    """
+    sh = newsize[0],array.shape[0]//newsize[0],newsize[1],array.shape[1]//newsize[1]
+    pdb.set_trace()
+    if pixcombine == 'sum':
+        reshapedarray = array.reshape(sh).sum(-1).sum(1)
+    elif pixcombine == 'mean':
+        reshapedarray = array.reshape(sh).mean(-1).mean(1)
+    elif pixcombine == 'median':
+        reshapedarray = array.reshape(sh).median(-1).median(1)
+
+    return reshapedarray
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
