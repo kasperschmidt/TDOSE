@@ -15,9 +15,48 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
                   fluxscale='fluxscale',show_residualimg=False,generateimage=False,generateresidualimage=False,
                   optimizer='curve_fit',clobber=False,outputhdr=None,param_initguess=None,verbose=True):
     """
-    model
+    Generate the full model of the FoV to extract spectra from
 
     --- INPUT ---
+    dataimg                   The image to model sources in
+    sourcecatalog             Source catalog of sources to model in dataimg
+    modeltype                 The type of model to use. Select between:
+                                  gauss       Generate a multivariate gaussian model at each source position
+                                  aperture    Add apertures of radius sigysigxangle at the location of each source
+                                  galfit      Not enabled yet
+    xpos_col                  Column name of sourcecatalog column containing the x-coordinates of sources
+    ypos_col                  Column name of sourcecatalog column containing the y-coordinates of sources
+    sigysigxangle             Parameters for source models in image. For:
+                                  modeltype = gauss    sigysigxangle    corresponds to the sigma_y, sigma_x and
+                                                                        angle of the multivariate gaussian models
+                                                                        is to be used provide it here. Expects either
+                                                                        a list of stings where the three values are
+                                                                        seperated by '_' or an array of size [N,3]
+                                                                        where sigysigxangle[ii,:] = sigma_yi, sigma_xi angle_i
+                                  modeltype = aperture sigysigxangle    corresponds to the radius of the aperture in pixels
+                                                                        provided as a single value for all apertures or
+                                                                        a list of different aperture sizes
+                                  modeltype = galfit   sigysigxangle    NA
+    datanoise                 Noise image corresponding to dataimg
+    fluxscale                 Flux scale to apply to each source model given as either a list of values or
+                              a single value. If:
+                                  modeltype = gauss    fluxscale        corresponds to a scaling of the gaussian profile
+                                  modeltype = aperture fluxscale        corresponds to the pixel values in the apertures,
+                                                                        e.g., the ID of the objects.
+                                  modeltype = galfit   sigysigxangle    NA
+    show_residualimg          To show the residual image for each model, set this keyword to true
+    generateimage             To store model to fits image provide the path and name of file to generate here.
+    generateresidualimage     To store residual between image and model to fits image provide the path and name
+                              of file to generate here.
+    optimizer                 Optimizer to use for generating model. Chose between:
+                                  leastsq     scipy.optimize.leastsq(); not ideal for 2D images...
+                                              Tries to optimize the residual function
+                                  curve_fit   scipy.optimize.curve_fit()
+                                              Tries to optimize using the model function
+    clobber                   Overwrite files if they already exist
+    outputhdr                 Fits header to use as template for models
+    param_initguess           To use a TDOSE parameter list as intial guess for image model provide it here
+    verbose                   Toggle verbosity
 
     --- EXAMPLE OF USE ---
     import tdose_model_FoV as tmf
@@ -127,6 +166,16 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
     Generate and save a fits file containing the model image obtained from modeling multiple gaussians
 
     --- INPUT ---
+    outname          File name to store model image to
+    paramlist        Parameter list of soources in model to be strored in the header of the fits file
+    imgsize          Size of the image model
+    modeltype        The type of model which was used to generate the image
+    param_init       If intitial parameters exists provide this here.
+    dataresidual     To store the residual (data-model) instead of the model itself set this keyword to True
+    clobber          Overwrite file if it already exists
+    outputhdr        Header to use as template for fits image to generate
+    verbose          Toggle verbosity
+    verbosemodel     Toggle extended verbosity
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -227,15 +276,15 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_paramlist(sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,fluxscale=None,verbose=True):
     """
-    Generating parameter list for image modeling
+    Generating parameter list for image modeling when the modeltype is set to 'gauss'
 
     --- INPUT ---
-    sourcecatalog
-    xpos_col='xpos'
-    ypos_col='ypos'
-    sigysigxangle=None
-    fluxscale=None
-    verbose=True
+    sourcecatalog         The source catalog to generate a parameter list for
+    xpos_col              Column name of column in sourcecatalog containing the x position of sources
+    ypos_col              Column name of column in sourcecatalog containing the y position of sources
+    sigysigxangle         The parameters to store in parameter list (see header for gen_fullmodel() for details)
+    fluxscale             Flux scale of sources
+    verbose               Toggle verbosity
 
     --- EXAMPLE OF USE ---
     # - - - Use model cube source file as input - - -
@@ -291,9 +340,15 @@ def gen_paramlist(sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=No
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_paramlist_aperture(sourcecatalog,radius_pix,pixval=None,xpos_col='xpos',ypos_col='ypos',verbose=True):
     """
-    Generating parameter list for image modeling
+    Generating parameter list for image modeling when the model type is set to 'aperture'
 
     --- INPUT ---
+    sourcecatalog         The source catalog to generate a parameter list for
+    radius_pix            The radius of the source apartures
+    pixval                Value of pixels in each aperture, e.g., the object id
+    xpos_col              Column name of column in sourcecatalog containing the x position of sources
+    ypos_col              Column name of column in sourcecatalog containing the y position of sources
+    verbose               Toggle verbosity
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -314,7 +369,7 @@ def gen_paramlist_aperture(sourcecatalog,radius_pix,pixval=None,xpos_col='xpos',
         if len(radius_pix) == 1:
             radius     = radius_pix
         else:
-            radius     = radius_pix
+            radius     = radius_pix[oo]
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if pixval is not None:
             pv = pixval[oo]
@@ -565,9 +620,15 @@ def modelimage_aperture((xgrid,ygrid), param, showmodelimg=False, verbose=True, 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def model_objects_galfit(dataimage,galfitparamfile,show_residualimg=False,verbose=True):
     """
-    model
+    ~ ~ ~ ~ STILL UNDER CONSTRUCTION/TESTING ~ ~ ~ ~
+
+    Function template for modeling of objects with galfit
 
     --- INPUT ---
+    dataimage
+    galfitparamfile
+    show_residualimg
+    verbose
 
     --- EXAMPLE OF USE ---
     import tdose_model_FoV as tmf
@@ -613,7 +674,9 @@ def model_objects_galfit(dataimage,galfitparamfile,show_residualimg=False,verbos
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def model_objects_MoGs(param,verbose=True):
     """
-    model
+    ~ ~ ~ ~ STILL UNDER CONSTRUCTION/TESTING ~ ~ ~ ~
+
+    modellng the sources as gaussian mixture models
 
     --- INPUT ---
 
