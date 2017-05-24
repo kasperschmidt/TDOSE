@@ -1066,7 +1066,19 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
                     clobber=False,verbose=True):
     """
     Generate a DS9 region file based on a model parameters file.
-    Model type represented by paraneters us determined from fits header.
+    Model type represented by parameters is determined from fits header.
+
+    --- INPUT ---
+    fitstable     Fits file with information for model parameters in header to generate ds9 region file for
+    outputfile    Name of output file to save region file to
+    wcsinfo       WCS information to use when converting coordinates to RA and Dec
+    color         Color of regions
+    width         Width of lines of regions
+    Nsigma        Number of sigmas to use as radii when plotting circles/ellipses
+    textlist      List of text strings to add to the regions
+    fontsize      Font size of region title text
+    clobber       Overwrite region file if it already exists
+    verbose       Toggle verbosity
 
     """
     tabhdr = pyfits.open(fitstable)[1].header

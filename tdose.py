@@ -37,13 +37,15 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
     modeldatacube          To skip modeling the data cube set modeldatacube=False
     createsourcecube       To skip creating the source model cube set createsourcecube=False
     store1Dspectra         To skip storing the 1D spectra to binary fits tables set store1Dspectra=False
+    plot1Dspectra          Plot the 1D spectra after extracting them
+    plotS2Nspectra         Plot signal-to-noise spectra after extracting the 1D spectra
     save_init_model_output If a SExtractor catalog is provide to the keyword gauss_guess in the setup file
                            an initial guess including the SExtractor fits is generated for the Gaussian model.
                            To save a ds9 region, image and paramater list (the two latter is available from the default
                            output of the TDOSE modeling) set save_init_model_output=True
     clobber                If True existing output files will be overwritten
     verbose                Toggle verbosity
-    verbose                Toggle extended verbosity
+    verbosefull            Toggle extended verbosity
 
     --- EXAMPLE OF USE ---
     import tdose
@@ -88,7 +90,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if verbose: print '=================================================================================================='
         if verbose: print ' TDOSE: Generate cutouts around sources to extract          '+\
                           '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
-        tdose.gen_cutouts(setupdic,extractids,Nextractions,sourceids_init,sourcedat_init,
+        tdose.gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                           performcutout=performcutout,generatesourcecat=generatesourcecat,clobber=clobber,
                           verbose=verbose,verbosefull=verbosefull,start_time=start_time)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -175,7 +177,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                                       '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
                 regionfile    = setupdic['models_directory']+'/'+\
                                 refimg.split('/')[-1].replace('.fits','_'+setupdic['model_param_reg']+'_'+setupdic['source_model']+'.reg')
-                modelparam    = modelimg.replace('.fits','_objparam.fits') # output from refernce image modeling
+                modelparam    = modelimg.replace('.fits','_objparam.fits') # output from reference image modeling
 
                 names         = []
                 sourceids     = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']]
@@ -427,12 +429,25 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
  """
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def gen_cutouts(setupdic,extractids,Nextractions,sourceids_init,sourcedat_init,
+def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                 performcutout=True,generatesourcecat=True,clobber=False,verbose=True,verbosefull=True,start_time=0.0):
     """
     Generate cutouts of reference image and data cube
 
+    --- INPUT ---
+    setupdic              Dictionary containing the setup parameters read from the TDOSE setup file
+    extractids            IDs of objects to extract spectra for
+    sourceids_init        The initial source IDs
+    sourcedat_init        The initial source data
+    performcutout         Set to true to actually perform cutouts.
+    generatesourcecat     To generate a (sub) source catalog corresponding to the objects in the cutout
+    clobber               Overwrite existing files if they exist
+    verbose               Toggle verbosity
+    verbosefull           Toggle extended verbosity
+    start_time            Start time of wrapper cutout generation is embedded in
+
     """
+    Nextractions = len(extractids)
     cut_images = []
     cut_cubes  = []
     for oo, cutoutid in enumerate(extractids):
@@ -531,6 +546,22 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
     """
     Modeling the refernce image
 
+    --- INPUT ---
+    setupdic                Dictionary containing the setup parameters read from the TDOSE setup file
+    refimg                  Name of fits reference image to model
+    img_hdr                 Fits header of of reference image
+    sourcecat               Source catalog providing coordinates of objects in reference image to model
+    modelimg                Name of output file to store model to
+    modelparam              Fits table to contain the model parameters (which will be turned into a DS9 region file)
+    regionfile              The name of the reegionfile to generate with model parameter regions
+    img_wcs                 WCS of image to model
+    img_data                Data of image array
+    names                   Names of individual objects used in DS9 region
+    save_init_model_output  Set to true to save the initial model to files
+    clobber                 Overwrite files if the already exist
+    verbose                 Toggle verbosity
+    verbosefull             Toggle extended verbosity
+
     """
     if setupdic['source_model'].lower() == 'gauss':
         sigysigxangle = None
@@ -603,6 +634,20 @@ def model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_varianc
     """
     Modeling the data cube
 
+    --- INPUT ---
+    setupdic                Dictionary containing the setup parameters read from the TDOSE setup file
+    extid                   ID of cube to model
+    modcubename             Name of model cube to generate
+    rescubename             Name of residual cube to generate
+    cube_data               Data cube
+    cube_variance           Variance for data cube (cube_data)
+    paramCUBE               Parmaters of objects in data cube
+    cube_hdr                Header of data cube
+    paramPSF                Parameters of PSF
+    clobber                 Overwrite files if they exist
+    verbose                 Toggle verbosity
+    verbosefull             Toggle extended verbosity
+
     """
     if setupdic['model_cube_layers'] == 'all':
         layers = None
@@ -650,6 +695,17 @@ def model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_varianc
 def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobber=False,verbose=True,verbosefull=True):
     """
     Defining the PSF model to convolve reference image with
+
+    --- INPUT ---
+    setupdic                Dictionary containing the setup parameters read from the TDOSE setup file
+    datacube                Name of data used for printing.
+    cube_data               Data from datacube to base PSF cube dimensions on
+    cube_scales             The pixel scale of the data cube
+    cube_hdr                The data cube fits header
+    cube_waves              The wavelengths corresponding to the layers of the data cube
+    clobber                 Overwrite files if they exist
+    verbose                 Toggle verbosity
+    verbosefull             Toggle extended verbosity
 
     """
     if setupdic['psf_FWHM_evolve'].lower() == 'linear':
@@ -715,6 +771,15 @@ def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobb
 def plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=True,plotS2Nspectra=True,verbose=True):
     """
 
+    --- INPUT ---
+    setupdic                Dictionary containing the setup parameters read from the TDOSE setup file
+    SAD                     Source association dictionary difining what sources should be combined into objects
+                            (spectra) when plotting.
+    specoutputdir           Directory to store plots in
+    plot1Dspectra           Plot 1D spectra?
+    plotS2Nspectra          Plot signal-to-noise spectra of the 1D spectra?
+    verbose                 Toggle verbosity
+
     """
     showspec        = False
 
@@ -751,6 +816,10 @@ def modify_cube(modifysetupfile='./tdose_setup_template_modify.txt',verbose=True
     """
     Wrapper for modyfying data cube based on sourcemodelcube
 
+    --- INPUT ---
+    modifysetupfile    Setup file for modifying the data cubes based on the source model cubes
+    verbose            Toggle verbosity
+
     --- EXAMPLE OF USE ---
     import tdose
     tdose.modify_cube(modifysetupfile='./tdose_setup_template_modify.txt',verbose=True)
@@ -784,6 +853,10 @@ def modify_cube(modifysetupfile='./tdose_setup_template_modify.txt',verbose=True
 def get_datinfo(cutoutid,setupdic):
     """
     Function returning information on file names etc. for both default run and cutout run
+
+    --- INPUT ---
+    cutoutid        ID to return information for
+    setupdic        Dictionary containing the setup parameters read from the TDOSE setup file
 
     """
     if cutoutid == -9999:
