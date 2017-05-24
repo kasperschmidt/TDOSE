@@ -203,6 +203,8 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                                 sys.exit(' ---> Building of model for numerical intergration is not enabled yet')
 
                             sys.exit(' ---> Numerical convolution is not enabled yet, sorry')
+                            kbscheck   = tu.gen_psfed_cube()
+                            kbscheck   = tu.perform_2Dconvolution()
                             img_model  = tu.numerical_convolution_image(inputmodel,kerneltype,saveimg=True,imgmask=comb_mask,
                                                                         fill_value=0.0,norm_kernel=True,convolveFFT=False,
                                                                         verbose=loopverbose)
@@ -308,6 +310,14 @@ def save_cube(cubename,datacube,layer_scales,outputhdr=None,clobber=False,verbos
     """
     Saveing data cube to fits file
 
+    --- INPUT ---
+    cubename        File to save data cube to
+    datacube        Numpy array cotaining data cube to save to file
+    layer_scales    The layer scales to save to file
+    outputhdr       Fits header to use for output
+    clobber         Overwrite file if it already exists
+    verbose         Toggle verbosity
+
     """
     if verbose: print ' - Saving model cube to \n   '+cubename
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -387,6 +397,7 @@ def optimize_source_scale_gauss(img_data,img_std,mu_objs,cov_objs,optimizer='cur
     img_std         Standard deviation image for data to use in optimization
     mu_objs         Mean vectors for multivariate Gaussian sources to scale         Dimensions: [Nobj,2]
     cov_objs        Covariance matrixes for multivariate Gaussian sources to scale. Dimensions: [Nobj,2,2]
+    optimizer       The optimizer to use when scaling the sources
     verbose         Toggle verbosity
 
     --- EXAMPLE OF USE ---
@@ -425,10 +436,12 @@ def optimize_img_scale(img_data,img_std,img_model,optimizer='curve_fit',show_res
     optimize the (flux) scaling of an image with respect to a (noisy) data image
 
     --- INPUT ---
-    img_data        The (noisy) data image to scale model image provide in img_model to
-    img_std         Standard deviation image for data to use in optimization
-    img_model       Model image to (flux) scale to match img_data
-    verbose         Toggle verbosity
+    img_data            The (noisy) data image to scale model image provide in img_model to
+    img_std             Standard deviation image for data to use in optimization
+    img_model           Model image to (flux) scale to match img_data
+    optimizer           The optimizer to use when scaling the layers
+    show_residualimg    To show the residual image (data - model) for the optimize layers, set this to true
+    verbose             Toggle verbosity
 
     --- EXAMPLE OF USE ---
     import tdose_model_cube as tmc
@@ -584,12 +597,11 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
                     Choose between:
                        'gauss'    Expects a (Nlayer,6) array of paramters
                                   [yposition,xposition,fluxscale,sigmay,sigmax,angle] for each layer.
-    verbose         Toggle verbosity
     save_modelcube  If true, the resulting model cube will be saved to an output fits file.
     cubename        Name of fits file to save model cube to
     clobber         If true any existing fits file will be overwritten
     outputhdr       Header to use for output fits file. If none provided a default header will be used.
-
+    verbose         Toggle verbosity
 
     --- EXAMPLE OF USE ---
 

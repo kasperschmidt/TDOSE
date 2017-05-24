@@ -11,16 +11,18 @@ def remove_object(datacube,sourcemodelcube,objects=[1],remove=True,dataext=0,sou
     Use source model cube to remove object(s) from data cube
 
     --- INPUT ---
-    datacube
-    sourcemodelcube
-    objects            The objects to remove from data cube. Provide number of source sub-cube in
-                       "sourcemodelcube".
-    remove             If true objects in "objects" will be removed from "datacube". If remove=False
-                       everything but the objects listed in "objects" will be removed.
-    savecube           If a string is provided the modified cube will be stored in a new fits file
-                       appending the provided string to the data cube file name.
-    clobber            If true any existing fits file will be overwritten if modified cube is saved
-    verbose            Toggle verbosity
+    datacube            Datacube to modify
+    sourcemodelcube     Source model cube of data cube defining models of each source in the datacube
+    objects             The objects to remove from data cube. Provide number of source sub-cube in
+                        "sourcemodelcube".
+    remove              If true objects in "objects" will be removed from "datacube". If remove=False
+                        everything but the objects listed in "objects" will be removed.
+    dataext             Extension of datacube containing actual data
+    sourcemodelext      Extension of source model cube containing the models
+    savecube            If a string is provided the modified cube will be stored in a new fits file
+                        appending the provided string to the data cube file name.
+    clobber             If true any existing fits file will be overwritten if modified cube is saved
+    verbose             Toggle verbosity
 
     --- EXAMPLE OF USE ---
 

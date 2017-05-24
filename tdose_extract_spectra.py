@@ -17,14 +17,19 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='
     when generating the source model cube
 
     --- INPUT ---
-    model_cube_file
-    source_association_dictionary
-    outputdir
-    clobber
-    variance_cube_file             file containing variance cube of data to be used to estimate nois on 1D spectrum
-    variance_cube_ext
-    source_model_cube_file
-    data_cube_file                      file containing original data cube used for extraction of aperture spectra
+    model_cube_file                     Model cube to base extraction on (using header info and layer scales)
+    source_association_dictionary       Source association dictionary defining what sources should be combined into
+                                        objects (individual spectra).
+    nameext                             The name extension to use for saved spectra
+    outputdir                           Directory to save spectra to
+    clobber                             Overwrite spectra if they already exists
+    variance_cube_file                  File containing variance cube of data to be used to estimate nois on 1D spectrum
+    variance_cube_ext                   Extension of variance cube to use
+    source_model_cube_file              The source model cube defining the individual sources
+    source_cube_ext                     Extension of source model cube file that contins source models
+    model_cube_ext                      Extension of model cube file that contains model
+    layer_scale_ext                     Extension of model cube file that contains the layer scales
+    data_cube_file                      File containing original data cube used for extraction of aperture spectra
     verbose
 
     --- EXAMPLE OF USE ---
@@ -38,7 +43,7 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='
     layer_scale_arr   = pyfits.open(model_cube_file)[layer_scale_ext].data
     if variance_cube_file is not None:
         variance_cube     = np.sqrt(pyfits.open(variance_cube_file)[variance_cube_ext].data) # turn varinace into standard deviation
-        source_model_cube = pyfits.open(source_model_cube_file)[model_cube_ext].data
+        source_model_cube = pyfits.open(source_model_cube_file)[source_cube_ext].data
     else:
         variance_cube     = None
         source_model_cube = None
@@ -254,6 +259,7 @@ def extract_spectra_viasourcemodelcube(datacube,sourcemodelcube,wavelengths,spec
     speclist          List of spectra to extract. Indexes corresponding to the source models in the
                       sourcemodlecube
     specids           List of IDs to use in naming of output for source models referred to in "speclist"
+    outputdir         Directory to store spectra to
     noisecube         Cube with uncertainties (sqrt(variance)) of data cube to be used in extraction
     souremodel_hdr    If not 'None' provide a basic fits header for the source model cubes extracted
                       and they will be appended to the individual output fits file containing the extracted
@@ -314,6 +320,7 @@ def extract_spectrum_viasourcemodelcube(datacube,sourceweights,wavelengths,
     sourceweights     Weights from source model to use as "extraction cube". The weights should contain the
                       fractional flux belonging to the source in each pixel
     wavelengths       Wavelength vector to use for extracted 1D spectrum.
+    specname          Name of spectrum to generate
     noisecube         Cube with uncertainties (sqrt(variance)) of data cube to be used in extraction
     spec1Dmethod      Method used to extract 1D spectrum from source cube with
     sourcecube_hdr    If not 'None' provide a fits header for the source cube and it ill be appended to the
@@ -406,7 +413,37 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                  sky_wavecol='lambda',sky_fluxcol='data',sky_errcol='stat',
                  verbose=True):
     """
-    Simple plots of multiple 1D spectra
+    Plots of multiple 1D spectra
+
+    --- INPUT ---
+    filelist            List of spectra filenames to plot
+    plotname            Name of plot to generate
+    colors              Colors of the spectra in filelist to use
+    labels              Labels of the spectra in filelist to use
+    plotSNcurve         Show signal-to-noise curve instead of flux spectra
+    tdose_wavecol       Wavelength column of the spectra in filelist
+    tdose_fluxcol       Flux column of the spectra in filelist
+    tdose_errcol        Flux error column of the spectra in filelist
+    simsources          To plot simulated sources provide ids here
+    simsourcefile       Source file with simulated sources to plot
+    sim_cube_dim        Dimensions of simulated cubes
+    comparisonspecs     To plot comparison spectra provide the filenames of those here
+    comp_colors         Colors of the spectra in comparisonspecs list to use
+    comp_labels         Labels of the spectra in comparisonspecs list to use
+    comp_wavecol        Wavelength column of the spectra in comparisonspecs list
+    comp_fluxcol        Flux column of the spectra in comparisonspecs list
+    comp_errcol         Flux error column of the spectra in comparisonspecs list
+    xrange              Xrange of plot
+    yrange              Yrange of plot
+    showspecs           To show plot instead of storing it to disk set showspecs=True
+    shownoise           To add noise envelope around spectrum set shownoise=True
+    skyspecs            To plot sky spectra provide the filenames of those here
+    sky_colors          Colors of the spectra in skyspecs list to use
+    sky_labels          Labels of the spectra in skyspecs list to use
+    sky_wavecol         Wavelength column of the spectra in skyspecs list
+    sky_fluxcol         Flux column of the spectra in skyspecs list
+    sky_errcol          Flux error column of the spectra in skyspecs list
+    verbose             Toggle verbosity
 
     """
     if len(filelist) == 1:
@@ -589,6 +626,18 @@ def plot_histograms(datavectors,plotname='./tdose_cubehist.pdf',colors=None,labe
                     xrange=None,yrange=None,verbose=True,norm=True,ylog=True):
     """
     Plot histograms of a set of data vectors.
+
+    --- INPUT ---
+    datavectors     Set of data vectors to plot histograms of
+    plotname        Name of plot to generate
+    colors          Colors to use for histograms
+    labels          Labels for the data vectors
+    bins            Bins to use for histograms. Can be generated with np.arange(minval,maxval+binwidth,binwidth)
+    xrange          Xrange of plot
+    yrange          Yrange of plot
+    verbose         Toggle verbosity
+    norm            Noramlize the histograms
+    ylog            Use a logarithmic y-axes when plotting
 
     """
     Ndat = len(datavectors)
