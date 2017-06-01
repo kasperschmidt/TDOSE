@@ -27,7 +27,7 @@ TDOSE will be presented in a forthcoming publication (Schmidt et al.), until thi
 
 The software for Three Dimensional Optimal Spectra Extraction (TDOSE) is build in Python to extract spectra of both point sources and extended sources from integral field data cubes, i.e., three dimensional data with spatial (x,y) and wavelength dimensions (λ). TDOSE was build for spectral extraction from MUSE data cubes. However, TDOSE was also build to be as broadly appliable as possible. Therefore, TDOSE should be able to extract 1D spectra from any 3D FITS data cube.
 
-TDOSE broadly follows the point source extraction software described by Kamann, Wisotzki and Roth (2013) adding the capability of modeling sources as non-point sources, e.g., via GALFIT modeling or (multiple) multivariate gaussian modeling, and using these non-point source models to guide the three dimensional extractions.
+TDOSE broadly follows the point source extraction software described by Kamann, Wisotzki and Roth (2013) adding the capability of modeling sources as non-point sources, e.g., via (multiple) multivariate gaussian modeling or GALFIT modeling (not fully enabled yet), and using these non-point source models to guide the three dimensional extractions to approach optimal spectral extraction of extended objects.
 
 Below is a quick run-through of TDOSE and how to use it. Comments and/or suggestions for improvement, new features etc. are more than welcome. Please send these to Kasper B. Schmidt (kbschmidt at aip.de) or add an 'issue' via GitHub.
 
@@ -105,10 +105,11 @@ Details of the individual steps of a full TDOSE run can be found in `tdose.py`.
 
 #### Model Reference with Multiple Multivariate Gaussians
 
-More details soon... in the meantime take a look at `tdose.model_refimage()`.
+More details comning soon... in the meantime take a look at `tdose.model_refimage()`.
 ```python
 import tdose_utilities as tu
 import tdose_model_FoV as tmf
+
 pinit, fit    = tmf.gen_fullmodel(img_data,sourcecat,modeltype=setupdic['source_model'],verbose=verbosefull,
                                       xpos_col=setupdic['sourcecat_xposcol'],ypos_col=setupdic['sourcecat_yposcol'],
                                       datanoise=None,sigysigxangle=sigysigxangle,
@@ -121,6 +122,7 @@ pinit, fit    = tmf.gen_fullmodel(img_data,sourcecat,modeltype=setupdic['source_
 
 #### Model Data Cube 
 
+More details comning soon...
 ```python
 import tdose_model_cube as tmc
 ```
@@ -147,9 +149,14 @@ galfitoutput = tu.galfit_run(galfitinputfile,noskyest=False)
 
 #### Remove Sources (Models) from Initial Data Cube
 
-Comning soon...
+More details comning soon...
 ```python
 import tdose_modify_cube as tmoc
+
+sourcemodelcube = path+'tdose_source_model_cube.fits'
+datacube        = path+'datacube.fits'
+
+modified_cube   = tmoc.remove_object(datacube, sourcemodelcube, objects=[1,2,10], remove=True, dataext=0, sourcemodelext=0, savecube='removesource1and2and10', verbose=True)
 ```
 
 #### Build Mock Data Cube
@@ -157,12 +164,14 @@ import tdose_modify_cube as tmoc
 The following will build a mock data cube based on the source catalog provided of spatial dimensions (200,150) and 100 wavelength slices. A Moffat PSF will be applied and Gaussian noise will be added.
 ```python
 import tdose_build_mock_cube as tbmc
+
 sourcecat       = 'mock_cube_sourcecat161213_all.fits'
 cube_dim        = [100,200,150]
 noisetype       = 'gauss'
 noise_gauss_std = 0.03
 psf             = 'moffat'
 psf_param       = [10.0,[1.1,1.3,1.5]]
+
 outputcube      = tbmc.build_cube(sourcecat, cube_dim=cube_dim, clobber=False, noisetype=noise, noise_gauss_std=noise_gauss_std, psf=psf, psf_param=psf_param)
 ```
 Here, the `sourcecat` is a fits catalog containing x and y pixel positions, a flux scale, indicators of the source (model) types and spectral (model) types. For further details see header of `tbmc.build_cube()`. The `psf*` paramters define the psf model to convolve the cube with using `tdose_utilities.gen_psfed_cube()`.
