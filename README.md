@@ -110,14 +110,9 @@ More details comning soon... in the meantime take a look at `tdose.model_refimag
 import tdose_utilities as tu
 import tdose_model_FoV as tmf
 
-pinit, fit    = tmf.gen_fullmodel(img_data,sourcecat,modeltype=setupdic['source_model'],verbose=verbosefull,
-                                      xpos_col=setupdic['sourcecat_xposcol'],ypos_col=setupdic['sourcecat_yposcol'],
-                                      datanoise=None,sigysigxangle=sigysigxangle,
-                                      fluxscale=fluxscale,generateimage=modelimg,
-                                      generateresidualimage=True,clobber=clobber,outputhdr=img_hdr,
-                                      param_initguess=param_initguess)
-    tu.model_ds9region(modelparam,regionfile,img_wcs,color='cyan',width=2,Nsigma=2,textlist=names,
-                       fontsize=12,clobber=clobber)
+pinit, fit    = tmf.gen_fullmodel(img_data, sourcecat, modeltype=setupdic['source_model'], verbose=verbosefull, xpos_col=setupdic['sourcecat_xposcol'], ypos_col=setupdic['sourcecat_yposcol'], datanoise=None, sigysigxangle=sigysigxangle, fluxscale=fluxscale, generateimage=modelimg, generateresidualimage=True, clobber=clobber, outputhdr=img_hdr, param_initguess=param_initguess)
+
+tu.model_ds9region(modelparam, regionfile, img_wcs, color='cyan', width=2, Nsigma=2, textlist=names, fontsize=12, clobber=clobber)
 ```
 
 #### Model Data Cube 
@@ -141,8 +136,7 @@ modelparam      = path+'datacube_modelimage_objparam.fits'
 paramHSTinit    = tu.build_paramarray(modelparam,returninit=True,verbose=True)
 paramHSTfitted  = tu.build_paramarray(modelparam,returninit=False,verbose=True)
 
-tu.galfit_buildinput_fromparamlist(galfitinputfile,paramHSTfitted,image,objecttype='gaussian',sigmaimg=None,psfimg=psfimg,
-                                       platescale=[0.03,0.03],magzeropoint=25.947,convolvebox=[500,500],verbose=True)
+tu.galfit_buildinput_fromparamlist(galfitinputfile, paramHSTfitted, image, objecttype='gaussian', sigmaimg=None, psfimg=psfimg, platescale=[0.03,0.03], magzeropoint=25.947, convolvebox=[500,500], verbose=True)
 
 galfitoutput = tu.galfit_run(galfitinputfile,noskyest=False)
 ```
