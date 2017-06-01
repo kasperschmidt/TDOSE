@@ -110,7 +110,7 @@ def generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=Fals
 #-------------------------------------------------START OF TDOSE SETUP-------------------------------------------------
 #
 # Template for TDOSE (http://github.com/kasperschmidt/TDOSE) setup file
-# Generated with tdose_utilities.generate_setup_template() on 2017-04-11 14:03
+# Generated with tdose_utilities.generate_setup_template() on %s
 # The spectral extraction using this setup is run with tdose.perform_extraction()
 #
 # - - - - - - - - - - - - - - - - - - - - - - - - - - DATA INPUT  - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -321,7 +321,7 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,inffmt="S200,S20
 
     outputdir = '/Users/kschmidt/work/TDOSE/muse_tdose_setups/'
     infofile  = outputdir+'musewide_infofile.txt'
-    tu.duplicate_setup_template(outputdir,infofile,inffmt=['A','A','F'],
+    tu.duplicate_setup_template(outputdir,infofile,inffmt="S40,S40,S40",
                              loopcols=['setupname','data_cube','cube_extension'],
                              namebase='MUSEWide_tdose_setup',clobber=False,verbose=True)
 
@@ -339,27 +339,34 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,inffmt="S200,S20
 
     for setupnumber in xrange(Nfiles):
         replacements = copen[setupnumber]
-        newsetup     = namebase+'_'+replacements['setupname']+'.txt'
+        newsetup     = outputdirectory+namebase+'_'+replacements['setupname']+'.txt'
         if os.path.isfile(newsetup) & (clobber == False):
             if verbose: print ' - File '+newsetup+' already exists and clobber = False so moving on to next duplication '
             continue
         else:
-            fout = open()
+            fout = open(newsetup,'w')
 
             with open(filename,'r') as fsetup:
                 for setupline in fsetup:
                     if setupline.startswith('#'):
+                        if "Generated with tdose_utilities.generate_setup_template()" in setupline:
+                            nowstring = tu.get_now_string()
+                            fout.write("Generated with tdose_utilities.duplicate_setup_template() on "+nowstring+' \n+')
+                        else:
+                            fout.write(setupline)
+                    elif setupline == '\n':
                         fout.write(setupline)
                     else:
                         vals = setupline.split()
+
                         if vals[0] in loopcols:
                             newline = setupline.replace(vals[1],copen[vals[0]][setupnumber])
+                            fout.write(newline)
+                        else:
+                            newline = setupline.replace(vals[1],'NO_REPLACEMENT')
 
+                        fout.write(newline)
         fout.close()
-
-
-    sys.exit(' ---> Function not build yet')
-    return None
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def build_2D_cov_matrix(sigmax,sigmay,angle,verbose=True):
     """
