@@ -294,15 +294,24 @@ sources_action         remove                             # Indicate how to modi
         fout.write(setuptemplate)
         fout.close()
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def duplicate_setup_template_MUSEWide(outputdirectory,namebase='MUSEWide_tdose_setup',clobber=False,verbose=True):
+def duplicate_setup_template(outputdirectory,infofile,infohdr=2,inffmt="S200,S200,f",
+                             loopcols=['data_cube','cube_extension'],
+                             namebase='MUSEWide_tdose_setup',clobber=False,verbose=True):
     """
     ~ ~ ~ ~ STILL UNDER CONSTRUCTION/TESTING ~ ~ ~ ~
 
-    Take a setuptemplate generated with generate_setup_template() and duplicate it and
-    fill it out for the MUSE-Wide fields, i.e., update PSF info, field names, image names, source lists, etc.
+    Take a setup template generated with generate_setup_template() and duplicate it filling
+    it with information from a provided infofile, e.g., fill update PSF info, field names,
+    image names, source lists, etc.
 
     --- INPUT ---
     outputdirectory     Directory to store setup templates in
+    infofile            File containing info to replace values in template setup with
+    infohdr             Number of header (comment) lines in infofile before the expected list of column names
+    inffmt              Format of columns in infofile (format for all columns are needed; not just loopcols)
+    loopcols            The name of thecolumns in the loopcols to perform replacements for. The columns should
+                        correspond to keywords in the TDOSE setup file. The first column of the file should be
+                        named 'setupname' and will be used to name the duplicated setup file (appending it to namebase.
     namebase            Name base to use for the setup templates
     clobber             Overwrite files if they exist
     verbose             Toggle verbosity
@@ -310,11 +319,44 @@ def duplicate_setup_template_MUSEWide(outputdirectory,namebase='MUSEWide_tdose_s
     --- EXAMPLE OF USE ---
     import tdose_utilities as tu
 
+    outputdir = '/Users/kschmidt/work/TDOSE/muse_tdose_setups/'
+    infofile  = outputdir+'musewide_infofile.txt'
+    tu.duplicate_setup_template(outputdir,infofile,inffmt=['A','A','F'],
+                             loopcols=['setupname','data_cube','cube_extension'],
+                             namebase='MUSEWide_tdose_setup',clobber=False,verbose=True)
+
     """
     if verbose: print ' --- tdose_utilities.duplicate_setup_template_MUSEWide() --- '
 
-    filename = namebase+'.txt'
+    filename = outputdirectory+namebase+'.txt'
     tu.generate_setup_template(outputfile=filename,clobber=clobber)
+
+    copen     = np.genfromtxt(infofile,skip_header=infohdr,names=True,dtype=inffmt)
+
+    Nfiles    = len(copen[loopcols[0]])
+    if verbose: print ' - Performing replacements and generating the '+str(Nfiles)+' TDOSE setup templates ' \
+                                                                                   'described in \n   '+infofile
+
+    for setupnumber in xrange(Nfiles):
+        replacements = copen[setupnumber]
+        newsetup     = namebase+'_'+replacements['setupname']+'.txt'
+        if os.path.isfile(newsetup) & (clobber == False):
+            if verbose: print ' - File '+newsetup+' already exists and clobber = False so moving on to next duplication '
+            continue
+        else:
+            fout = open()
+
+            with open(filename,'r') as fsetup:
+                for setupline in fsetup:
+                    if setupline.startswith('#'):
+                        fout.write(setupline)
+                    else:
+                        vals = setupline.split()
+                        if vals[0] in loopcols:
+                            newline = setupline.replace(vals[1],copen[vals[0]][setupnumber])
+
+        fout.close()
+
 
     sys.exit(' ---> Function not build yet')
     return None
