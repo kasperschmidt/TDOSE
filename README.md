@@ -10,7 +10,7 @@ README for the optimal spectral extraction software TDOSE.
 TDOSE will be presented in a forthcoming publication (Schmidt et al.), until this publication has appeared, please references the TDOSE GitHub repository (https://github.com/kasperschmidt/TDOSE) if you find TDOSE useful. 
 
 ## Table of Content
-<a href="url"><img src="https://github.com/kasperschmidt/TDOSE/blob/master/TDOSElogo.png" align="right" height="300" ></a>
+<a href="TDOSElogo.png"><img src="TDOSElogo.png" align="right" height="300" ></a>
 
 - [Description](#description)
 - [Script Overview](#script-overview)
@@ -183,6 +183,6 @@ Here, the `sourcecat` is a fits catalog containing x and y pixel positions, a fl
 ## Schematic Overview of TDOSE
 TDOSE_illustration.png (displayed below) presents a schemative overview of the different elements, functions and routines making up TDOSE.
 
-<a href="url"><img src="https://github.com/kasperschmidt/TDOSE/blob/master/TDOSE_illustration.png" align="center" height="1200" ></a>
+<a href="TDOSE_illustration.png"><img src="TDOSE_illustration.png" align="center" height="1200" ></a>
 
 
