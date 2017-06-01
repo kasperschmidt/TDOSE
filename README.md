@@ -82,7 +82,7 @@ The follwoing 'special packages' also needs to be accessible to Python to run TD
 
 `astropy`: http://www.astropy.org. Can be installed with pip. Used extensively throughout TDOSE. 
 
-`reproject`: https://reproject.readthedocs.io. Used to project model of reference image to IFU WCS when the model is not a set of simple gaussians that can be build from scratch (i.e., when `source_model = modelimg` in the setup file)
+`reproject`: https://reproject.readthedocs.io. Can be installed with pip. Used to project model of reference image to IFU WCS when the model is not a set of simple gaussians that can be build from scratch (i.e., when `source_model = modelimg` in the setup file)
 
 ## Running TDOSE
 
@@ -137,9 +137,9 @@ sigmaimg        = 'path/to/sigmaimage/sigmaimage.fits'
 psfimg          = 'path/to/PSFimage/PSFimage.fits'
 galfitinputfile = 'path/to/inputfile/galfit_inputfile.txt'
 
-modelparam      = path+'DATACUBE_candels-cdfs-15_v1p0_cutout_MUSEWide11503085_10x7arcsec_CUTOUT10x7arcsec_From_hlsp_candels_hst_wfc3_gs-tot_f125w_v1.0_drz_modelimage_objparam.fits'
-    paramHSTinit    = tu.build_paramarray(modelparam,returninit=True,verbose=True)
-    paramHSTfitted  = tu.build_paramarray(modelparam,returninit=False,verbose=True)
+modelparam      = path+'datacube_modelimage_objparam.fits'
+paramHSTinit    = tu.build_paramarray(modelparam,returninit=True,verbose=True)
+paramHSTfitted  = tu.build_paramarray(modelparam,returninit=False,verbose=True)
 
 tu.galfit_buildinput_fromparamlist(galfitinputfile,paramHSTfitted,image,objecttype='gaussian',sigmaimg=None,psfimg=psfimg,
                                        platescale=[0.03,0.03],magzeropoint=25.947,convolvebox=[500,500],verbose=True)
