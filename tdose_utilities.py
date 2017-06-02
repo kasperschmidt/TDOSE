@@ -294,7 +294,7 @@ sources_action         remove                             # Indicate how to modi
         fout.write(setuptemplate)
         fout.close()
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def duplicate_setup_template(outputdirectory,infofile,infohdr=2,inffmt="S200,S200,f",
+def duplicate_setup_template(outputdirectory,infofile,infohdr=2,infofmt="S250",
                              loopcols=['data_cube','cube_extension'],
                              namebase='MUSEWide_tdose_setup',clobber=False,verbose=True):
     """
@@ -308,7 +308,8 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,inffmt="S200,S20
     outputdirectory     Directory to store setup templates in
     infofile            File containing info to replace values in template setup with
     infohdr             Number of header (comment) lines in infofile before the expected list of column names
-    inffmt              Format of columns in infofile (format for all columns are needed; not just loopcols)
+    infofmt             Format of columns in infofile (format for all columns are needed; not just loopcols)
+                        If just a single format string is provided, this will be used for all columns.
     loopcols            The name of thecolumns in the loopcols to perform replacements for. The columns should
                         correspond to keywords in the TDOSE setup file. The first column of the file should be
                         named 'setupname' and will be used to name the duplicated setup file (appending it to namebase.
@@ -321,9 +322,7 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,inffmt="S200,S20
 
     outputdir = '/Users/kschmidt/work/TDOSE/muse_tdose_setups/'
     infofile  = outputdir+'musewide_infofile.txt'
-    tu.duplicate_setup_template(outputdir,infofile,inffmt="S40,S40,S40",
-                             loopcols=['setupname','data_cube','cube_extension'],
-                             namebase='MUSEWide_tdose_setup',clobber=False,verbose=True)
+    tu.duplicate_setup_template(outputdir,infofile,namebase='MUSEWide_tdose_setup',clobber=False,loopcols=['setupname','data_cube','cube_extension'])
 
     """
     if verbose: print ' --- tdose_utilities.duplicate_setup_template_MUSEWide() --- '
@@ -331,7 +330,12 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,inffmt="S200,S20
     filename = outputdirectory+namebase+'.txt'
     tu.generate_setup_template(outputfile=filename,clobber=clobber)
 
-    copen     = np.genfromtxt(infofile,skip_header=infohdr,names=True,dtype=inffmt)
+    if ',' not in infofmt: #if a single common format is given count columns in infofile
+        copen     = np.genfromtxt(infofile,skip_header=infohdr,names=True)
+        Ncol      = len(copen[0])
+        infofmt   = ','.join([infofmt]*Ncol)
+
+    copen     = np.genfromtxt(infofile,skip_header=infohdr,names=True,dtype=infofmt)
 
     Nfiles    = len(copen[loopcols[0]])
     if verbose: print ' - Performing replacements and generating the '+str(Nfiles)+' TDOSE setup templates ' \
@@ -351,7 +355,7 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,inffmt="S200,S20
                     if setupline.startswith('#'):
                         if "Generated with tdose_utilities.generate_setup_template()" in setupline:
                             nowstring = tu.get_now_string()
-                            fout.write("Generated with tdose_utilities.duplicate_setup_template() on "+nowstring+' \n+')
+                            fout.write("# Generated with tdose_utilities.duplicate_setup_template() on "+nowstring+' \n')
                         else:
                             fout.write(setupline)
                     elif setupline == '\n':
@@ -360,11 +364,12 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,inffmt="S200,S20
                         vals = setupline.split()
 
                         if vals[0] in loopcols:
-                            newline = setupline.replace(vals[1],copen[vals[0]][setupnumber])
-                            fout.write(newline)
+                            replaceline = setupline.replace(' '+vals[1]+' ',' '+copen[vals[0]][setupnumber]+' ')
                         else:
-                            newline = setupline.replace(vals[1],'NO_REPLACEMENT')
+                            replaceline = setupline.replace(' '+vals[1]+' ',' NO_REPLACEMENT ')
 
+                        newline     = replaceline.split('#')[0]+'#'+\
+                                      '#'.join(setupline.split('#')[1:]) # don't include comment replacements
                         fout.write(newline)
         fout.close()
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
