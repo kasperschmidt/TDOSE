@@ -110,10 +110,11 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
             cmdthatwasrun = "import tdose; tdose.perform_extraction(setupfile='%s',performcutout=%s,generatesourcecat=%s,modelrefimage=%s," \
                             "refimagemodel2cubewcs=%s,definePSF=%s,modeldatacube=%s,createsourcecube=%s,store1Dspectra=%s," \
-                            "plot1Dspectra=%s,plotS2Nspectra=%s,save_init_model_output=%s,clobber=%s,verbose=%s,verbosefull=%s)" % \
+                            "plot1Dspectra=%s,plotS2Nspectra=%s,save_init_model_output=%s,clobber=%s,verbose=%s,verbosefull=%s," \
+                            "logterminaloutput=%s)" % \
                             (setuplog,performcutout,generatesourcecat,modelrefimage,refimagemodel2cubewcs,definePSF,modeldatacube,
                              createsourcecube,store1Dspectra,plot1Dspectra,plotS2Nspectra,save_init_model_output,clobber,verbose,
-                             verbosefull)
+                             verbosefull,logterminaloutput)
 
             loginfo = open(setuplog, 'w')
             loginfo.write("# The setup file appended below was run with the command: \n# "+cmdthatwasrun+
