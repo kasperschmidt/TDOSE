@@ -61,7 +61,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
 
     """
-    # defining function withing the routing that can be called by the output logger
+    # defining function within the routine that can be called by the output logger at the end
     def tdosefunction(setupfile,performcutout,generatesourcecat,modelrefimage,refimagemodel2cubewcs,
                        definePSF,modeldatacube,createsourcecube,store1Dspectra,plot1Dspectra,
                        plotS2Nspectra,save_init_model_output,clobber,verbose,verbosefull):
