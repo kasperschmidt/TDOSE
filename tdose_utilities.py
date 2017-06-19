@@ -310,9 +310,10 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,infofmt="S250",
     infohdr             Number of header (comment) lines in infofile before the expected list of column names
     infofmt             Format of columns in infofile (format for all columns are needed; not just loopcols)
                         If just a single format string is provided, this will be used for all columns.
-    loopcols            The name of thecolumns in the loopcols to perform replacements for. The columns should
+    loopcols            The name of the columns in the loopcols to perform replacements for. The columns should
                         correspond to keywords in the TDOSE setup file. The first column of the file should be
-                        named 'setupname' and will be used to name the duplicated setup file (appending it to namebase.
+                        named 'setupname' and will be used to name the duplicated setup file (appending it to namebase).
+                        if 'all', all columns in infofile will be attempted replaced.
     namebase            Name base to use for the setup templates
     clobber             Overwrite files if they exist
     verbose             Toggle verbosity
@@ -336,6 +337,10 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,infofmt="S250",
         infofmt   = ','.join([infofmt]*Ncol)
 
     copen     = np.genfromtxt(infofile,skip_header=infohdr,names=True,dtype=infofmt)
+
+    if loopcols == 'all':
+        if verbose: print ' - loopcals="all" so will attempt replacement of all columns in infofile'
+        loopcols = np.asarray(copen.dtype.names).tolist()
 
     Nfiles    = len(copen[loopcols[0]])
     if verbose: print ' - Performing replacements and generating the '+str(Nfiles)+' TDOSE setup templates ' \
