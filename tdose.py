@@ -7,6 +7,8 @@ import sys
 import numpy as np
 import collections
 import astropy
+import collections
+import multiprocessing
 from astropy import wcs
 from astropy.coordinates import SkyCoord
 from reproject import reproject_interp
@@ -486,6 +488,121 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                       definePSF,modeldatacube,createsourcecube,store1Dspectra,plot1Dspectra,
                       plotS2Nspectra,save_init_model_output,clobber,verbose,verbosefull)
 
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,
+                                    # - - - - - - - Inputs passed to tdose.perform_extraction() - - - - - - -
+                                    performcutout=True,generatesourcecat=True,modelrefimage=True,refimagemodel2cubewcs=True,
+                                    definePSF=True,modeldatacube=True,createsourcecube=True,store1Dspectra=True,plot1Dspectra=True,
+                                    plotS2Nspectra=True,save_init_model_output=False,clobber=False,verbosePE=True,verbosefull=False,
+                                    logterminaloutput=True):
+    """
+    Run multiple TDOSE setups in parallel
+
+    --- INPUT ---
+    setupfiles               List of setup files to run in parallel
+    Nsessions                The number of parallel sessions to launch (the list of setupfiles will be bundled up in
+                             Nsessions bundles to run). The default is 0 which will run Nsetupfiles sessions with
+                             1 setup file per parallel session.
+    verbose                  Toggle verbosity
+
+    **remaining input**      Input passed to tdose.perform_extraction();
+                             see tdose.perform_extraction() header for details
+
+    --- EXAMPLE OF USE ---
+    import tdose, glob
+    setupfiles           = ['setup01','setup02','setup03','setup04','setup05','setup06','setup07','setup08','setup09']
+    setupfiles           = glob.glob('/Users/kschmidt/work/TDOSE/tdose_setup_candels-cdfs-*[0-99].txt')
+    bundles, paralleldic = tdose.perform_extractions_in_parallel(setupfiles,Nsessions=2,clobber=True,performcutout=False,store1Dspectra=False,plot1Dspectra=False)
+
+    """
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    def parallel_worker(setupfiles,performcutout,generatesourcecat,modelrefimage,refimagemodel2cubewcs,definePSF,
+                        modeldatacube,createsourcecube,store1Dspectra,plot1Dspectra,plotS2Nspectra,
+                        save_init_model_output,clobber,verbose,verbosefull,logterminaloutput):
+        """
+        Multiprocessing worker function
+        """
+        for setupfile in setupfiles:
+            tdose.perform_extraction(setupfile=setupfile,performcutout=performcutout,generatesourcecat=generatesourcecat,
+                                     modelrefimage=modelrefimage,refimagemodel2cubewcs=refimagemodel2cubewcs,
+                                     definePSF=definePSF,modeldatacube=modeldatacube,createsourcecube=createsourcecube,
+                                     store1Dspectra=store1Dspectra,plot1Dspectra=plot1Dspectra,plotS2Nspectra=plotS2Nspectra,
+                                     save_init_model_output=save_init_model_output,clobber=clobber,
+                                     verbose=verbose,verbosefull=verbosefull,logterminaloutput=logterminaloutput)
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    bundles     = collections.OrderedDict()
+    Nsetups     = len(setupfiles)
+    if (type(Nsessions) is not int) or (Nsessions < 0):
+        sys.exit(' ---> Nsessions must be a positive integer; it was not: '+Nsessions)
+    if Nsessions == 0:
+        Nbundle = Nsetups
+
+        for ii in xrange(Nbundle):
+            string          = 'bundleNo'+str(ii+1)
+            bundles[string] = [setupfiles[ii]]
+    else:
+        Nbundle     = int(Nsessions)
+        bundlesize  = int(np.ceil(float(Nsetups)/float(Nbundle)))
+
+        for ii in xrange(Nbundle):
+            string = 'bundleNo'+str(ii+1)
+            if ii == Nbundle: # Last bundle
+                bundles[string] = setupfiles[ii*bundlesize:]
+            else:
+                bundles[string] = setupfiles[bundlesize*ii:bundlesize*(ii+1)]
+
+    if verbose: print ' - Found '+str(Nsetups)+' setup files to bundle up and run '+str(Nbundle)+' paerallel sessions for'
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' ---- Starting multiprocess parallel run of the '+str(Nsetups)+' TDOSE setups ---- '
+    tstart  = tu.get_now_string(withseconds=True)
+
+    mngr = multiprocessing.Manager() # initialize Manager too keep track of worker function output
+    return_dict = mngr.dict()        # define Manager dictionary to store output from Worker function in
+    jobs = []
+
+    for ii in xrange(Nbundle):
+        bundlekey = 'bundleNo'+str(ii+1)
+        if len(bundles[bundlekey]) == 1:
+            jobname = bundles[bundlekey][0].split('/')[-1]
+        else:
+            jobname = bundlekey
+
+        job = multiprocessing.Process(target=parallel_worker,
+                                      args  = (bundles[bundlekey],performcutout,generatesourcecat,modelrefimage,
+                                               refimagemodel2cubewcs,definePSF,modeldatacube,createsourcecube,store1Dspectra,
+                                               plot1Dspectra,plotS2Nspectra,save_init_model_output,clobber,
+                                               verbose,verbosefull,logterminaloutput),
+                                      name  = jobname)
+
+        jobs.append(job)
+        job.start()
+        #job.join() # wait until job has finished
+
+    for job in jobs:
+        job.join()
+
+    tend = tu.get_now_string(withseconds=True)
+
+    if verbose:
+        print '\n ---- The perform_extractions_in_parallel finished running the jobs for all TDOSE setups ----'
+        print '      Start        : '+tstart
+        print '      End          : '+tend
+        print '      Exitcode = 0 : job produced no error '
+        print '      Exitcode > 0 : job had an error, and exited with that code (signal.SIGTERM)'
+        print '      Exitcode < 0 : job was killed with a signal of -1 * exitcode (signal.SIGTERM)'
+
+        for job in jobs:
+            print ' - The job running field ',job.name,' exited with exitcode: ',job.exitcode
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Adding output from parallelized run to dictionary'
+    dict = {}
+    for key in return_dict.keys():
+        dict[key] = return_dict[key]  # filling dictionary
+
+    return bundles, dict
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                 performcutout=True,generatesourcecat=True,clobber=False,verbose=True,verbosefull=True,start_time=0.0):
