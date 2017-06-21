@@ -66,6 +66,7 @@ The following standard packages are imported in one or more of the TDOSE scripts
 `collections`, 
 `glob`,
 `matplotlib`,
+`multiprocessing`,
 `numpy`,
 `pdb`,
 `pyfits`,
