@@ -800,23 +800,34 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
                                     setupdic['source_model_cube_ext']+'_'+setupdic['psf_type']+'.fits')
 
         if len(sourcemodelcube) > 0:
+            subsourcecat_file = setupdic['source_catalog'].replace('.fits',cutstr+'.fits')
+            if not os.path.isfile(subsourcecat_file):
+                sys.exit(' ---> did not find the source catalog \n                  '+subsourcecat_file+
+                         '\n                  need it to locate model and define region of insertion in full FoV cube. ')
+            subsourcecat    = pyfits.open(subsourcecat_file)[1].data
+            objid_modelent  = np.where(subsourcecat['id'] == objid)[0][0]
+
             if setupdic['sourcecat_parentIDcol'] is None:
-                subsourcecat_file = setupdic['source_catalog'].replace('.fits',cutstr+'.fits')
-                if not os.path.isfile(subsourcecat_file):
-                    sys.exit(' ---> did not find the source catalog \n                  '+subsourcecat_file+
-                             '\n                  need it to locate model and define region of insertion in full FoV cube. ')
-                subsourcecat    = pyfits.open(subsourcecat_file)[1].data
-                objid_modelent  = np.where(subsourcecat['id'] == objid)[0][0]
-
-                sourcemodel     = pyfits.open(sourcemodelcube[0])[setupdic['cube_extension']].data[objid_modelent,:,:,:]
-                ra_obj          = subsourcecat[setupdic['sourcecat_racol']][objid_modelent]
-                dec_obj         = subsourcecat[setupdic['sourcecat_deccol']][objid_modelent]
+                parent_id       = None
+                Nparent         = 1
             else:
-                sys.exit(' ---> Grouping sources according to parent ID not enabled in full FoV cube generation yet... sorry')
-                # sourcemodel  = np.sum(pyfits.open(sourcemodelcube[0])[setupdic['cube_extension']].data[objid_modelnumber,:,:,:],axis=0)
-                # ra_obj       = subsourcecat_file[setupdic['sourcecat_racol']][?]
-                # dec_obj      = subsourcecat_file[setupdic['sourcecat_deccol']][?]
+                parent_id       = subsourcecat[setupdic['sourcecat_parentIDcol']][objid_modelent]
+                parent_ent      = np.where(subsourcecat[setupdic['sourcecat_parentIDcol']] == parent_id)[0]
+                source_ids      = subsourcecat['id'][parent_ent]
+                Nparent         = len(parent_ent)
 
+            if Nparent == 1:
+                if verbose: print '   > Getting object model for '+str(int(objid))+' (source model no. '+str(int(objid_modelent))+')'
+                sourcemodel = pyfits.open(sourcemodelcube[0])[setupdic['cube_extension']].data[objid_modelent,:,:,:]
+            else:
+                if verbose: print '   > Getting object model for '+str(int(parent_id))+'\n     (combining source models: '+\
+                                  ','.join([str(int(id)) for id in source_ids])+', i.e. source model no. '+\
+                                  ','.join([str(int(ent)) for ent in parent_ent])+')'
+
+                sourcemodel = np.sum(pyfits.open(sourcemodelcube[0])[setupdic['cube_extension']].data[parent_ent,:,:,:],axis=0)
+
+            ra_obj        = subsourcecat[setupdic['sourcecat_racol']][objid_modelent]
+            dec_obj       = subsourcecat[setupdic['sourcecat_deccol']][objid_modelent]
             skyc          = SkyCoord(ra_obj, dec_obj, frame='icrs', unit=(units.deg,units.deg))
             size          = units.Quantity((  cutoutsize[1], cutoutsize[0]), units.arcsec)
             cutout_layer  = Cutout2D(cube_data[0,:,:], skyc, size, wcs=cubewcs_2D, mode='partial')
