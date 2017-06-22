@@ -4,6 +4,7 @@ import pdb
 import time
 import os
 import sys
+import glob
 import numpy as np
 import collections
 import astropy
@@ -11,6 +12,8 @@ import collections
 import multiprocessing
 from astropy import wcs
 from astropy.coordinates import SkyCoord
+from astropy import units
+from astropy.nddata import Cutout2D
 from reproject import reproject_interp
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 import tdose
@@ -34,6 +37,8 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                            genereated and exist) set performcutout=False
     generatesourcecat      To skip generating the cutout source catalogs from the main source catalog of sources
                            to model (e.g., after editing the source catalog) set generatesourcecat=False
+                           Note however, that these catalogs are needed to produce the full FoV source model cube with
+                           tdose.gen_fullFoV_from_cutouts()
     modelrefimage          To skip modeling the reference image set modelrefimage=False
     refimagemodel2cubewcs  To skip converting the refence image model to the cube WCS system set refimagemodel2cubewcs=False
     definePSF              To skip generating the PSF definePSF=False
@@ -305,7 +310,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             sourcecubename  = setupdic['models_directory']+'/'+\
-                              datacube.split('/')[-1].replace('.fits','_'+setupdic['source_model_cube']+'_'+
+                              datacube.split('/')[-1].replace('.fits','_'+setupdic['source_model_cube_ext']+'_'+
                                                               setupdic['source_model']+'.fits')
 
             if createsourcecube:
@@ -715,6 +720,141 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
         else:
             ds9string = ds9string.replace('xxregionxx',' ')
         print ds9string
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcube=True,clobber=False,verbose=True):
+    """
+    This routine combines the 3D scaled model cubes obtained from individual cutouts to a
+    source model cube of the full FoV the cutouts were extracted from so the full FoV IFU
+    cube can be modified based on the individual cutouts.
+
+    --- INPUT ---
+    setupfile              TDOSE setup file used to run tdose.perform_extraction() with  model_cutouts=True
+    store_sourcemodelcube  Save the 4D source model cube to a fits file (it's large: ~ size of 3Dcube * Nsources).
+                           If False it will just be used to generate the (summed) full FoV 3D cube.
+    store_modelcube        If true a model cube summing over the source model cube will be stored as a seperate fits file
+    clobber                Overwrite existing files
+    verbose                Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    import tdose
+    tdose.gen_fullFoV_from_cutouts('/Users/kschmidt/work/TDOSE/tdose_setup_candels-cdfs-02.txt')
+
+    """
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Loading setup file and getting IDs that were extracted (and hence cutout)'
+    setupdic        = tu.load_setup(setupfile,verbose=verbose)
+
+    sourcecat_init  = setupdic['source_catalog']
+    sourcedat_init  = pyfits.open(sourcecat_init)[1].data
+    sourcehdr_init  = pyfits.open(sourcecat_init)[1].header
+    sourceids_init  = sourcedat_init[setupdic['sourcecat_IDcol']]
+
+    Nsources        = len(sourceids_init)
+    sourcenumber    = np.arange(Nsources)
+
+    if type(setupdic['sources_to_extract']) == np.str_ or (type(setupdic['sources_to_extract']) == str):
+        if setupdic['sources_to_extract'].lower() == 'all':
+            extractids = sourceids_init.astype(float)
+        else:
+            extractids = np.genfromtxt(setupdic['sources_to_extract'],dtype=None,comments='#')
+            extractids = list(extractids.astype(float))
+    else:
+        extractids = setupdic['sources_to_extract']
+    Nextractions = len(extractids)
+    if verbose: print '   Will combine models of '+str(Nextractions)+' extracted objects (if models exists) into full FoV cubes '
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Checking that source model cubes exist in models_directory '
+    modeldir = setupdic['models_directory']
+    basename = setupdic['data_cube'].split('/')[-1].split('.fit')[0]
+
+    for objid in extractids:
+        sourcemodelcube = glob.glob(modeldir+basename+'*id'+str(int(objid))+'*cutout*'+
+                                    setupdic['source_model_cube_ext']+'_'+setupdic['psf_type']+'.fits')
+
+        if len(sourcemodelcube) == 0:
+            if verbose: print '   WARNING: did not find a source model cube for object '+str(objid)
+        elif len(sourcemodelcube) > 1:
+            if verbose: print '   WARNING: found more than one source model cube for object '+str(objid)+\
+                              '\n   Using '+sourcemodelcube[0]
+
+    if verbose: print '   If no WARNINGs raised, all cubes were found'
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Build template full FoV source model cube to fill with models'
+    cube_data     = pyfits.open(setupdic['data_cube'])[setupdic['cube_extension']].data
+    cube_data_hdr = pyfits.open(setupdic['data_cube'])[setupdic['cube_extension']].header
+    striphdr      = tu.strip_header(cube_data_hdr.copy())
+    cubewcs       = wcs.WCS(striphdr)
+    cubewcs_2D    = tu.WCS3DtoWCS2D(cubewcs.copy())
+    cube_shape    = cube_data.shape
+
+    smc_out      = np.zeros([Nextractions,cube_shape[0],cube_shape[1],cube_shape[2]])
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Adding individual models to full FoV source model cube '
+    for oo, objid in enumerate(extractids):
+        cutstr, cutoutsize, cut_img, cut_cube, cut_variance, cut_sourcecat = tdose.get_datinfo(objid,setupdic)
+
+        sourcemodelcube = glob.glob(modeldir+basename+'*id'+str(int(objid))+'*cutout*'+
+                                    setupdic['source_model_cube_ext']+'_'+setupdic['psf_type']+'.fits')
+
+        if len(sourcemodelcube) > 0:
+            if setupdic['sourcecat_parentIDcol'] is None:
+                subsourcecat_file = setupdic['source_catalog'].replace('.fits',cutstr+'.fits')
+                if not os.path.isfile(subsourcecat_file):
+                    sys.exit(' ---> did not find the source catalog \n                  '+subsourcecat_file+
+                             '\n                  need it to locate model and define region of insertion in full FoV cube. ')
+                subsourcecat    = pyfits.open(subsourcecat_file)[1].data
+                objid_modelent  = np.where(subsourcecat['id'] == objid)[0][0]
+
+                sourcemodel     = pyfits.open(sourcemodelcube[0])[setupdic['cube_extension']].data[objid_modelent,:,:,:]
+                ra_obj          = subsourcecat[setupdic['sourcecat_racol']][objid_modelent]
+                dec_obj         = subsourcecat[setupdic['sourcecat_deccol']][objid_modelent]
+            else:
+                sys.exit(' ---> Grouping sources according to parent ID not enabled in full FoV cube generation yet... sorry')
+                # sourcemodel  = np.sum(pyfits.open(sourcemodelcube[0])[setupdic['cube_extension']].data[objid_modelnumber,:,:,:],axis=0)
+                # ra_obj       = subsourcecat_file[setupdic['sourcecat_racol']][?]
+                # dec_obj      = subsourcecat_file[setupdic['sourcecat_deccol']][?]
+
+            skyc          = SkyCoord(ra_obj, dec_obj, frame='icrs', unit=(units.deg,units.deg))
+            size          = units.Quantity((  cutoutsize[1], cutoutsize[0]), units.arcsec)
+            cutout_layer  = Cutout2D(cube_data[0,:,:], skyc, size, wcs=cubewcs_2D, mode='partial')
+
+            smc_out[oo,:,cutout_layer.bbox_original[0][0]:cutout_layer.bbox_original[0][1]+1,
+                         cutout_layer.bbox_original[1][0]:cutout_layer.bbox_original[1][1]+1] = sourcemodel
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if store_sourcemodelcube:
+        fullfov_smc = modeldir+basename+'_'+setupdic['source_model_cube_ext']+'_'+setupdic['psf_type']+'_fullFoV.fits'
+        if verbose: print ' - Storing final full FoV source model cube to:\n   '+fullfov_smc
+        if 'XTENSION' in cube_data_hdr.keys():
+            hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
+            hducube        = pyfits.ImageHDU(smc_out,header=cube_data_hdr)
+            hdus           = [hduprim,hducube]
+        else:
+            hducube = pyfits.PrimaryHDU(smc_out,header=cube_data_hdr)
+            hdus           = [hducube]
+
+        hdulist = pyfits.HDUList(hdus)       # turn header into to hdulist
+        hdulist.writeto(fullfov_smc,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if store_modelcube:
+        fullfov_cube = modeldir+basename+'_'+setupdic['model_cube_ext']+'_'+setupdic['psf_type']+'_fullFoV.fits'
+        if verbose: print ' - Producing FoV model cube from full FoV source model cube and storing it in:\n   '+fullfov_cube
+        cube_out     = np.sum(smc_out,axis=0)
+        if 'XTENSION' in cube_data_hdr.keys():
+            hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
+            hducube        = pyfits.ImageHDU(cube_out,header=cube_data_hdr)
+            hdus           = [hduprim,hducube]
+        else:
+            hducube = pyfits.PrimaryHDU(cube_out,header=cube_data_hdr)
+            hdus           = [hducube]
+
+        hdulist = pyfits.HDUList(hdus)       # turn header into to hdulist
+        hdulist.writeto(fullfov_cube,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
                    save_init_model_output=True,clobber=True,verbose=True,verbosefull=True):
