@@ -214,7 +214,7 @@ model_cube_optimizer   matrix                             # The optimizer to use
 
 model_cube_ext         tdose_modelcube                    # Name extension of fits file containing model data cube.
 residual_cube_ext      tdose_modelcube_residual           # Name extension of fits file containing residual between model data cube and data. To ignored use None.
-source_model_cube      tdose_source_modelcube             # Name extension of fits file containing source model cube (used to modify data cube).
+source_model_cube_ext  tdose_source_modelcube             # Name extension of fits file containing source model cube (used to modify data cube).
 
 # - - - - - - - - - - - - - - - - - - - - - - - - SPECTRAL EXTRACTION - - - - - - - - - - - - - - - - - - - - - - - - -
 sources_to_extract     [8685,9262,10195,29743]            # Sources in source_catalog to extract 1D spectra for.
