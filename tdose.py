@@ -29,7 +29,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
     Perform extraction of spectra from data cube based on information in TDOSE setup file
 
     --- INPUT ---
-    setupfile              TDOSE setup file. Templetae can be generated with tu.generate_setup_template()
+    setupfile              TDOSE setup file. Template can be generated with tu.generate_setup_template()
     performcutout          To skip cutting out subcubes and images (i.e., if the cutouts have already been
                            genereated and exist) set performcutout=False
     generatesourcecat      To skip generating the cutout source catalogs from the main source catalog of sources
@@ -616,7 +616,7 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
     sourcedat_init        The initial source data
     performcutout         Set to true to actually perform cutouts.
     generatesourcecat     To generate a (sub) source catalog corresponding to the objects in the cutout
-    clobber               Overwrite existing files if they exist
+    clobber               Overwrite existing files
     verbose               Toggle verbosity
     verbosefull           Toggle extended verbosity
     start_time            Start time of wrapper cutout generation is embedded in
