@@ -158,7 +158,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                     sys.stdout.write("%s\r" % infostr)
                     sys.stdout.flush()
 
-            imgstr, imgsize, refimg, datacube, variancecube, sourcecat = tdose.get_datinfo(extid,setupdic)
+            imgstr, imgsize, refimg, datacube, variancecube, sourcecat = tu.get_datinfo(extid,setupdic)
             if setupdic['wht_image'] is not None:
                 refimg    = refimg[0]
 
@@ -648,7 +648,7 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
         dec         = sourcedat_init[setupdic['sourcecat_deccol']][objent]
 
 
-        cutstr, cutoutsize, cut_img, cut_cube, cut_variance, cut_sourcecat = tdose.get_datinfo(cutoutid,setupdic)
+        cutstr, cutoutsize, cut_img, cut_cube, cut_variance, cut_sourcecat = tu.get_datinfo(cutoutid,setupdic)
 
         if setupdic['wht_image'] is None:
             imgfiles = [setupdic['ref_image']]
@@ -794,7 +794,7 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Adding individual models to full FoV source model cube '
     for oo, objid in enumerate(extractids):
-        cutstr, cutoutsize, cut_img, cut_cube, cut_variance, cut_sourcecat = tdose.get_datinfo(objid,setupdic)
+        cutstr, cutoutsize, cut_img, cut_cube, cut_variance, cut_sourcecat = tu.get_datinfo(objid,setupdic)
 
         sourcemodelcube = glob.glob(modeldir+basename+'*id'+str(int(objid))+'*cutout*'+
                                     setupdic['source_model_cube_ext']+'_'+setupdic['psf_type']+'.fits')
@@ -1175,58 +1175,4 @@ def modify_cube(modifysetupfile='./tdose_setup_template_modify.txt',verbose=True
                                          dataext=setupdic['cube_extension'],sourcemodelext=setupdic['source_extension'],
                                          savecube=modcubename,verbose=verbose)
 
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def get_datinfo(cutoutid,setupdic):
-    """
-    Function returning information on file names etc. for both default run and cutout run
-
-    --- INPUT ---
-    cutoutid        ID to return information for
-    setupdic        Dictionary containing the setup parameters read from the TDOSE setup file
-
-    """
-    if cutoutid == -9999:
-        cutstr       = None
-        imgsize      = setupdic['cutout_sizes']
-        refimg       = setupdic['ref_image']
-        datacube     = setupdic['data_cube']
-        variancecube = setupdic['noise_cube']
-        sourcecat    = setupdic['source_catalog']
-    else:
-        if type(setupdic['cutout_sizes']) == np.str_:
-            sizeinfo = np.genfromtxt(setupdic['cutout_sizes'],dtype=None,comments='#')
-            objent   = np.where(sizeinfo[:,0] == cutoutid)[0]
-
-            if len(objent) > 1:
-                sys.exit(' ---> More than one match in '+setupdic['cutout_sizes']+' for object '+str(cutoutid))
-            elif len(objent) == 0:
-                sys.exit(' ---> No match in '+setupdic['cutout_sizes']+' for object '+str(cutoutid))
-            else:
-                imgsize   = sizeinfo[objent,1:][0].astype(float).tolist()
-        else:
-            imgsize   = setupdic['cutout_sizes']
-
-        cutstr          = ('_id'+str(int(cutoutid))+'_cutout'+str(imgsize[0])+'x'+str(imgsize[1])+'arcsec').replace('.','p')
-        img_init_base   = setupdic['ref_image'].split('/')[-1]
-        cube_init_base  = setupdic['data_cube'].split('/')[-1]
-        var_init_base   = setupdic['variance_cube'].split('/')[-1]
-
-        cut_img         = setupdic['cutout_directory']+img_init_base.replace('.fits',cutstr+'.fits')
-        cut_cube        = setupdic['cutout_directory']+cube_init_base.replace('.fits',cutstr+'.fits')
-        cut_variance    = setupdic['cutout_directory']+var_init_base.replace('.fits',cutstr+'.fits')
-        cut_sourcecat   = setupdic['source_catalog'].replace('.fits',cutstr+'.fits')
-
-        if setupdic['wht_image'] is None:
-            refimg          = cut_img
-        else:
-            wht_init_base   = setupdic['wht_image'].split('/')[-1]
-            wht_img         = setupdic['cutout_directory']+wht_init_base.replace('.fits',cutstr+'.fits')
-            refimg          = [cut_img,wht_img]
-
-        datacube        = cut_cube
-        variancecube    = cut_variance
-        sourcecat       = cut_sourcecat
-
-
-    return cutstr, imgsize, refimg, datacube, variancecube, sourcecat
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
