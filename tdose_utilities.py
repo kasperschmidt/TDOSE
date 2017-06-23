@@ -2034,3 +2034,380 @@ def get_datinfo(cutoutid,setupdic):
 
     return cutstr, imgsize, refimg, datacube, variancecube, sourcecat
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory',verbose=True):
+    """
+    Generating summary/overview plot of modeled objects (cutouts) and the corresponding 1D spectra
+
+    --- INPUT ---
+    objids         IDs of objects to generate plots for
+    setupfile      The setup file used when running TDOSE (defines the location of the products to plot)
+    skipobj        Skip objects where an overview plot already exists at the output location
+    outputdir      The directory to save the overview plots to. If outputdir = 'spec1D_directory'
+                   the plots will be saved to the 'spec1D_directory' specified in the TDOSE setupfile
+                   provided.
+    verbose        Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    objids    = ['8685']#,'0000008685-0000008685','10195','0010207068-0000010195']
+    setupfile = '/Volumes/DATABCKUP2/TDOSEextractions/tdose_spectra/tdose_setup_candels-cdfs-02_logged.txt'
+    tu.gen_overview_plot(objids,setupfile)
+
+    """
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Loading setup file to get info on directories to search for TDOSE products'
+    setupdic  =  tu.load_setup(setupfile,verbose=verbose)
+
+    if outputdir == 'spec1D_directory':
+        outdir = setupdic['spec1D_directory']
+    else:
+        outdir = outputdir
+
+    if verbose: print ' - Get main source id for cases where multiple sources were combined using parent ID (ids contain "-")'
+    baseids = []
+    for objid in objids:
+        baseids.append(objid.split('-')[-1])
+
+    Nobj = len(objids)
+    if verbose: print ' - Will generate summary plot for the '+str(Nobj)+' objects provided IDs for'
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Looping over objects and generating plots'
+    for ii, objid in enumerate(objids):
+        objidstr    = str("%.10d" % int(objid))
+        baseid      = baseids[ii]
+        plotname    = outdir+'tdose_source_overview_'+objidstr+'.pdf'
+
+        if skipobj & os.path.isfile(plotname):
+            skipthisobj = True
+        else:
+            skipthisobj = False
+
+        if verbose:
+            infostr = ' - Generate plot for '+objidstr+' ('+str(ii+1)+'/'+str(Nobj)+') '
+            if skipthisobj:
+                infostr = infostr+'... plot exists --> skipobj'
+            else:
+                infostr = infostr+'                           '
+            sys.stdout.write("%s\r" % infostr)
+            sys.stdout.flush()
+
+        if skipthisobj: continue
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        # look for data to be plotted for object
+        cutstr, cutoutsize, cut_img, cut_cube, cut_variance, cut_sourcecat = tu.get_datinfo(int(baseid),setupdic)
+        sourcemodel  = setupdic['source_model']
+
+        imagebase    = setupdic['ref_image'].split('/')[-1]
+        refimg       = setupdic['cutout_directory']+imagebase.replace('.fits',cutstr+'.fits')
+        modelimg     = setupdic['models_directory']+imagebase.replace('.fits',cutstr+'_'+setupdic['model_image_ext']+
+                                                                      '_'+sourcemodel+'.fits')
+        residualimg  = modelimg.replace('.fits','_residual.fits')
+
+        cubebase     = setupdic['data_cube'].split('/')[-1]
+        datacube     = setupdic['cutout_directory']+cubebase.replace('.fits',cutstr+'.fits')
+        modelcube    = setupdic['models_directory']+cubebase.replace('.fits',cutstr+'_'+setupdic['model_cube_ext']+
+                                                                     '_'+sourcemodel+'.fits')
+        residualcube = setupdic['models_directory']+cubebase.replace('.fits',cutstr+'_'+setupdic['residual_cube_ext']+
+                                                                     '_'+sourcemodel+'.fits')
+
+        spec1D       = setupdic['spec1D_directory']+setupdic['spec1D_name']+'_'+sourcemodel+'_'+objidstr+'.fits'
+
+        dwave        = 150
+        wavefix      = 5500
+
+        if os.path.isfile(spec1D):
+            specdat = pyfits.open(spec1D)[1].data
+            maxs2n  = np.max(specdat['s2n'][ np.isfinite(specdat['s2n']) ])
+            maxent  = np.where(specdat['s2n'] == maxs2n)[0][0]
+            maxwave = specdat['wave'][maxent]
+            maxflux = specdat['flux'][maxent]
+            diff    = np.abs(specdat['wave']-wavefix)
+            entfix  = np.where(diff == np.min(diff))[0][0]
+        else:
+            maxent  = 1
+            maxwave = 6000.0
+            entfix  = 100
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        Ncol         = 4
+        Nrow         = 7
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        fig = plt.figure(figsize=(Ncol, Nrow))
+        fig.subplots_adjust(wspace=0.1, hspace=0.75,left=0.1, right=0.98, bottom=0.05, top=0.96)
+        Fsize  = 6
+        lthick = 1
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif',size=Fsize)
+        plt.rc('xtick', labelsize=Fsize)
+        plt.rc('ytick', labelsize=Fsize)
+        plt.clf()
+        plt.ioff()
+        #plt.title(plotname.split('/')[-1].replace('_','\_'),fontsize=Fsize)
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+
+        #---------------------------- REF IMG ----------------------------
+        rowval  = 0
+        colval  = 0
+        colspan = 1
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_image(ax,refimg,fontsize=Fsize,lthick=lthick,alpha=0.5)
+
+        #---------------------------- REF IMG MOD  ----------------------------
+        rowval  = 0
+        colval  = 1
+        colspan = 1
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_image(ax,modelimg,fontsize=Fsize,lthick=lthick,alpha=0.5)
+
+        #---------------------------- REF IMG RES  ----------------------------
+        rowval  = 0
+        colval  = 2
+        colspan = 1
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_image(ax,residualimg,fontsize=Fsize,lthick=lthick,alpha=0.5)
+
+        #---------------------------- REF IMG HIST ----------------------------
+        rowval  = 0
+        colval  = 3
+        colspan = 1
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_hist(ax,lthick,0.5,refimg)
+
+        #---------------------------- FMAX CUBE ----------------------------
+        rowval  = 1
+        colval  = 0
+        colspan = 1
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_image(ax,datacube,imgext=setupdic['cube_extension'],cubelayer=maxent,fontsize=Fsize,lthick=lthick,alpha=0.5)
+
+        #---------------------------- FMAX CUBE MOD ----------------------------
+        rowval  = 1
+        colval  = 1
+        colspan = 1
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_image(ax,modelcube,imgext=setupdic['cube_extension'],cubelayer=maxent,fontsize=Fsize,lthick=lthick,alpha=0.5)
+
+        #---------------------------- FMAX CUBE RES ----------------------------
+        rowval  = 1
+        colval  = 2
+        colspan = 1
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_image(ax,residualcube,imgext=setupdic['cube_extension'],cubelayer=maxent,fontsize=Fsize,lthick=lthick,alpha=0.5)
+
+        #---------------------------- FMAX CUBE HIST ----------------------------
+        rowval  = 1
+        colval  = 3
+        colspan = 1
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_hist(ax,lthick,0.5,refimg)
+
+        #---------------------------- FMAX SPEC ZOOM ----------------------------
+        rowval  = 2
+        colval  = 0
+        colspan = 4
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_spec(ax,spec1D,title='Spec Title?',xrange=[maxwave-dwave,maxwave+dwave],markwave=maxwave,drawbox=False,fontsize=6,
+                                  plotSNcurve=False,shownoise=True,lthick=lthick,fillalpha=0.30)
+
+        #---------------------------- FMAX S/N SPEC ZOOM ----------------------------
+        rowval  = 3
+        colval  = 0
+        colspan = 4
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_spec(ax,spec1D,title='Spec Title?',xrange=[maxwave-dwave,maxwave+dwave],markwave=maxwave,drawbox=False,fontsize=6,
+                                  plotSNcurve=True,shownoise=True,lthick=lthick,fillalpha=0.30)
+
+        #---------------------------- FFIX CUBE ----------------------------
+        rowval  = 4
+        colval  = 0
+        colspan = 1
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_image(ax,datacube,imgext=setupdic['cube_extension'],cubelayer=entfix,fontsize=Fsize,lthick=lthick,alpha=0.5)
+
+        #---------------------------- FFIX CUBE MOD ----------------------------
+        rowval  = 4
+        colval  = 1
+        colspan = 1
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_image(ax,modelcube,imgext=setupdic['cube_extension'],cubelayer=entfix,fontsize=Fsize,lthick=lthick,alpha=0.5)
+
+        #---------------------------- FFIX CUBE RES ----------------------------
+        rowval  = 4
+        colval  = 2
+        colspan = 1
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_image(ax,residualcube,imgext=setupdic['cube_extension'],cubelayer=entfix,fontsize=Fsize,lthick=lthick,alpha=0.5)
+
+        #---------------------------- FFIX CUBE HIST ----------------------------
+        rowval  = 4
+        colval  = 3
+        colspan = 1
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_hist(ax,lthick,0.5,refimg)
+
+        #---------------------------- FFIX SPEC ----------------------------
+        rowval  = 5
+        colval  = 0
+        colspan = 4
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_spec(ax,spec1D,title='Spec Title?',xrange=[4800,9300],markwave=wavefix,
+                                  drawbox=[maxwave-dwave,maxwave+dwave],fontsize=6,
+                                  plotSNcurve=False,shownoise=True,lthick=lthick,fillalpha=0.30)
+
+        #---------------------------- FFIX S/N SPEC ----------------------------
+        rowval  = 6
+        colval  = 0
+        colspan = 4
+        ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
+
+        tu.gen_overview_plot_spec(ax,spec1D,title='Spec Title?',xrange=[4800,9300],markwave=wavefix,
+                                  drawbox=[maxwave-dwave,maxwave+dwave],fontsize=6,
+                                  plotSNcurve=True,shownoise=True,lthick=lthick,fillalpha=0.30)
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        #if verbose: print ' - Saving plot to',plotname
+        plt.savefig(plotname)
+        plt.clf()
+        plt.close('all')
+
+        if verbose: print infostr+' ... done '
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_overview_plot_image(ax,imagefile,imgext=0,cubelayer=1,title='Img Title?',fontsize=6,lthick=2,alpha=0.5,
+                            cmap='coolwarm'):
+    """
+    Plotting commands for image (cube layer) overview plotting
+
+    --- INPUT ---
+
+    cubelayer     If the content of the file is a cube, provide the cube layer to plot. If
+                    cubelayer = 'fmax' the layer with most flux is plotted
+
+    """
+
+    ax.set_title(title,fontsize=fontsize)
+    if os.path.isfile(imagefile):
+        imgdata = pyfits.open(imagefile)[imgext].data
+
+        if len(imgdata.shape) == 3: # it is a cube
+            imgdata = imgdata[cubelayer,:,:]
+
+        ax.imshow(imgdata, interpolation='None',cmap=cmap,aspect='equal', origin='lower')
+
+        ax.set_xlabel('x-pixel')
+        ax.set_ylabel('y-pixel ')
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    else:
+        textstr = 'No image\nfound'
+        ax.text(1.0,22,textstr,horizontalalignment='center',verticalalignment='center',fontsize=fontsize)
+
+        ax.set_ylim([28,16])
+        ax.plot([0.0,2.0],[28,16],'r--',lw=lthick)
+        ax.plot([2.0,0.0],[28,16],'r--',lw=lthick)
+
+        ax.set_xlabel(' ')
+        ax.set_ylabel(' ')
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_overview_plot_hist(ax,lthick,alpha,refimg):
+    """
+    Plotting commands for overview plot
+    """
+
+    ax.set_ylim([28,16])
+    ax.plot([0.0,2.0],[28,16],'b--',lw=lthick)
+    ax.plot([2.0,0.0],[28,16],'b--',lw=lthick)
+    textstr = 'Not enough data'
+    ax.text(1.0,22,textstr,horizontalalignment='center',verticalalignment='center')
+
+    ax.set_title('Ref. Image')
+    ax.set_xlabel('x pixel')
+    ax.set_ylabel('y pixel')
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_overview_plot_spec(ax,spec1Dfile,title='Spec Title?',xrange=[4800,9300],markwave=5500,drawbox=False,fontsize=6,
+                           plotSNcurve=False,shownoise=True,lthick=2,fillalpha=0.30):
+    """
+    Plotting commands for overview plot
+    """
+    ax.set_title(title,fontsize=fontsize)
+    if os.path.isfile(spec1Dfile):
+        specdat = pyfits.open(spec1Dfile)[1].data
+        goodent = np.where((specdat['wave'] > xrange[0]) & (specdat['wave'] < xrange[1]))[0]
+
+        wave    = specdat['wave'][goodent]
+        flux    = specdat['flux'][goodent]
+        fluxerr = specdat['fluxerror'][goodent]
+
+        if markwave:
+            diff    = np.abs(np.asarray(wave)-markwave)
+            markent = np.where(diff == np.min(diff))[0]
+            if len(markent) == 0:
+                print ' WARNING the "markwave" is outside provided plotting xrange '
+                markwave = False
+
+        if plotSNcurve:
+            try:
+                s2ndat = specdat['s2n'][goodent]
+            except:
+                s2ndat = specdat['flux'][goodent]/specdat['fluxerror'][goodent]
+            ax.plot(wave,s2ndat,color='b',lw=lthick)
+            ylabel = 'S/N'
+
+            if markwave:
+                ax.plot([wave[markent],wave[markent]],ax.get_ylim(),color='r',linestyle='--',lw=lthick)
+        else:
+            if shownoise:
+                plt.fill_between(wave,flux-fluxerr,flux+fluxerr,alpha=fillalpha,color='b')
+            ax.plot(wave,flux,color='b',lw=lthick)
+            ylabel = 'Flux [1e-20cgs]'
+
+            if markwave:
+                ax.plot([wave[markent],wave[markent]],ax.get_ylim(),color='r',linestyle='--',lw=lthick)
+
+        ax.set_xlabel('Wavelength [\AA]', fontsize=fontsize)
+        ax.set_ylabel(ylabel,fontsize=fontsize)
+
+        ax.plot(xrange,[0,0],'--k',lw=lthick)
+
+        if drawbox:
+            yrangeplot = ax.get_ylim()
+            plt.fill_between(drawbox,[yrangeplot[0],yrangeplot[0]],[yrangeplot[1],yrangeplot[1]],
+                     color='red',alpha=fillalpha)
+
+
+    else:
+        textstr = 'No spectrum found'
+        ax.text(1.0,22,textstr,horizontalalignment='center',verticalalignment='center',fontsize=fontsize)
+
+        ax.set_ylim([28,16])
+        ax.plot([0.0,2.0],[28,16],'r--',lw=lthick)
+        ax.plot([2.0,0.0],[28,16],'r--',lw=lthick)
+
+        ax.set_xlabel(' ')
+        ax.set_ylabel(' ')
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
