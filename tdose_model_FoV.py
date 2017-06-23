@@ -406,7 +406,7 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',datanoise=Non
     param_optimized, param_cov  = tmf.model_objects_gauss(param_init,dataimg,verbose=True)
 
     """
-    if verbose: print ' - Optimize residual between model (multiple Gaussians) and data with least squares in 2D'
+    if verbose: print ' - Optimize residual between model (multiple Gaussians) and data with the optimizer "'+optimizer+'"'
     if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if optimizer == 'leastsq':
@@ -422,37 +422,40 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',datanoise=Non
         else:
             sigma = datanoise
 
-        maxfctcalls = 30000
+        maxfctcalls  = 30000
+        Nsources     = int(len(param_init)/6.)
+        #               [yposition,xposition,fluxscale,sigmay  ,sigmax  ,angle]
+        param_bounds = ([0        ,0        ,0        ,0       ,0       ,-np.inf ]*Nsources,
+                        [np.inf   , np.inf  ,np.inf   , np.inf , np.inf ,np.inf  ]*Nsources)
         try:
-            param_optimized, param_cov = opt.curve_fit(tmf.curve_fit_function_wrapper, (xgrid, ygrid),
-                                                       dataimage.ravel(), p0 = param_init, sigma=sigma,
-                                                       maxfev=maxfctcalls)
+            param_optimized, param_cov = opt.curve_fit(tmf.curve_fit_function_wrapper, (xgrid, ygrid),dataimage.ravel(), p0 = param_init, sigma=sigma,maxfev=maxfctcalls, bounds=param_bounds)
             output = param_optimized, param_cov
         except:
-            print ' WARNING: Curve_fit failed (using "maximum function call" of '+str(maxfctcalls)+\
+            print ' WARNING: Curve_fit failed (likely using "maximum function call" of '+str(maxfctcalls)+\
                   ') so returning param_init; i.e. the intiial guess of the parameters'
             output = param_init, None
+            #pdb.set_trace()
 
     else:
-        sys.exit(' ---> Invalid optimizer ('+optimizer+') chose in model_objects_gauss()')
+        sys.exit(' ---> Invalid optimizer ('+optimizer+') chosen in model_objects_gauss()')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
     #if verbose: print ' - The returned best-fit parameters are \n   ',output[0]
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if show_residualimg:
-        if verbose: print ' - Displaying the residual image between initial guess and optimized paramters'
+        if verbose: print ' - Displaying the residual image between initial guess and optimized parameters'
         init_img = tmf.modelimage_multigauss((xgrid,ygrid), param_init , showmodelimg=False)
         best_img = tmf.modelimage_multigauss((xgrid,ygrid), output[0]  , showmodelimg=False)
         res_img  = init_img-best_img
 
         plt.imshow(res_img,interpolation='none', vmin=1e-5, vmax=np.max(res_img), norm=mpl.colors.LogNorm())
-        plt.title('Model Residual = Initial Parameter Image - Optimized Paramter Image')
+        plt.title('Model Residual = Initial Parameter Image - Optimized Parameter Image')
         plt.show()
 
         res_img  = best_img-dataimage
 
         plt.imshow(res_img,interpolation='none', vmin=1e-5, vmax=np.max(res_img), norm=mpl.colors.LogNorm())
-        plt.title('Data Residual = Optimized Paramter Image - Data Image')
+        plt.title('Data Residual = Optimized Parameter Image - Data Image')
         plt.show()
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return output
