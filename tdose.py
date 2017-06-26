@@ -856,7 +856,7 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
                                  cutout_layer.bbox_original[1][0]:cutout_layer.bbox_original[1][1]+1] = sourcemodel
                     cube_out = cube_out + cube_model
             sourcemodelhdu.close()
-    if verbose: print '   ... done'
+    if verbose: print '\n   ... done'
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if store_sourcemodelcube:
         fullfov_smc = modeldir+basename+'_'+setupdic['source_model_cube_ext']+'_'+setupdic['psf_type']+'_fullFoV.fits'
