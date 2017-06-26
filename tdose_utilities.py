@@ -2065,6 +2065,19 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
 
     if verbose: print ' - Get main source id for cases where multiple sources were combined using parent ID (ids contain "-")'
     baseids = []
+
+    if objids == 'all':
+
+        if verbose: print ' - Objid = "all" so grabbing IDs from file names in spec1D_directory from setupfile'
+        specdir  = setupdic['spec1D_directory']
+
+        spectra = glob.glob(specdir+setupdic['spec1D_name']+'_'+setupdic['psf_type']+'*.fits')
+        objids = []
+        for specfile in spectra:
+            objid_fromfile = specfile.split(specdir+setupdic['spec1D_name']+'_'+setupdic['psf_type']+'_')[-1].split('.fit')[0]
+            objids.append(objid_fromfile)
+        objids = np.unique(np.sort(np.asarray(objids)))
+
     for objid in objids:
         baseids.append(objid.split('-')[-1])
 
