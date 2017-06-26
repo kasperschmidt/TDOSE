@@ -731,8 +731,10 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
     --- INPUT ---
     setupfile              TDOSE setup file used to run tdose.perform_extraction() with  model_cutouts=True
     store_sourcemodelcube  Save the 4D source model cube to a fits file (it's large: ~ size of 3Dcube * Nsources).
-                           If False it will just be used to generate the (summed) full FoV 3D cube.
-    store_modelcube        If true a model cube summing over the source model cube will be stored as a seperate fits file
+                           Hence, if too little memory is available on the system python will likely crash.
+    store_modelcube        If true a model cube (woudl be the same as summing over the source model cube) will be
+                           stored as a seperate fits file. This only requieres memory enough to handle two cubes
+                           as opposed to Nsources * cube when manipulating the 4D source model cube.
     clobber                Overwrite existing files
     verbose                Toggle verbosity
 
@@ -781,7 +783,7 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
     if verbose: print '   If no WARNINGs raised, all cubes were found'
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Build template full FoV source model cube to fill with models'
+    if verbose: print ' - Build template full FoV cubes to fill with models'
     cube_data     = pyfits.open(setupdic['data_cube'])[setupdic['cube_extension']].data
     cube_data_hdr = pyfits.open(setupdic['data_cube'])[setupdic['cube_extension']].header
     striphdr      = tu.strip_header(cube_data_hdr.copy())
@@ -789,10 +791,13 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
     cubewcs_2D    = tu.WCS3DtoWCS2D(cubewcs.copy())
     cube_shape    = cube_data.shape
 
-    smc_out      = np.zeros([Nextractions,cube_shape[0],cube_shape[1],cube_shape[2]])
-
+    if store_sourcemodelcube:
+        smc_out      = np.zeros([Nextractions,cube_shape[0],cube_shape[1],cube_shape[2]])
+    if store_modelcube:
+        cube_out     = np.zeros([cube_shape[0],cube_shape[1],cube_shape[2]])
+        cube_model   = np.zeros([cube_shape[0],cube_shape[1],cube_shape[2]])
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Adding individual models to full FoV source model cube '
+    if verbose: print ' - Adding individual models to full FoV output cubes '
     for oo, objid in enumerate(extractids):
         cutstr, cutoutsize, cut_img, cut_cube, cut_variance, cut_sourcecat = tu.get_datinfo(objid,setupdic)
 
@@ -816,15 +821,22 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
                 source_ids      = subsourcecat['id'][parent_ent]
                 Nparent         = len(parent_ent)
 
+            sourcemodelhdu = pyfits.open(sourcemodelcube[0])
             if Nparent == 1:
-                if verbose: print '   > Getting object model for '+str(int(objid))+' (source model no. '+str(int(objid_modelent))+')'
-                sourcemodel = pyfits.open(sourcemodelcube[0])[setupdic['cube_extension']].data[objid_modelent,:,:,:]
+                infostr = '   > Getting object model for '+str(int(objid))+' (source model no. '+str(int(objid_modelent))+')'+\
+                          '   (obj '+str("%.5d" % (oo+1))+' / '+str("%.5d" % (Nextractions))+')       '
+                sourcemodel = sourcemodelhdu[setupdic['cube_extension']].data[objid_modelent,:,:,:]
             else:
-                if verbose: print '   > Getting object model for '+str(int(parent_id))+'\n     (combining source models: '+\
-                                  ','.join([str(int(id)) for id in source_ids])+', i.e. source model no. '+\
-                                  ','.join([str(int(ent)) for ent in parent_ent])+')'
+                infostr = '   > Getting object model for '+str(int(parent_id))+'\n     (combining source models: '+\
+                          ','.join([str(int(id)) for id in source_ids])+', i.e. source model no. '+\
+                          ','.join([str(int(ent)) for ent in parent_ent])+')'+\
+                          '   (obj '+str("%.5d" % (oo+1))+' / '+str("%.5d" % (Nextractions))+')       '
 
-                sourcemodel = np.sum(pyfits.open(sourcemodelcube[0])[setupdic['cube_extension']].data[parent_ent,:,:,:],axis=0)
+                sourcemodel = np.sum(sourcemodelhdu[setupdic['cube_extension']].data[parent_ent,:,:,:],axis=0)
+
+            if verbose:
+                sys.stdout.write("%s\r" % infostr)
+                sys.stdout.flush()
 
             ra_obj        = subsourcecat[setupdic['sourcecat_racol']][objid_modelent]
             dec_obj       = subsourcecat[setupdic['sourcecat_deccol']][objid_modelent]
@@ -832,9 +844,19 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
             size          = units.Quantity((  cutoutsize[1], cutoutsize[0]), units.arcsec)
             cutout_layer  = Cutout2D(cube_data[0,:,:], skyc, size, wcs=cubewcs_2D, mode='partial')
 
-            smc_out[oo,:,cutout_layer.bbox_original[0][0]:cutout_layer.bbox_original[0][1]+1,
-                         cutout_layer.bbox_original[1][0]:cutout_layer.bbox_original[1][1]+1] = sourcemodel
-
+            if store_sourcemodelcube:
+                smc_out[oo,:,cutout_layer.bbox_original[0][0]:cutout_layer.bbox_original[0][1]+1,
+                             cutout_layer.bbox_original[1][0]:cutout_layer.bbox_original[1][1]+1] = sourcemodel
+            if store_modelcube:
+                if store_sourcemodelcube:
+                    continue
+                else:
+                    cube_model = cube_model*0.0 # reset to zeros
+                    cube_model[:,cutout_layer.bbox_original[0][0]:cutout_layer.bbox_original[0][1]+1,
+                                 cutout_layer.bbox_original[1][0]:cutout_layer.bbox_original[1][1]+1] = sourcemodel
+                    cube_out = cube_out + cube_model
+            sourcemodelhdu.close()
+    if verbose: print '   ... done'
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if store_sourcemodelcube:
         fullfov_smc = modeldir+basename+'_'+setupdic['source_model_cube_ext']+'_'+setupdic['psf_type']+'_fullFoV.fits'
@@ -853,8 +875,9 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if store_modelcube:
         fullfov_cube = modeldir+basename+'_'+setupdic['model_cube_ext']+'_'+setupdic['psf_type']+'_fullFoV.fits'
+        if store_sourcemodelcube:
+            cube_out = np.sum(smc_out,axis=0)
         if verbose: print ' - Producing FoV model cube from full FoV source model cube and storing it in:\n   '+fullfov_cube
-        cube_out     = np.sum(smc_out,axis=0)
         if 'XTENSION' in cube_data_hdr.keys():
             hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
             hducube        = pyfits.ImageHDU(cube_out,header=cube_data_hdr)
