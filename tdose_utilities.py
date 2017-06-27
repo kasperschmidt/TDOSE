@@ -1223,9 +1223,10 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
     if verbose: print ' - Saved region file to '+outputfile
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.txt',clobber=False,imgheader=None,
-                                      idcol=0,racol=2,deccol=3,fluxcol=22,fluxfactor=100.,verbose=True):
+                                      idcol=0,racol=2,deccol=3,fluxcol=22,fluxfactor=100.,generateDS9reg=True,
+                                      verbose=True):
     """
-    Generate source catalog for modeling image with tdose_model_FoV.gen_fullmodel()
+    Generate a txt (and fits) source catalog for modeling images with tdose_model_FoV.gen_fullmodel()
 
     --- INPUT ---
     sextractorfile      SExtractor file to generate source catalog from.
@@ -1239,6 +1240,7 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
                         y-direction pixel position of sources
     fluxcol             Column number or column name of column containing flux scaling of sources
     fluxfactor          Factor to apply to fluxcol values
+    generateDS9reg      Generate a DS9 region file showing the location of the sources?
     verbose             Toggle verbosity
 
     """
@@ -1287,6 +1289,20 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
                 fout.write(str(ids[ii])+' '+str(ras[ii])+' '+str(decs[ii])+' '+str(fluxes[ii])+'  \n')
 
         fout.close()
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        if generateDS9reg:
+            regionfile = outname.replace('.txt','.reg')
+            if verbose: print ' - Storing DS9 region file to '+regionfile
+            idsstr     = [str(id) for id in ids]
+            tu.create_simpleDS9region(regionfile,ras,decs,color='red',circlesize=0.5,textlist=idsstr,clobber=clobber)
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        outnamefits = outname.replace('.txt','.fits')
+        if verbose: print ' - Save fits version of source catalog to '+outnamefits
+        fitsfmt       = ['D','D','D','D','D','D']
+        sourcecatfits = tu.ascii2fits(outname,asciinames=True,skip_header=2,fitsformat=fitsfmt)
+
         return outname
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=None,clobber=False,objects='all',
@@ -1460,6 +1476,100 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     return paramlist_arr
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def ascii2fits(asciifile,asciinames=True,skip_header=0,outpath=None,fitsformat='D',verbose=True):
+    """
+    Convert ascii file into fits file
+
+    --- INPUT ---
+    asciifile        Ascii file to convert
+    asciinames       Do the ascii file contain the column names in the header?
+    skip_header      The number of header lines to skip when reading the ascii file.
+    outpath          Alternative destination for the resulting fits file.
+    fitsformat       Format of the entries to store in the fits file. Default assumes 'D' for all
+                     Otherwise, provide list of fits formats
+    verbose          Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    outpath = '/Users/johndoe/tdose_sourcecats/'
+    catfile = 'sources.cat'
+    outputfile = tu.ascii2fits(catfile,asciinames=True,skip_header=2,outpath=outpath,verbose=True)
+
+    """
+    #-------------------------------------------------------------------------------------------------------------
+    if verbose: print ' - Reading ascii file ',asciifile
+    data    = np.genfromtxt(asciifile,names=asciinames,skip_header=skip_header,comments='#',dtype=None)
+    keys    = data.dtype.names
+    #-------------------------------------------------------------------------------------------------------------
+    if verbose: print ' - Initialize and fill dictionary with data'
+    datadic = {}
+    for kk in keys:
+        datadic[kk] = []
+        try:
+            lenarr = len(np.asarray(data[kk]))
+            datadic[kk] = np.asarray(data[kk])
+        except: # if only one row of data is to be written
+            datadic[kk] = np.asarray([data[kk]])
+
+    if verbose: print ' - found the columns '+','.join(keys)
+
+    if len(fitsformat) != len(keys):
+        fitsformat = np.asarray([fitsformat]*len(keys))
+    #-------------------------------------------------------------------------------------------------------------
+    # writing to fits table
+    tail = asciifile.split('.')[-1]# reomove extension
+    outputfile = asciifile.replace('.'+tail,'.fits')
+    if outpath != None:
+        outputfile = outpath+outputfile.split('/')[-1]
+
+    columndefs = []
+    for kk, key in enumerate(keys):
+        try:
+            columndefs.append(pyfits.Column(name=key  , format=fitsformat[kk], array=datadic[key]))
+        except:
+            sys.exit(' ---> ERROR in defining columns for fits file '+outputfile+' in call to tdose_utilities.ascii2fits()')
+
+    cols     = pyfits.ColDefs(columndefs)
+    tbhdu    = pyfits.new_table(cols)          # creating table header
+    hdu      = pyfits.PrimaryHDU()             # creating primary (minimal) header
+    thdulist = pyfits.HDUList([hdu, tbhdu])    # combine primary and table header to hdulist
+    thdulist.writeto(outputfile,clobber=True)  # write fits file (clobber=True overwrites excisting file)
+    #-------------------------------------------------------------------------------------------------------------
+    if verbose: print ' - Wrote the data to: ',outputfile
+    return outputfile
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def create_simpleDS9region(outputfile,ralist,declist,color='red',circlesize=0.5,textlist=None,clobber=False):
+    """
+    Generate a basic DS9 region file with circles around a list of coordinates
+
+    --- INPUT ---
+    outputfile   Path and name of file to store reigion file to
+    ralist       List of R.A. to position circles at
+    declist      List of Dec. to position circles at
+    color        Color of circles
+    size         Size of circles (radius in arcsec)
+    text         Text string for each circle
+    clobber      Overwrite existing files?
+
+    """
+
+    if not clobber:
+        if os.path.isfile(outputfile):
+            sys.exit('File already exists and clobber = False --> ABORTING')
+    fout = open(outputfile,'w')
+
+    fout.write("# Region file format: DS9 version 4.1 \nfk5\n")
+
+    for rr, ra in enumerate(ralist):
+        string = 'circle('+str(ra)+','+str(declist[rr])+','+str(circlesize)+'") # color='+color+' width=3 '
+
+        if textlist is not None:
+            string = string+' font="times 10 bold roman" text={'+textlist[rr]+'}'
+
+        fout.write(string+' \n')
+
+    fout.close()
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def extract_fitsextension(fitsfile,extension,outputname='default',conversion='None',useheader4output=False,clobber=False,
                           verbose=True):
