@@ -1537,6 +1537,40 @@ def ascii2fits(asciifile,asciinames=True,skip_header=0,outpath=None,fitsformat='
     if verbose: print ' - Wrote the data to: ',outputfile
     return outputfile
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def SExtractorCat2fits(sextractorfiles,stringcols=[1],header=73,verbose=True):
+    """
+    Converting an ascii catalog with columns defined in header in the SExtractor format, i.e. one column
+    name per row preceeded by a "#" and a column numner, and followed by a description (or any ascii file
+    with the given setup) to a fits binary table
+
+    --- INPUT ---
+    sextractorfiles   List of ascii files to convert to fits
+    stringcols        Columns to use a string format for (all other columns will be set to double float)
+    header            Header containing the column names of the catalogs following the "SExtractor notation"
+    verbose           Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    import glob
+    import tdose_utilities as tu
+    catalogs = glob.glob('/Volumes/DATABCKUP2/MUSE-Wide/catalogs_photometry/catalog_photometry_candels-cdfs-*.cat')
+    tu.SExtractorCat2fits(catalogs,stringcols=[1],header=73,verbose=True)
+
+    """
+    for sexcat_ascii in sextractorfiles:
+        asciiinfo = open(sexcat_ascii,'r')
+        photcols = []
+        for line in asciiinfo:
+            if line.startswith('#'):
+                colname = line.split()[2]
+                photcols.append(colname)
+
+        photfmt = ['D']*len(photcols)
+        for stringcol in stringcols:
+            photfmt[stringcol] = 'A60'
+
+        sexcat_fits   = tu.ascii2fits(sexcat_ascii,asciinames=photcols,skip_header=header,fitsformat=photfmt,verbose=verbose)
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def create_simpleDS9region(outputfile,ralist,declist,color='red',circlesize=0.5,textlist=None,clobber=False):
     """
     Generate a basic DS9 region file with circles around a list of coordinates
