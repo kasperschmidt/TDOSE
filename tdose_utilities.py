@@ -298,8 +298,6 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,infofmt="S250",
                              loopcols=['data_cube','cube_extension'],
                              namebase='MUSEWide_tdose_setup',clobber=False,verbose=True):
     """
-    ~ ~ ~ ~ STILL UNDER CONSTRUCTION/TESTING ~ ~ ~ ~
-
     Take a setup template generated with generate_setup_template() and duplicate it filling
     it with information from a provided infofile, e.g., fill update PSF info, field names,
     image names, source lists, etc.
