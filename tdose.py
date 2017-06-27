@@ -494,7 +494,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                       plotS2Nspectra,save_init_model_output,clobber,verbose,verbosefull)
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,
+def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generateFullFoVmodel=True,generateOverviewPlots=True,
                                     # - - - - - - - Inputs passed to tdose.perform_extraction() - - - - - - -
                                     performcutout=True,generatesourcecat=True,modelrefimage=True,refimagemodel2cubewcs=True,
                                     definePSF=True,modeldatacube=True,createsourcecube=True,store1Dspectra=True,plot1Dspectra=True,
@@ -509,7 +509,10 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,
                              Nsessions bundles to run). The default is 0 which will run Nsetupfiles sessions with
                              1 setup file per parallel session.
     verbose                  Toggle verbosity
-
+    generateFullFoVmodel     Combine cutouts (if the run is based on cutouts) into full FoV model cube with
+                             tdose.gen_fullFoV_from_cutouts()
+    generateOverviewPlots    Generate overview plots of each of the extracted objects with tu.gen_overview_plot()
+    
     **remaining input**      Input passed to tdose.perform_extraction();
                              see tdose.perform_extraction() header for details
 
@@ -517,13 +520,14 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,
     import tdose, glob
     setupfiles           = ['setup01','setup02','setup03','setup04','setup05','setup06','setup07','setup08','setup09']
     setupfiles           = glob.glob('/Users/kschmidt/work/TDOSE/tdose_setup_candels-cdfs-*[0-99].txt')
-    bundles, paralleldic = tdose.perform_extractions_in_parallel(setupfiles,Nsessions=2,clobber=True,performcutout=False,store1Dspectra=False,plot1Dspectra=False)
+    bundles, paralleldic = tdose.perform_extractions_in_parallel(setupfiles,Nsessions=2,clobber=True,performcutout=False,store1Dspectra=False,plot1Dspectra=False,generateFullFoVmodel=True,generateOverviewPlots=True)
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     def parallel_worker(setupfiles,performcutout,generatesourcecat,modelrefimage,refimagemodel2cubewcs,definePSF,
                         modeldatacube,createsourcecube,store1Dspectra,plot1Dspectra,plotS2Nspectra,
-                        save_init_model_output,clobber,verbose,verbosefull,logterminaloutput):
+                        save_init_model_output,clobber,verbose,verbosefull,logterminaloutput,
+                        generateFullFoVmodel=True,generateOverviewPlots=True):
         """
         Multiprocessing worker function
         """
@@ -534,7 +538,11 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,
                                      store1Dspectra=store1Dspectra,plot1Dspectra=plot1Dspectra,plotS2Nspectra=plotS2Nspectra,
                                      save_init_model_output=save_init_model_output,clobber=clobber,
                                      verbose=verbose,verbosefull=verbosefull,logterminaloutput=logterminaloutput)
+            if generateFullFoVmodel:
+                tdose.gen_fullFoV_from_cutouts(setupfile)
 
+            if generateOverviewPlots:
+                tu.gen_overview_plot('all',setupfile)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     bundles     = collections.OrderedDict()
     Nsetups     = len(setupfiles)
@@ -578,7 +586,8 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,
                                       args  = (bundles[bundlekey],performcutout,generatesourcecat,modelrefimage,
                                                refimagemodel2cubewcs,definePSF,modeldatacube,createsourcecube,store1Dspectra,
                                                plot1Dspectra,plotS2Nspectra,save_init_model_output,clobber,
-                                               verbose,verbosefull,logterminaloutput),
+                                               verbose,verbosefull,logterminaloutput,
+                                               generateFullFoVmodel,generateOverviewPlots),
                                       name  = jobname)
 
         jobs.append(job)
