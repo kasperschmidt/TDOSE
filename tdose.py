@@ -1001,13 +1001,18 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
     else:
         sys.exit(' ---> Setting source_model == '+setupdic['source_model']+' is not a valid entry')
 
+    # checking if constraint is set on centroid positioning in setup file for modeling
+    try:
+        maxcenshift = setupdic['max_centroid_shift']
+    except:
+        maxcenshift = None
 
     pinit, fit    = tmf.gen_fullmodel(img_data,sourcecat,modeltype=setupdic['source_model'],verbose=verbosefull,
                                       xpos_col=setupdic['sourcecat_xposcol'],ypos_col=setupdic['sourcecat_yposcol'],
                                       datanoise=None,sigysigxangle=sigysigxangle,
                                       fluxscale=fluxscale,generateimage=modelimg,
                                       generateresidualimage=True,clobber=clobber,outputhdr=img_hdr,
-                                      param_initguess=param_initguess)
+                                      param_initguess=param_initguess,max_centroid_shift=maxcenshift)
 
     tu.model_ds9region(modelparam,regionfile,img_wcs,color='cyan',width=2,Nsigma=2,textlist=names,
                        fontsize=12,clobber=clobber)
