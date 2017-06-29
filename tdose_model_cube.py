@@ -516,6 +516,7 @@ def gen_image(imagedim,mu_objs,cov_objs,sourcescale='ones',verbose=True):
     img_conv = tmc.gen_image()
 
     """
+    sourcescale = list(sourcescale) # convert source scales to list to prevent "Future warning" when comparing to 'ones'
     img_out   = np.zeros(imagedim)
     if mu_objs.shape == (2,):
         Nmu       = 1
