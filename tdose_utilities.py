@@ -178,7 +178,7 @@ gauss_guess_fluxscale  ACS_F814W_FLUX                     # Column of flux in ga
 gauss_guess_fluxfactor 3                                  # Factor to apply to flux scale in initial Gauss parameter guess
 gauss_guess_Nsigma     1                                  # Number of sigmas to include in initial Gauss parameter guess
 
-max_centroid_shift     10                                 # The maximum shigt of the centroid of each source allowed in the gaussian modeling. Given in pixels to
+max_centroid_shift     10                                 # The maximum shift of the centroid of each source allowed in the gaussian modeling. Given in pixels to
                                                           # set bounds ypix_centroid +/- max_centroid_shift and xpix_centroid +/- max_centroid_shift
                                                           # If none, no bounds are put on the centroid position of the sources.
 # - - - - - - - - - - - - - - - - - - - - - - - - GALFIT MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
