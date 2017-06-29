@@ -93,7 +93,7 @@ def generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=Fals
     import tdose_utilities as tu
 
     filename = './tdose_setup_template_new.txt'
-    tu.generate_setup_template(outputfile=filename,clobber=True)
+    tu.generate_setup_template(outputfile=filename,clobber=False)
     setup    = tu.load_setup(setupfile=filename)
 
     """
@@ -109,9 +109,9 @@ def generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=Fals
         setuptemplate = """
 #-------------------------------------------------START OF TDOSE SETUP-------------------------------------------------
 #
-# Template for TDOSE (http://github.com/kasperschmidt/TDOSE) setup file
-# Generated with tdose_utilities.generate_setup_template() on %s
-# The spectral extraction using this setup is run with tdose.perform_extraction()
+# Template for Three Dimensional Optimal Spectral Extracion (TDOSE, http://github.com/kasperschmidt/TDOSE) setup file
+# Template was generated with tdose_utilities.generate_setup_template() on %s
+# Setup file can be run with tdose.perform_extraction() or tdose.perform_extractions_in_parallel()
 #
 # - - - - - - - - - - - - - - - - - - - - - - - - - - DATA INPUT  - - - - - - - - - - - - - - - - - - - - - - - - - - -
 data_cube              /path/datacube.fits                # Path and name of fits file containing data cube to extract spectra from
@@ -178,6 +178,9 @@ gauss_guess_fluxscale  ACS_F814W_FLUX                     # Column of flux in ga
 gauss_guess_fluxfactor 3                                  # Factor to apply to flux scale in initial Gauss parameter guess
 gauss_guess_Nsigma     1                                  # Number of sigmas to include in initial Gauss parameter guess
 
+max_centroid_shift     10                                 # The maximum shigt of the centroid of each source allowed in the gaussian modeling. Given in pixels to
+                                                          # set bounds ypix_centroid +/- max_centroid_shift and xpix_centroid +/- max_centroid_shift
+                                                          # If none, no bounds are put on the centroid position of the sources.
 # - - - - - - - - - - - - - - - - - - - - - - - - GALFIT MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
 galfit_directory       /path/models_galfit/               # If source_model = galfit provide path to directory containing galfit models.
                                                           # TDOSE will look for galfit_*ref_image*_output.fits (incl. the cutout string if model_cutouts=True)
@@ -191,11 +194,13 @@ modelimg_directory    /path/models_cutouts/               # If source_model = mo
 modelimg_extension     2                                  # Fits extension containing model
 
 # - - - - - - - - - - - - - - - - - - - - - - - - APERTURE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - -
-aperture_size          0.5                                # Radius of apertures to use given in arc seconds
+aperture_size          1.5                                # Radius of apertures to use given in arc seconds
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - PSF MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
 psf_type               gauss                              # Select PSF model to build. Choices are:
                                                           #   gauss      Model the PSF as a symmetric Gaussian with sigma = FWHM/2.35482
+                                                          #   kernel_gauss   An astropy.convolution.Gaussian2DKernel() used for numerical convolution                        # Not enabled yet
+                                                          #   kernel_moffat  An astropy.convolution.Moffat2DKernel()   used for numerical convolution                        # Not enabled yet
 psf_FWHM_evolve        linear                             # Evolution of the FWHM from blue to red end of data cube. Choices are:
                                                           #   linear     FWHM wavelength dependence described as FWHM(lambda) = p0[''] + p1[''/A] * (lambda - 7000A)
 psf_FWHMp0             0.940                              # p0 parameter to use when determining wavelength dependence of PSF
@@ -203,7 +208,7 @@ psf_FWHMp1             -3.182e-5                          # p1 parameter to use 
 psf_savecube           True                               # To save fits file containing the PSF cube set psf_savecube = True
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - CUBE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
-model_cube_layers      'all'                              # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
+model_cube_layers       all                               # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
                                                           # To model source-specific layers provide ascii file containing ID layerlow and layerhigh.
                                                           # If layerlow=all and layerhigh=all all layers will be modeled for particular source
 model_cube_optimizer   matrix                             # The optimizer to use when matching flux levels in cube layers:
