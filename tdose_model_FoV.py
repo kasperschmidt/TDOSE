@@ -13,7 +13,7 @@ import pdb
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,datanoise=None,
                   fluxscale='fluxscale',show_residualimg=False,generateimage=False,generateresidualimage=False,
-                  optimizer='curve_fit',clobber=False,outputhdr=None,param_initguess=None,verbose=True):
+                  optimizer='curve_fit',clobber=False,outputhdr=None,param_initguess=None,max_centroid_shift=None,verbose=True):
     """
     Generate the full model of the FoV to extract spectra from
 
@@ -56,6 +56,7 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
     clobber                   Overwrite files if they already exist
     outputhdr                 Fits header to use as template for models
     param_initguess           To use a TDOSE parameter list as intial guess for image model provide it here
+    max_centroid_shift        Maximum offset in pixels of (x,y) centroid position allowed when modeling
     verbose                   Toggle verbosity
 
     --- EXAMPLE OF USE ---
@@ -86,8 +87,8 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
             if verbose: print ' - Using the intitial guess provided for model fit'
             param_init   = param_initguess
 
-        fit_output      = tmf.model_objects_gauss(param_init,dataimg,optimizer=optimizer,datanoise=datanoise,
-                                                  verbose=verbose,show_residualimg=show_residualimg)
+        fit_output      = tmf.model_objects_gauss(param_init,dataimg,optimizer=optimizer,max_centroid_shift=max_centroid_shift,
+                                                  datanoise=datanoise,verbose=verbose,show_residualimg=show_residualimg)
     elif modeltype.lower() == 'galfit':
         if param_initguess is not None:
             if verbose: print (' TDOSE WARNING: Initial guess is not enabled for modeltype = galfit; setting param_initguess = None')
@@ -383,21 +384,25 @@ def gen_paramlist_aperture(sourcecatalog,radius_pix,pixval=None,xpos_col='xpos',
     paramlist_arr = np.asarray(paramlist)
     return paramlist_arr
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',datanoise=None,show_residualimg=True,verbose=True):
+def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',max_centroid_shift=None,
+                        datanoise=None,show_residualimg=True,verbose=True):
     """
     Optimize residual between model (multiple Gaussians) and data with least squares in 2D
 
     --- INPUT ---
-    param_init    Initial guess on parameters (defines the number of gaussians to fit for)
-    dataimage     Image to model with multiple Gaussians
-    optimizer     Chose the optimizer to use
-                      leastsq     scipy.optimize.leastsq(); not ideal for 2D images...
-                                  Tries to optimize the residual function
-                      curve_fit   scipy.optimize.curve_fit()
-                                  Tries to optimize using the model function
-    datanoise     Image of sigmas, i.e., sqrt(variance) to use as weights when optimizing fit
-                  using curve_fit
-    verbose       Toggle verbosity
+    param_init            Initial guess on parameters (defines the number of gaussians to fit for)
+    dataimage             Image to model with multiple Gaussians
+    optimizer             Chose the optimizer to use
+                              leastsq     scipy.optimize.leastsq(); not ideal for 2D images...
+                                          Tries to optimize the residual function
+                              curve_fit   scipy.optimize.curve_fit()
+                                          Tries to optimize using the model function
+    max_centroid_shift    Maximum offset in pixels of (x,y) centroid position of sources when modeling
+                          I.e. impose  ypix_centroid +/-  max_centroid_shift and xpix_centroid +/-  max_centroid_shift
+                          bounds om parameters when fitting.
+    datanoise             Image of sigmas, i.e., sqrt(variance) to use as weights when optimizing fit
+                          using curve_fit
+    verbose               Toggle verbosity
 
     --- EXAMPLE OF USE ---
     import tdose_model_FoV as tmf
@@ -427,8 +432,26 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',datanoise=Non
         #               [yposition,xposition,fluxscale,sigmay  ,sigmax  ,angle]
         param_bounds = ([0        ,0        ,0        ,0       ,0       ,-np.inf ]*Nsources,
                         [np.inf   , np.inf  ,np.inf   , np.inf , np.inf ,np.inf  ]*Nsources)
+
+        if max_centroid_shift is not None:
+            init_y       = param_init[0::6]
+            init_x       = param_init[1::6]
+
+            bound_xlow   = init_x-max_centroid_shift
+            bound_xhigh  = init_x+max_centroid_shift
+
+            bound_ylow   = init_y-max_centroid_shift
+            bound_yhigh  = init_y+max_centroid_shift
+
+            param_bounds[0][0::6] = bound_ylow
+            param_bounds[1][0::6] = bound_yhigh
+
+            param_bounds[0][1::6] = bound_xlow
+            param_bounds[1][1::6] = bound_xhigh
+
         try:
-            param_optimized, param_cov = opt.curve_fit(tmf.curve_fit_function_wrapper, (xgrid, ygrid),dataimage.ravel(), p0 = param_init, sigma=sigma,maxfev=maxfctcalls, bounds=param_bounds)
+            param_optimized, param_cov = opt.curve_fit(tmf.curve_fit_function_wrapper, (xgrid, ygrid),dataimage.ravel(),
+                                                       p0 = param_init, sigma=sigma,maxfev=maxfctcalls, bounds=param_bounds)
             output = param_optimized, param_cov
         except:
             print ' WARNING: Curve_fit failed (likely using "maximum function call" of '+str(maxfctcalls)+\
