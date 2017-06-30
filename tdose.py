@@ -591,7 +591,7 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generate
             else:
                 bundles[string] = setupfiles[bundlesize*ii:bundlesize*(ii+1)]
 
-    if verbose: print ' - Found '+str(Nsetups)+' setup files to bundle up and run '+str(Nbundle)+' paerallel sessions for'
+    if verbose: print ' - Found '+str(Nsetups)+' setup files to bundle up and run '+str(Nbundle)+' parallel sessions for'
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' ---- Starting multiprocess parallel run of the '+str(Nsetups)+' TDOSE setups ---- '
