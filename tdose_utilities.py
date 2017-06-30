@@ -18,6 +18,8 @@ import scipy.ndimage
 import tdose_utilities as tu
 import tdose_model_FoV as tmf
 from scipy.stats import multivariate_normal
+import matplotlib as mpl
+mpl.use('Agg') # prevent pyplot from opening window; enables closing ssh session with detached screen running TDOSE
 import matplotlib.pylab as plt
 import pdb
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =

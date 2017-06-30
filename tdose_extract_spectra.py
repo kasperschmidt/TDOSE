@@ -7,6 +7,8 @@ import tdose_utilities as tu
 import tdose_extract_spectra as tes
 import tdose_build_mock_cube as tbmc
 import pdb
+import matplotlib as mpl
+mpl.use('Agg') # prevent pyplot from opening window; enables closing ssh session with detached screen running TDOSE
 import matplotlib.pyplot as plt
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='tdose_spectrum',outputdir='./',clobber=False,

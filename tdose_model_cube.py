@@ -9,6 +9,7 @@ import scipy.optimize as opt
 import tdose_utilities as tu
 import tdose_model_cube as tmc
 import matplotlib as mpl
+mpl.use('Agg') # prevent pyplot from opening window; enables closing ssh session with detached screen running TDOSE
 import matplotlib.pylab as plt
 import tdose_model_FoV as tmf
 import astropy.convolution

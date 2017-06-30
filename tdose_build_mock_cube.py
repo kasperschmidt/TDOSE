@@ -3,6 +3,8 @@ import numpy as np
 import os
 import sys
 import pyfits
+import matplotlib as mpl
+mpl.use('Agg') # prevent pyplot from opening window; enables closing ssh session with detached screen running TDOSE
 import matplotlib.pylab as plt
 import pdb
 import tdose_utilities as tu
