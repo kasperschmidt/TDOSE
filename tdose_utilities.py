@@ -1266,7 +1266,7 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
         if verbose: print ' - Image header not provided; assuming ra and dec col are in pixel units'
     else:
         if verbose: print ' - Image header provided; converting ra and dec values using wcs info from header'
-        striphdr   = tu.strip_header(imgheader.copy())
+        striphdr   = tu.strip_header(imgheader.copy(),verbose=verbose)
         wcs_in     = wcs.WCS(striphdr)
         skycoord   = SkyCoord(ras, decs, frame='icrs', unit='deg')
         pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in)
@@ -1304,7 +1304,7 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
         outnamefits = outname.replace('.txt','.fits')
         if verbose: print ' - Save fits version of source catalog to '+outnamefits
         fitsfmt       = ['D','D','D','D','D','D']
-        sourcecatfits = tu.ascii2fits(outname,asciinames=True,skip_header=2,fitsformat=fitsfmt)
+        sourcecatfits = tu.ascii2fits(outname,asciinames=True,skip_header=2,fitsformat=fitsfmt,verbose=verbose)
 
         return outname
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
