@@ -161,6 +161,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 infostr = ' - Starting extraction for object '+str("%4.f" % (oo+1))+' / '+\
                           str("%4.f" % Nloops)+' with ID = '+str(extid)+'           '+tu.get_now_string()
 
+            start_time_obj = time.clock()
             imgstr, imgsize, refimg, datacube, variancecube, sourcecat = tu.get_datinfo(extid,setupdic)
 
             skipthisobj = False
@@ -410,7 +411,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if verbose: print '=================================================================================================='
-            if verbose: print ' TDOSE: Plotting extracted spectra                          '+\
+            if verbose: print ' TDOSE: Plotting extracted spectra                    '+\
                               '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
             if setupdic['plot_generate']:
                 tdose.plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=plot1Dspectra,plotS2Nspectra=plotS2Nspectra,
@@ -419,7 +420,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             if verbose:
                 print '=================================================================================================='
                 print ' TDOSE: Modeling and extraction done for object '+str(extid)+\
-                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )       '
+                print '                                                       '+\
+                      '   --> Object runtime = '+str("%10.4f" % (time.clock() - start_time_obj))+' seconds <--   '
                 print ' - To open all generated files in DS9 execute the following command '
                 ds9cmd  = ' ds9 '
                 Nframes = 0
