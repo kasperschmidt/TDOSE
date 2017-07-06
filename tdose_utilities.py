@@ -2223,7 +2223,7 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
         spectra = glob.glob(specdir+setupdic['spec1D_name']+'_'+setupdic['psf_type']+'*.fits')
         objids = []
         for specfile in spectra:
-            objid_fromfile = specfile.split(specdir+setupdic['spec1D_name']+'_'+setupdic['psf_type']+'_')[-1].split('.fit')[0]
+            objid_fromfile = specfile.split(specdir+setupdic['spec1D_name']+'_'+setupdic['source_model']+'_')[-1].split('.fit')[0]
             objids.append(objid_fromfile)
         objids = np.unique(np.sort(np.asarray(objids)))
 
@@ -2241,7 +2241,7 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
         else:
             objidstr    = str("%.10d" % int(objid))
         baseid      = baseids[ii]
-        plotname    = outdir+'tdose_source_overview_'+objidstr+'.pdf'
+        plotname    = outdir+setupdic['spec1D_name']+'_'+setupdic['source_model']+'_'+objidstr+'_source_overview.pdf'
 
         if skipobj & os.path.isfile(plotname):
             skipthisobj = True
