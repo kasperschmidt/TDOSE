@@ -490,7 +490,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                 s2ndat = specdat['s2n'][goodent]
             except:
                 s2ndat = specdat[tdose_fluxcol][goodent]/specdat[tdose_errcol][goodent]
-            plt.plot(specdat[tdose_wavecol][goodent],s2ndat,color=spec_color,lw=lthick*2, label=spec_label)
+            plt.plot(specdat[tdose_wavecol][goodent],s2ndat,color=spec_color,lw=lthick, label=spec_label)
             ylabel = 'S/N'
             #plotname = plotname.replace('.pdf','_S2N.pdf')
         else:
@@ -502,7 +502,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                                  specdat[tdose_fluxcol][goodent]+specdat[tdose_errcol][goodent],
                                  alpha=fillalpha,color=spec_color)
             plt.plot(specdat[tdose_wavecol][goodent],specdat[tdose_fluxcol][goodent],
-                     color=spec_color,lw=lthick*2, label=spec_label)
+                     color=spec_color,lw=lthick, label=spec_label)
             ylabel = tdose_fluxcol
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if simsources is not None:
@@ -522,7 +522,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
 
             plt.plot(specdat[tdose_wavecol],simspec,'--',color='black',lw=lthick)
 
-        plt.plot(specdat[tdose_wavecol],sim_total,'--',color='black',lw=lthick*2,
+        plt.plot(specdat[tdose_wavecol],sim_total,'--',color='black',lw=lthick,
                  label='Sim. spectrum: \nsimsource='+str(simsources))
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -550,7 +550,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
 
             if plotSNcurve:
                 plt.plot(compdat[comp_wavecol][goodent],compdat[comp_fluxcol][goodent]/compdat[comp_errcol][goodent],
-                         color=comp_color,lw=lthick*2, label=comp_label)
+                         color=comp_color,lw=lthick, label=comp_label)
             else:
                 fillalpha = 0.30
                 plt.fill_between(compdat[comp_wavecol][goodent],
@@ -584,7 +584,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
 
             if plotSNcurve:
                 plt.plot(skydat[sky_wavecol][goodent],skydat[sky_fluxcol][goodent]/skydat[sky_errcol][goodent],
-                         color=sky_color,lw=lthick*2, label=sky_label)
+                         color=sky_color,lw=lthick, label=sky_label)
             else:
                 fillalpha = 0.30
                 plt.fill_between(skydat[sky_wavecol][goodent],
