@@ -583,9 +583,9 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, useroll=Fals
         covmatrix          = tu.build_2D_cov_matrix(paramset[4],paramset[3],paramset[5],verbose=verbosefull)
         gauss2Dimg         = tu.gen_2Dgauss(imgsize,covmatrix,paramset[2],show2Dgauss=False,verbose=verbosefull,method='scipy')
         if useroll:
-            gauss2D_positioned = tu.roll_2Dprofile(gauss2Dimg,paramset[0:2]-1.0,showprofiles=False)
+            gauss2D_positioned = tu.roll_2Dprofile(gauss2Dimg,paramset[0:2],showprofiles=False)
         else:
-            gauss2D_positioned = tu.shift_2Dprofile(gauss2Dimg,paramset[0:2]-1.0,showprofiles=False)
+            gauss2D_positioned = tu.shift_2Dprofile(gauss2Dimg,paramset[0:2],showprofiles=False)
         modelimage         = modelimage + gauss2D_positioned
 
     if verbose: print '\n   done'
