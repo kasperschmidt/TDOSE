@@ -98,6 +98,16 @@ tdose.perform_extraction(setupfile='path/to/setup/tdose_setup.txt', verbose=True
 ```
 in a Python environment. Here `tdose_setup.txt` is a completed setup file. A template setup file can be genererated with `tdose_utilities.generate_setup_template()`. Keywords to `tdose.perform_extraction()` can be used to ignore individual steps of the TDOSE run, which can be useful for repeated runs with minor changes to the setup. See the header of `tdose.perform_extraction()` for details on these keywords.
 
+### Parallel run of multiple data cubes
+
+TDOSE can be run in parallel on multiple data cubes. This is done by laucnhing multipl default TDOSE runs in paralell with the `multiprocessing` package. To run in parallel simply provide a list of setup files to `tdose.perform_extractions_in_parallel()` with a calling sequence similar to:
+```python
+import tdose, glob
+setupfiles           = glob.glob('/path/to/TDOSE/setups/tdose_setup_*[0-99].txt')
+bundles, paralleldic = tdose.perform_extractions_in_parallel(setupfiles,Nsessions=8,clobber=True,generateOverviewPlots=True,skipextractedobjects=True,logterminaloutput=True)
+```
+Here `Nsessions` decides have many processes to launch (the setup files will be bundled up in this number of sub-list), which essentially corresponds to the nunber of cores to occupy.
+
 ### Individual TDOSE Function Runs
 
 Below a few examples of how to run individual pieces of TDOSE code to perform individual tasks are given, as these might be useful as stand-alone functions.
@@ -176,8 +186,8 @@ Here, the `sourcecat` is a fits catalog containing x and y pixel positions, a fl
 - [Kamann, Wisotzki and Roth (2013)](http://adsabs.harvard.edu/abs/2013A%26A...549A..71K)
 
 ## Schematic Overview of TDOSE
-TDOSE_illustration.png (displayed below) presents a schemative overview of the different elements, functions and routines making up TDOSE.
+TDOSE_illustration_v2.png (displayed below) presents a schemative overview of the different elements making up TDOSE and the workflow for the available extractions.
 
-<a href="TDOSE_illustration.png"><img src="TDOSE_illustration.png" align="center" height="1200" ></a>
+<a href="TDOSE_illustration.png"><img src="TDOSE_illustration_v2.png" align="center" height="1200" ></a>
 
 
