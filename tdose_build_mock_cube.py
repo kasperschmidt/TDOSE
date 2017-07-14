@@ -207,7 +207,7 @@ def gen_source_cube(position,scale,sourcetype,spectype,cube_dim=[10,60,30],verbo
                       str(position[1])+','+str(position[0])+') in output cube'
     position = np.asarray(position)
     #source_positioned = tu.roll_2Dprofile(source_centered,position,showprofiles=showsourceimgs)
-    source_positioned = tu.shift_2Dprofile(source_centered,position,showprofiles=showsourceimgs)
+    source_positioned = tu.shift_2Dprofile(source_centered,position,showprofiles=showsourceimgs,origin=1)
 
     if verbose: print ' - Assemble flat spectrum cube with z-dimension '+str(cube_dim[0])
     sourcecube = np.stack([source_positioned]*cube_dim[0])
