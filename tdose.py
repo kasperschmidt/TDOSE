@@ -13,6 +13,7 @@ import multiprocessing
 from astropy import wcs
 from astropy.coordinates import SkyCoord
 from astropy import units
+import astropy.convolution
 from astropy.nddata import Cutout2D
 from reproject import reproject_interp
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -240,7 +241,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                         FoV_modelfile   = model_file
                         FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
                     else:
-                        if verbosefull: print 'did not find the model\n    '+model_file+'\n   so will skip object '+extid
+                        if verbosefull: print 'did not find the model\n    '+model_file+'\n   so will skip object '+str(extid)
                         continue
                 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                 if not FoV_modelexists:
@@ -281,8 +282,6 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 paramCUBE     = tu.convert_paramarray(paramREF,img_hdr,cube_hdr,type=setupdic['source_model'].lower(),verbose=verbosefull)
             elif FoV_modelexists:
                 modelimgsize = model_file
-                # pdb.set_trace()
-                # sys.exit(' ---> convert model to WCS (pixel scale) of IFU... not enabled yet')
 
             if refimagemodel2cubewcs:
                 cubehdu       = pyfits.PrimaryHDU(cube_data[0,:,:])
@@ -296,11 +295,11 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                         cubehdu.header.append((key,cubewcshdr[key],cubewcshdr[key]),end=True)
 
                 if not FoV_modelexists:
-                        modelimgsize = cube_data.shape[1:]
+                    modelimgsize = cube_data.shape[1:]
                 else:
                     projected_image, footprint = reproject_interp( (FoV_modeldata, img_wcs), cube_wcs2D, shape_out=cube_data.shape[1:])
-                    paramCUBE    = projected_image
-                    #paramCUBE    = tu.reshape_array(FoV_modeldata,cube_data.shape[1:],pixcombine='sum')
+                    projected_image[np.isnan(projected_image)] = 0.0 # replacing NaNs from reprojection with 0s
+                    paramCUBE  = projected_image/np.sum(projected_image)*np.sum(FoV_modeldata) # normalize and scale to match FoV_modeldata
 
                 tmf.save_modelimage(cubewcsimg,paramCUBE,modelimgsize,modeltype=setupdic['source_model'].lower(),
                                     param_init=False,clobber=clobber,outputhdr=cubehdu.header,verbose=verbosefull)
@@ -329,9 +328,11 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             rescubename = setupdic['models_directory']+'/'+\
                           datacube.split('/')[-1].replace('.fits','_'+setupdic['residual_cube_ext']+'_'+setupdic['source_model']+'.fits')
 
+            psfcubename  = setupdic['models_directory']+'/'+datacube.split('/')[-1].replace('.fits','_tdose_psfcube_'+
+                                                                                            setupdic['source_model']+'.fits')
             if modeldatacube:
                 tdose.model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_variance,paramCUBE,cube_hdr,paramPSF,
-                                     clobber=clobber,verbose=verbose,verbosefull=verbosefull)
+                                     psfcubename=psfcubename,clobber=clobber,verbose=verbose,verbosefull=verbosefull)
             else:
                 if verbose: print ' >>> Skipping modeling of data cube (assume it exists)'
 
@@ -346,9 +347,13 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                                       '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
                 model_cube        = pyfits.open(modcubename)[setupdic['cube_extension']].data
                 layer_scales      = pyfits.open(modcubename)['WAVESCL'].data
+                if setupdic['source_model'].lower() != 'aperture':
+                    psfcube       = pyfits.open(psfcubename)[setupdic['cube_extension']].data
+                else:
+                    psfcube       = None
 
                 source_model_cube = tmc.gen_source_model_cube(layer_scales,model_cube.shape,paramCUBE,paramPSF,
-                                                              paramtype=setupdic['source_model'],
+                                                              psfcube=psfcube,paramtype=setupdic['source_model'],
                                                               psfparamtype=setupdic['psf_type'],save_modelcube=True,
                                                               cubename=sourcecubename,clobber=clobber,outputhdr=cube_hdr,
                                                               verbose=verbosefull)
@@ -367,7 +372,11 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             smc_file           = sourcecubename
             smc_ext            = setupdic['cube_extension']
 
+            # - - - - - - - - - - - - Putting together source association dictionary - - - - - - - - - - - - -
             SAD    = collections.OrderedDict()
+
+            if FoV_modelexists:
+                sourceids = np.array([extid])
 
             if extid == -9999:
                 if setupdic['sources_to_extract'] == 'all':
@@ -397,6 +406,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 else:
                     sourceent = np.where(sourceids == extid)[0]
                     SAD[str("%.10d" % int(extid))] =  sourceent.tolist()
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
             if store1Dspectra:
                 specfiles  = tes.extract_spectra(model_cube_file,model_cube_ext=setupdic['cube_extension'],
@@ -732,7 +742,7 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                 wcs_in     = wcs.WCS(striphdr)
                 skycoord   = SkyCoord(cut_sourcedat[ii][setupdic['sourcecat_racol']],
                                       cut_sourcedat[ii][setupdic['sourcecat_deccol']], frame='icrs', unit='deg')
-                pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in)
+                pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in,origin=1)
                 cut_sourcedat[ii][setupdic['sourcecat_xposcol']] = pixcoord[0]
                 cut_sourcedat[ii][setupdic['sourcecat_yposcol']] = pixcoord[1]
 
@@ -1022,7 +1032,7 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_variance,paramCUBE,cube_hdr,paramPSF,
-                   clobber=False,verbose=True,verbosefull=True):
+                   psfcubename=False,clobber=False,verbose=True,verbosefull=True):
     """
     Modeling the data cube
 
@@ -1036,6 +1046,7 @@ def model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_varianc
     paramCUBE               Parmaters of objects in data cube
     cube_hdr                Header of data cube
     paramPSF                Parameters of PSF
+    psfcubename             Name of PSF cube to use for numerical convolutions
     clobber                 Overwrite files if they exist
     verbose                 Toggle verbosity
     verbosefull             Toggle extended verbosity
@@ -1075,11 +1086,15 @@ def model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_varianc
     optimizer    = setupdic['model_cube_optimizer']
     paramtype    = setupdic['source_model']
     psfparamtype = setupdic['psf_type']
+    if paramtype.lower() != 'aperture':
+        psfcube  = pyfits.open(psfcubename)[setupdic['cube_extension']].data
+    else:
+        psfcube  = None
 
     cube_noise = np.sqrt(cube_variance) # turn variance cube into standard deviation
     cube_model, layer_scales = tmc.gen_fullmodel(cube_data,paramCUBE,paramPSF,paramtype=paramtype,
                                                  psfparamtype=psfparamtype,noisecube=cube_noise,save_modelcube=True,
-                                                 cubename=modcubename,clobber=clobber,
+                                                 cubename=modcubename,clobber=clobber,psfcube=psfcube,
                                                  fit_source_scales=True,outputhdr=cube_hdr,verbose=verbosefull,
                                                  returnresidual=rescubename,optimize_method=optimizer,model_layers=layers)
 
@@ -1108,7 +1123,7 @@ def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobb
     else:
         sys.exit(' ---> '+setupdic['psf_FWHM_evolve']+' is an invalid choice for the psf_FWHM_evolve setup parameter ')
 
-    if setupdic['psf_type'].lower() == 'gauss':
+    if (setupdic['psf_type'].lower() == 'gauss') or (setupdic['psf_type'].lower() == 'kernel_gauss'):
         xpos,ypos,fluxscale,angle = 0.0, 0.0, 1.0, 0.0
         paramPSF                  = []
         for layer in np.arange(cube_data.shape[0]):
@@ -1119,7 +1134,8 @@ def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobb
         sys.exit(' ---> '+setupdic['psf_type']+' is an invalid choice for the psf_type setup parameter ')
 
     if setupdic['psf_savecube']:
-        psfcubename = setupdic['models_directory']+'/'+datacube.split('/')[-1].replace('.fits','_tdose_psfcube.fits')
+        psfcubename = setupdic['models_directory']+'/'+datacube.split('/')[-1].replace('.fits','_tdose_psfcube_'+
+                                                                                       setupdic['source_model']+'.fits')
         if verbose: print ' - Storing PSF cube to fits file \n   '+psfcubename
 
         if os.path.isfile(psfcubename) & (clobber == False):
@@ -1133,10 +1149,14 @@ def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobb
                     sys.stdout.flush()
 
                 if setupdic['psf_type'].lower() == 'gauss':
-                    mu_psf    = paramPSF[ll][0:2]
+                    #mu_psf    = paramPSF[ll][0:2]
                     cov_psf   = tu.build_2D_cov_matrix(paramPSF[ll][4],paramPSF[ll][3],paramPSF[ll][5],verbose=False)
                     psfimg    = tu.gen_2Dgauss(np.asarray(cube_data.shape[1:]).tolist(),cov_psf,1.0,
                                                show2Dgauss=False,verbose=False)
+                elif setupdic['psf_type'].lower() == 'kernel_gauss':
+                    kernel_sigma = paramPSF[ll][3]
+                    kernel       = astropy.convolution.Gaussian2DKernel(kernel_sigma,x_size=cube_data.shape[2],y_size=cube_data.shape[1])
+                    psfimg       = kernel.array
                 else:
                     sys.exit(' ---> '+setupdic['psf_type']+' is an invalid choice for the psf_type setup parameter ')
 
