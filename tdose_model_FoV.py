@@ -585,14 +585,21 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, useroll=Fals
         if useroll:
             gauss2D_positioned = tu.roll_2Dprofile(gauss2Dimg,paramset[0:2],showprofiles=False)
         else:
-            gauss2D_positioned = tu.shift_2Dprofile(gauss2Dimg,paramset[0:2],showprofiles=False)
+            gauss2D_positioned = tu.shift_2Dprofile(gauss2Dimg,paramset[0:2],showprofiles=False,origin=1)
+
         modelimage         = modelimage + gauss2D_positioned
 
     if verbose: print '\n   done'
     if showmodelimg:
-        plt.imshow(modelimage,interpolation='none', vmin=1e-5, vmax=np.max(modelimage), norm=mpl.colors.LogNorm())
+        centerdot = modelimage*0.0
+        center    = [int(modelimage.shape[0]/2.),int(modelimage.shape[1]/2.)]
+        centerdot[center[1],center[0]] = 2.0*np.max(modelimage)
+        print ' - Center of image:',center
+        plt.imshow(modelimage-centerdot,interpolation=None,origin='lower')#, vmin=1e-5, vmax=np.max(modelimage), norm=mpl.colors.LogNorm())
+        plt.colorbar()
         plt.title('Model Image')
-        plt.show()
+        plt.savefig('./GeneratedModelImage.pdf')
+        plt.clf()
 
     return modelimage
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
