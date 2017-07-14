@@ -55,6 +55,10 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
         if setup_arr[ii,1].lower() == 'true':  val = True
         if setup_arr[ii,1].lower() == 'false': val = False
 
+        if setup_arr[ii,0] in setup_dic.keys():
+            sys.exit(' Setup parameter "'+setup_arr[ii,0]+'" appers multiple times in the setup file\n             '+
+                     setupfile)
+
         dirs = ['sources_to_extract','model_cube_layers','cutout_sizes']
         if (setup_arr[ii,0] in dirs) & ('/' in setup_arr[ii,1]):
             val = setup_arr[ii,1]
@@ -162,9 +166,9 @@ source_model           gauss                              # The source model to 
                                                           #   gauss          Each source is modeled as a multivariate gaussian using the source_catalog input as starting point
                                                           #   galfit         The sources in the field-of-view are defined based on GALFIT header parameters; if all components are        # Not enabled yet
                                                           #                  Gaussians an analytical convolution is performed. Otherwise numerical convolution is used.                   # Not enabled yet
-                                                          #   modelimg       A model image exists, e.g., obtained with Galfit, in modelimg_directory. This prevents dis-entangling of     # Not enabled yet
-                                                          #                  different objects, i.e., the provided model image is assumed to represent the 1 object in the field-of-view. # Not enabled yet
-                                                          #                  If the model image is not found a gaussian model of the FoV (source_model=gauss) is performed instead        # Not enabled yet
+                                                          #   modelimg       A model image exists, e.g., obtained with Galfit, in modelimg_directory. This prevents dis-entangling of
+                                                          #                  different objects, i.e., the provided model image is assumed to represent the 1 object in the field-of-view.
+                                                          #                  If the model image is not found a gaussian model of the FoV (source_model=gauss) is performed instead.
                                                           #   aperture       A simple aperture extraction on the datacubes is performed, i.e., no modeling of sources.
 
 # - - - - - - - - - - - - - - - - - - - - - - - - GAUSS MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -190,10 +194,10 @@ galfit_directory       /path/models_galfit/               # If source_model = ga
 galfit_model_extension 2                                  # Fits extension containing galfit model with model parameters of each source in header.
 
 # - - - - - - - - - - - - - - - - - - - - - - - - MODEL IMAGE SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
-modelimg_directory    /path/models_cutouts/               # If source_model = modelimg provide the path to directory containing the individual source models
-                                                          # TDOSE will look for model_*ref_image*.fits (incl. the cutout string if model_cutouts=True)
-                                                          # If no model is found (and no galfit model is found) a source_model=gauss run on the object will be performed instead.
-modelimg_extension     2                                  # Fits extension containing model
+modelimg_directory     /path/models_cutouts/              # If source_model = modelimg provide the path to directory containing the individual source models
+                                                          # TDOSE will look for model_*ref_image*.fits (incl. the cutout string if model_cutouts=True). If no model is found the object is skipped
+
+modelimg_extension     0                                  # Fits extension containing model
 
 # - - - - - - - - - - - - - - - - - - - - - - - - APERTURE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - -
 aperture_size          1.5                                # Radius of apertures to use given in arc seconds
@@ -208,9 +212,10 @@ psf_FWHM_evolve        linear                             # Evolution of the FWH
 psf_FWHMp0             0.940                              # p0 parameter to use when determining wavelength dependence of PSF
 psf_FWHMp1             -3.182e-5                          # p1 parameter to use when determining wavelength dependence of PSF
 psf_savecube           True                               # To save fits file containing the PSF cube set psf_savecube = True
+                                                          # This cube is used for the "source_model = modelimg" numerical PSF convolution
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - CUBE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
-model_cube_layers       all                               # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
+model_cube_layers      all                                # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
                                                           # To model source-specific layers provide ascii file containing ID layerlow and layerhigh.
                                                           # If layerlow=all and layerhigh=all all layers will be modeled for particular source
 model_cube_optimizer   matrix                             # The optimizer to use when matching flux levels in cube layers:
@@ -597,8 +602,8 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
     Generating a 2D gaussian with specified parameters
 
     --- INPUT ---
-    size          The dimensions of the array to return. Expects [y-size,x-size].
-                  The 2D gauss will be positioned in the center of a (+/-x-size/2., +/-y-size/2) sized array
+    size          The dimensions of the array to return. Expects [ysize,xsize].
+                  The 2D gauss will be positioned in the center of the array (shifting by 0.5 pixel if dimensions even)
     cov           Covariance matrix of gaussian, i.e., variances and rotation
                   Can be build with cov = build_2D_cov_matrix(stdx,stdy,angle)
     scale         Scaling the 2D gaussian. By default scale = 1 returns normalized 2D Gaussian.
@@ -613,6 +618,7 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
     import tdose_utilities as tu
     covmatrix   = tu.build_2D_cov_matrix(4,1,5)
     gauss2Dimg  = tu.gen_2Dgauss([20,40],covmatrix,5,show2Dgauss=True)
+    gauss2Dimg  = tu.gen_2Dgauss([9,9],covmatrix,1,show2Dgauss=True)
 
     sigmax          = 3.2
     sigmay          = 1.5
@@ -628,7 +634,8 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
         mvn     = multivariate_normal([0, 0], cov)
 
         if verbose: print ' - Setting up grid to populate with 2D gauss PDF'
-        x, y = np.mgrid[-np.ceil(size[0]/2.):np.floor(size[0]/2.):1.0, -np.ceil(size[1]/2.):np.floor(size[1]/2.):1.0]
+        #x, y = np.mgrid[-np.ceil(size[0]/2.):np.floor(size[0]/2.):1.0, -np.ceil(size[1]/2.):np.floor(size[1]/2.):1.0] #LT170707
+        x, y = np.mgrid[-np.floor(size[0]/2.):np.ceil(size[0]/2.):1.0, -np.floor(size[1]/2.):np.ceil(size[1]/2.):1.0]
         pos = np.zeros(x.shape + (2,))
         pos[:, :, 0] = x; pos[:, :, 1] = y
 
@@ -644,18 +651,43 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
                 MTXexpr                      = np.dot(np.dot(np.transpose(coordMmean),np.linalg.inv(cov)),coordMmean)
                 gauss2D[int(ypix),int(xpix)] = norm * np.exp(-0.5 * MTXexpr)
 
+    if float(size[0]/2.) - float(int(size[0]/2.)) == 0.0:
+        if verbose: print ' - Y-dimension even; adding shift of 0.5 to y-dimension to center at sub-pixel level'
+        yshift = -0.5
+        ypos   = np.asarray(size[0])/2.0+yshift
+    else:
+        ypos   = np.asarray(size[0])/2.0
+
+    if float(size[1]/2.) - float(int(size[1]/2.)) == 0.0:
+        if verbose: print ' - X-dimension even; adding shift of 0.5 to x-dimension to center at sub-pixel level'
+        xshift = -0.5
+        xpos   = np.asarray(size[1])/2.0+xshift
+    else:
+        xpos   = np.asarray(size[1])/2.0
+
+    gauss2D = tu.shift_2Dprofile(gauss2D,[ypos,xpos],showprofiles=False,origin=0)
+
     if verbose: print ' - Scaling 2D gaussian by a factor '+str(scale)
     gauss2D = gauss2D*scale
 
     if show2Dgauss:
-        if verbose: print ' - Displaying resulting image of 2D gaussian'
-        plt.imshow(gauss2D,interpolation='none')
+        savename = './Generated2Dgauss.pdf'
+        if verbose: print ' - Displaying resulting image of 2D gaussian in '+savename
+        centerdot = gauss2D*0.0
+        center    = [int(gauss2D.shape[0]/2.),int(gauss2D.shape[1]/2.)]
+        centerdot[center[1],center[0]] = 2.0*np.max(gauss2D)
+        print ' - Center of gaussian (pixelized - marked in plot):',center
+        print ' - Center of gaussian (subpixel)                  :',[ypos,xpos]
+        plt.imshow(gauss2D-centerdot,interpolation=None,origin='lower')
+        plt.colorbar()
         plt.title('Generated 2D Gauss')
-        plt.show()
-
+        plt.savefig(savename)
+        plt.clf()
+        #plt.show()
+        pdb.set_trace()
     return gauss2D
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False):
+def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False,origin=1):
     """
     Shift 2D profile to given position in array by rolling it in x and y.
     Can move by sub-pixel amount using interpolation
@@ -663,21 +695,31 @@ def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False):
     --- INPUT ---
     profile         profile to shift
     position        position to move center of image (profile) to:  [ypos,xpos]
-                    NB! assumes position value starts from 0, i.e., if providing pixel values subtract 1.
     padvalue        the values to padd the images with when shifting profile
+    origin          The orging of the position values. If 0-based pixels postions the
+                    center calculation is updated to refelect this.
     showprofiles    Show profile when shifted?
 
     --- EXAMPLE OF USE ---
 
     """
     profile_dim = profile.shape
+    yposition   = np.asarray(position[0])
+    xposition   = np.asarray(position[1])
 
-    yshift = position[0]-profile_dim[0]/2.
-    xshift = position[1]-profile_dim[1]/2.
+    #if (yposition > 16) & (yposition < 16.4): pdb.set_trace()
+    if origin == 1:
+        yposition = yposition - 0.5
+        xposition = xposition - 0.5
+
+    ycenter     = np.float(profile_dim[0])/2. #+ 1.#5 # pixels to get true center as plotted by DS9
+    xcenter     = np.float(profile_dim[1])/2. #+ 1.#5 # pixels to get true center as plotted by DS9
+
+    yshift = np.float(yposition)-ycenter
+    xshift = np.float(xposition)-xcenter
+
     profile_shifted = scipy.ndimage.interpolation.shift(profile, [yshift,xshift], output=None, order=3,
                                                         mode='constant', cval=0.0, prefilter=True)
-
-    #profile_shifted = np.roll(np.roll(profile,yroll,axis=0),xroll,axis=1)
 
     if showprofiles:
         vmaxval = np.max(profile_shifted)
@@ -696,7 +738,6 @@ def roll_2Dprofile(profile,position,padvalue=0.0,showprofiles=False):
     --- INPUT ---
     profile         profile to shift
     position        position to move center of image (profile) to:  [ypos,xpos]
-                    NB! assumes position value starts from 0, i.e., if providing pixel values subtract 1.
     padvalue        the values to padd the images with when shifting profile
     showprofiles    Show profile when shifted?
 
@@ -777,23 +818,28 @@ def analytic_convolution_gaussian(mu1,covar1,mu2,covar2):
     return muconv, covarconv
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def numerical_convolution_image(imgarray,kerneltype,saveimg=True,imgmask=None,fill_value=0.0,
-                                norm_kernel=False,convolveFFT=False,verbose=True):
+def numerical_convolution_image(imgarray,kerneltype,saveimg=False,clobber=False,imgmask=None,fill_value=0.0,
+                                norm_kernel=False,convolveFFT=False,use_scipy_conv=False,verbose=True):
     """
     Perform numerical convolution on numpy array (image)
 
     --- INPUT ---
-    imgarray      numpy array containing image to convolve
-    kerneltype    Provide either a numpy array containing the kernel or an astropy kernel
-                  to use for the convolution. E.g.,
-                      astropy.convolution.Moffat2DKernel()
-                      astropy.convolution.Gaussian2DKernel()
-    saveimg       Save image of convolved imgarray
-    imgmask       Mask of image array to apply during convolution
-    fill_value    Fill value to use in convolution
-    norm_kernel   To normalize the convolution kernel set this keyword to True
-    convolveFFT   To convolve the image in fourier space set convolveFFT=True
-    verbose       Toggle verbosity
+    imgarray        numpy array containing image to convolve
+    kerneltype      Provide either a numpy array containing the kernel or an astropy kernel
+                    to use for the convolution. E.g.,
+                        astropy.convolution.Moffat2DKernel()
+                        astropy.convolution.Gaussian2DKernel()
+    saveimg         Save image of convolved imgarray
+    clobber         Overwrite existing files?
+    imgmask         Mask of image array to apply during convolution
+    fill_value      Fill value to use in convolution
+    norm_kernel     To normalize the convolution kernel set this keyword to True
+    convolveFFT     To convolve the image in fourier space set convolveFFT=True
+    use_scipy_conv  Whenever the kernel and imgarray has odd dimensions, default is to use the
+                    Astropy convolution where NaNs are treated with interpolation. To force a
+                    scipy.ndimage convolution set use_scipy_conv=True (this is the convolution
+                    used if any of the kernel (and imgarray) dimensions are even).
+    verbose         Toggle verbosity
 
     """
     if kerneltype is np.array:
@@ -805,17 +851,34 @@ def numerical_convolution_image(imgarray,kerneltype,saveimg=True,imgmask=None,fi
 
     if verbose: print ' - Convolving image with a '+kernelstr+' kernel using astropy convolution routines'
 
-    if convolveFFT:
-        img_conv = convolution.convolve_fft(imgarray, kernel, boundary='fill',
-                                            fill_value=fill_value,normalize_kernel=norm_kernel, mask=imgmask,
-                                            crop=True, return_fft=False, fft_pad=None,
-                                            psf_pad=None, interpolate_nan=False, quiet=False,
-                                            ignore_edge_zeros=False, min_wt=0.0)
+
+    if (np.float(kernel.shape[0]/2.0)-np.int(kernel.shape[0]/2.0) == 0) or \
+       (np.float(kernel.shape[1]/2.0)-np.int(kernel.shape[1]/2.0) == 0) or use_scipy_conv:
+        if verbose: print ' - Convolving using scipy.ndimage.filters.convolve() as at leat one dimension of kernel is even; ' \
+                          'no interpolation over NaN values'
+        if norm_kernel & (np.sum(kernel) != 1.0):
+            kernel = kernel/np.sum(kernel)
+
+        # shift to sub-pixel center for even dimensions
+        intpixcen = [kernel.shape[0]/2.0+0.5,kernel.shape[1]/2.0+0.5]
+        kernel    = tu.shift_2Dprofile(kernel,intpixcen,showprofiles=False,origin=0)
+
+        img_conv  = scipy.ndimage.filters.convolve(imgarray,kernel,cval=fill_value,origin=0)
     else:
-        img_conv = convolution.convolve(imgarray, kernel, boundary='fill',
-                                        fill_value=fill_value, normalize_kernel=norm_kernel, mask=imgmask)
+        if convolveFFT:
+            if verbose: print ' - Convolving using astropy.convolution.convolve_fft(); interpolation over NaN values'
+            img_conv = convolution.convolve_fft(imgarray, kernel, boundary='fill',
+                                                fill_value=fill_value,normalize_kernel=norm_kernel, mask=imgmask,
+                                                crop=True, return_fft=False, fft_pad=None,
+                                                psf_pad=None, interpolate_nan=False, quiet=False,
+                                                ignore_edge_zeros=False, min_wt=0.0)
+        else:
+            if verbose: print ' - Convolving using astropy.convolution.convolve(); interpolation over NaN values'
+            img_conv = convolution.convolve(imgarray, kernel, boundary='fill',
+                                            fill_value=fill_value, normalize_kernel=norm_kernel, mask=imgmask)
     if saveimg:
-        sys.exit(' ---> Saving convolved image is not enabled yet')
+        hdulist = pyfits.PrimaryHDU(data=img_conv)
+        hdulist.writeto(saveimg,clobber=clobber)
 
     return img_conv
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -848,10 +911,10 @@ def convert_paramarray(paramarray,hdr,hdr_new,type='gauss',verbose=True):
         Nparam    = 6
         Nobj      = len(paramarray)/Nparam
         for oo in xrange(Nobj):
-            ypix      = paramarray[oo*Nparam+0]-1.
-            xpix      = paramarray[oo*Nparam+1]-1.
-            skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcs_in)
-            pixcoord  = wcs.utils.skycoord_to_pixel(skycoord,wcs_out)# + np.array([1,1])
+            ypix      = paramarray[oo*Nparam+0]
+            xpix      = paramarray[oo*Nparam+1]
+            skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcs_in,origin=1)
+            pixcoord  = wcs.utils.skycoord_to_pixel(skycoord,wcs_out,origin=1)
             paramconv[oo*Nparam+0] = pixcoord[1]
             paramconv[oo*Nparam+1] = pixcoord[0]
             paramconv[oo*Nparam+2] = paramarray[oo*Nparam+2]
@@ -862,10 +925,10 @@ def convert_paramarray(paramarray,hdr,hdr_new,type='gauss',verbose=True):
         Nparam    = 4
         Nobj      = len(paramarray)/4
         for oo in xrange(Nobj):
-            ypix      = paramarray[oo*Nparam+0]-1.
-            xpix      = paramarray[oo*Nparam+1]-1.
-            skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcs_in)
-            pixcoord  = wcs.utils.skycoord_to_pixel(skycoord,wcs_out)# + np.array([1,1])
+            ypix      = paramarray[oo*Nparam+0]
+            xpix      = paramarray[oo*Nparam+1]
+            skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcs_in,origin=1)
+            pixcoord  = wcs.utils.skycoord_to_pixel(skycoord,wcs_out,origin=1)
             paramconv[oo*Nparam+0] = pixcoord[1]
             paramconv[oo*Nparam+1] = pixcoord[0]
             paramconv[oo*Nparam+2] = paramarray[oo*Nparam+2]*scale_in[0]/scale_out[0]
@@ -1204,7 +1267,7 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
     for oo in xrange(Nobj):
         ypix      = paramarray[oo*Nparam+0]
         xpix      = paramarray[oo*Nparam+1]
-        skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcsinfo)
+        skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcsinfo,origin=1)
         dec       = skycoord.dec.value
         ra        = skycoord.ra.value
 
@@ -1271,7 +1334,7 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
         striphdr   = tu.strip_header(imgheader.copy(),verbose=verbose)
         wcs_in     = wcs.WCS(striphdr)
         skycoord   = SkyCoord(ras, decs, frame='icrs', unit='deg')
-        pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in)
+        pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in,origin=1)
         xpos       = pixcoord[0]
         ypos       = pixcoord[1]
 
@@ -1385,7 +1448,7 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
             ypos       = sourcedat[deccol][oo]
         else:
             skycoord   = SkyCoord(sourcedat[racol][oo], sourcedat[deccol][oo], frame='icrs', unit='deg')
-            pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in)
+            pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in,origin=1)
             xpos, ypos = pixcoord[0], pixcoord[1]
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         xpos = xpos
@@ -2637,4 +2700,437 @@ def gen_overview_plot_spec(ax,spec1Dfile,title='Spec Title?',xrange=[4800,9300],
         ax.set_xticks([])
         ax.set_yticks([])
 
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500],yrange=[0.95,1.05],vmin=-0.005,vmax=0.005,verbose=True):
+    """
+    Generating plots comparing an analytic run modeling a objects with single Gaussains (source_model = gauss) to
+    a numerical convolution run using the model produced in the 'gauss' run as input (source_model = modelimg).
+
+    Useful, to ensure that the TDOSE outputs from idealized cases are identical (single objects in FoV)
+    which they should be; at least within numerical uncertainties and differences in the convolutions applied.
+
+    If an aperture run also exists, the 1D spectrum of these outpus will be overplotted as well
+
+    --- INPUT ---
+    setupfile     Setupfile used for the 'source_model = gauss'. Should be the exact same same setup used for the
+                  'source_model = modelimg' run apart from the change of the 'source_model' keyword, and that the
+                  *tdose_modelimage_gauss.fits was used as model (renaming it accoringly and positioning it in the
+                  the 'modelimg_directory').
+    plotcubelayer The layer in the cube to plot for the PSF cubes and the model cubes
+    verbose       Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    setupfile = '/Users/kschmidt/work/TDOSE/tdose_setup_candels-cdfs-02.txt'
+    plotdir   = '/Volumes/DATABCKUP2/TDOSEextractions/comparisonplots/'
+    tu.test_analyticVSnumerical(setupfile,plotdir,1200,xrange=[6000,6500])
+    tu.test_analyticVSnumerical(setupfile,plotdir,1200,xrange=[4700,9300])
+
+    """
+    setupdic  = tu.load_setup(setupfile=setupfile)
+    specdir   = setupdic['spec1D_directory']
+    moddir    = setupdic['models_directory']
+    modimgdir = setupdic['modelimg_directory']
+    objids    = setupdic['sources_to_extract']
+    mie       = setupdic['model_image_ext']
+    mce       = setupdic['model_cube_ext']
+    smce      = setupdic['source_model_cube_ext']
+
+    for objid in objids:
+        base_cube = setupdic['data_cube'].split('/')[-1].split('.fit')[0]
+        base_ref  = setupdic['ref_image'].split('/')[-1].split('.fit')[0]
+        idstr     = str("%.10d" % objid)
+        if setupdic['model_cutouts']:
+            cutstr, cutoutsize, cut_img, cut_cube, cut_variance, cut_sourcecat = tu.get_datinfo(objid,setupdic)
+            base_cube = base_cube+cutstr
+            base_ref  = base_ref+cutstr
+
+        aperturespec = specdir+setupdic['spec1D_name']+'_aperture_'+idstr+'.fits'
+        if os.path.isfile(aperturespec):
+            aperture  = True
+            ta_spec   = pyfits.open(aperturespec)[1].data
+        else:
+            aperture  = False
+
+        tg_spec   = pyfits.open(specdir+setupdic['spec1D_name']+'_gauss_'+idstr+'.fits')[1].data
+        tg_smc    = pyfits.open(moddir+base_cube+'_'+smce+'_gauss.fits')['DATA_DCBGC'].data
+        tg_model  = pyfits.open(moddir+base_cube+'_'+mce+'_gauss.fits')['DATA_DCBGC'].data
+        tg_psf    = pyfits.open(moddir+base_cube+'_tdose_psfcube_gauss.fits')['DATA_DCBGC'].data
+        tg_scales = pyfits.open(moddir+base_cube+'_'+mce+'_gauss.fits')['WAVESCL'].data
+        tg_acsmod = pyfits.open(moddir+base_ref+'_'+mie+'_gauss.fits')[0].data
+        tg_cubWCS = pyfits.open(moddir+base_ref+'_'+mie+'_cubeWCS_gauss.fits')[0].data
+
+        sc_spec   = pyfits.open(specdir+setupdic['spec1D_name']+'_modelimg_'+idstr+'.fits')[1].data
+        sc_smc    = pyfits.open(moddir+base_cube+'_'+smce+'_modelimg.fits')['DATA_DCBGC'].data
+        sc_model  = pyfits.open(moddir+base_cube+'_'+mce+'_modelimg.fits')['DATA_DCBGC'].data
+        sc_psf    = pyfits.open(moddir+base_cube+'_tdose_psfcube_modelimg.fits')['DATA_DCBGC'].data
+        sc_scales = pyfits.open(moddir+base_cube+'_'+mce+'_modelimg.fits')['WAVESCL'].data
+        sc_acsmod = pyfits.open(modimgdir+'model_'+base_ref+'.fits')[0].data
+        sc_cubWCS = pyfits.open(moddir+base_ref+'_'+mie+'_cubeWCS_modelimg.fits')[0].data
+
+        rangestr = '_wavelength'+str(xrange[0]).replace('.','p')+'to'+str(xrange[1]).replace('.','p')
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        plotname = outputdir+'spec1D'+rangestr+'_'+idstr+'.pdf'
+        if verbose: print ' - Generating '+plotname
+        fig = plt.figure(figsize=(10, 3))
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
+        Fsize  = 10
+        lthick = 1
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif',size=Fsize)
+        plt.rc('xtick', labelsize=Fsize)
+        plt.rc('ytick', labelsize=Fsize)
+        plt.clf()
+        plt.ioff()
+
+        plt.plot(tg_spec['wave'],tg_spec['flux'],'-k',label='TDOSE "gauss"',lw=lthick)
+        plt.plot(sc_spec['wave'],sc_spec['flux'],'--r',label='TDOSE "modelimg"',lw=lthick)
+        if aperture:
+            plt.plot(ta_spec['wave'],ta_spec['flux'],'-b',label='TDOSE "aperture"',lw=lthick)
+
+        plt.plot([tg_spec['wave'][plotcubelayer],tg_spec['wave'][plotcubelayer]],plt.gca().get_ylim(),'--k',alpha=0.5,
+                 label='Layer '+str(plotcubelayer))
+
+        plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
+        plt.ylabel('1D Flux', fontsize=Fsize)
+
+        plt.xlim(xrange)
+        #plt.ylim(yrange))
+
+        leg = plt.legend(fancybox=True, loc='upper right',prop={'size':Fsize},ncol=1,numpoints=1,
+                         bbox_to_anchor=(1.25, 1.03))  # add the legend
+        leg.get_frame().set_alpha(0.7)
+
+        plt.savefig(plotname)
+        plt.clf()
+        plt.close('all')
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        plotname = outputdir+'s2n1D'+rangestr+'_'+idstr+'.pdf'
+        if verbose: print ' - Generating '+plotname
+        fig = plt.figure(figsize=(10, 3))
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
+        Fsize  = 10
+        lthick = 1
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif',size=Fsize)
+        plt.rc('xtick', labelsize=Fsize)
+        plt.rc('ytick', labelsize=Fsize)
+        plt.clf()
+        plt.ioff()
+
+        plt.plot(tg_spec['wave'],tg_spec['s2n'],'-k',label='TDOSE "gauss"',lw=lthick)
+        plt.plot(sc_spec['wave'],sc_spec['s2n'],'--r',label='TDOSE "modelimg"',lw=lthick)
+        if aperture:
+            plt.plot(ta_spec['wave'],ta_spec['s2n'],'-b',label='TDOSE "aperture"',lw=lthick)
+
+        plt.plot([tg_spec['wave'][plotcubelayer],tg_spec['wave'][plotcubelayer]],plt.gca().get_ylim(),'--k',alpha=0.5,
+                 label='Layer '+str(plotcubelayer))
+
+        plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
+        plt.ylabel('S/N', fontsize=Fsize)
+
+        plt.xlim(xrange)
+        #plt.ylim(yrange)
+
+        leg = plt.legend(fancybox=True, loc='upper right',prop={'size':Fsize},ncol=1,numpoints=1,
+                         bbox_to_anchor=(1.25, 1.03))  # add the legend
+        leg.get_frame().set_alpha(0.7)
+
+        plt.savefig(plotname)
+        plt.clf()
+        plt.close('all')
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        plotname = outputdir+'spec_gaussOVERmodelimg'+rangestr+'_'+idstr+'.pdf'
+        if verbose: print ' - Generating '+plotname
+        fig = plt.figure(figsize=(10, 3))
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
+        Fsize  = 10
+        lthick = 1
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif',size=Fsize)
+        plt.rc('xtick', labelsize=Fsize)
+        plt.rc('ytick', labelsize=Fsize)
+        plt.clf()
+        plt.ioff()
+
+        ratio = tg_spec['flux']/sc_spec['flux']
+        plt.plot(tg_spec['wave'],ratio,'-k',lw=lthick)
+        plt.plot(xrange,[1.0,1.0],'--k',alpha=0.5,lw=lthick)
+
+        plt.plot([tg_spec['wave'][plotcubelayer],tg_spec['wave'][plotcubelayer]],yrange,'--k',alpha=0.5,
+                 label='Layer '+str(plotcubelayer))
+
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   mean(gauss/modelimg)   = ',np.mean(ratio)
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss/modelimg) = ',np.median(ratio)
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   std(gauss/modelimg)    = ',np.std(ratio)
+
+        plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
+        plt.ylabel('1D Flux: "gauss" / "modelimg"', fontsize=Fsize)
+
+        plt.xlim(xrange)
+        plt.ylim(yrange)
+
+        leg = plt.legend(fancybox=True, loc='upper right',prop={'size':Fsize},ncol=1,numpoints=1,
+                         bbox_to_anchor=(1.25, 1.03))  # add the legend
+        leg.get_frame().set_alpha(0.7)
+
+        plt.savefig(plotname)
+        plt.clf()
+        plt.close('all')
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        plotname = outputdir+'wavescl_gaussOVERmodelimg'+rangestr+'_'+idstr+'.pdf'
+        if verbose: print ' - Generating '+plotname
+        fig = plt.figure(figsize=(10, 3))
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
+        Fsize  = 10
+        lthick = 1
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif',size=Fsize)
+        plt.rc('xtick', labelsize=Fsize)
+        plt.rc('ytick', labelsize=Fsize)
+        plt.clf()
+        plt.ioff()
+
+        ratio = tg_scales/sc_scales
+        plt.plot(tg_spec['wave'],ratio[0],'-k',lw=lthick)
+        plt.plot(xrange,[1.0,1.0],'--k',alpha=0.5,lw=lthick)
+
+        plt.plot([tg_spec['wave'][plotcubelayer],tg_spec['wave'][plotcubelayer]],yrange,'--k',alpha=0.5,
+                 label='Layer '+str(plotcubelayer))
+
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   mean(gauss/modelimg)   = ',np.mean(ratio)
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss/modelimg) = ',np.median(ratio)
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   std(gauss/modelimg)    = ',np.std(ratio)
+
+        plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
+        plt.ylabel('Wavescale: "gauss" / "modelimg"', fontsize=Fsize)
+
+        plt.xlim(xrange)
+        plt.ylim(yrange)
+
+        leg = plt.legend(fancybox=True, loc='upper right',prop={'size':Fsize},ncol=1,numpoints=1,
+                         bbox_to_anchor=(1.25, 1.03))  # add the legend
+        leg.get_frame().set_alpha(0.7)
+
+        plt.savefig(plotname)
+        plt.clf()
+        plt.close('all')
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        plotname = outputdir+'sumSMC_gaussOVERmodelimg'+rangestr+'_'+idstr+'.pdf'
+        if verbose: print ' - Generating '+plotname
+        fig = plt.figure(figsize=(10, 3))
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
+        Fsize  = 10
+        lthick = 1
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif',size=Fsize)
+        plt.rc('xtick', labelsize=Fsize)
+        plt.rc('ytick', labelsize=Fsize)
+        plt.clf()
+        plt.ioff()
+
+        ratio = np.sum(np.sum(tg_smc[0],axis=1),axis=1) / np.sum(np.sum(sc_smc[0],axis=1),axis=1)
+        plt.plot(tg_spec['wave'],ratio,'-k',lw=lthick)
+        plt.plot(xrange,[1.0,1.0],'--k',alpha=0.5,lw=lthick)
+
+        plt.plot([tg_spec['wave'][plotcubelayer],tg_spec['wave'][plotcubelayer]],yrange,'--k',alpha=0.5,
+                 label='Layer '+str(plotcubelayer))
+
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   mean(gauss/modelimg)   = ',np.mean(ratio)
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss/modelimg) = ',np.median(ratio)
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   std(gauss/modelimg)    = ',np.std(ratio)
+
+        plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
+        plt.ylabel('sum(SMC): "gauss" / "modelimg"', fontsize=Fsize)
+
+        plt.xlim(xrange)
+        plt.ylim(yrange)
+
+        leg = plt.legend(fancybox=True, loc='upper right',prop={'size':Fsize},ncol=1,numpoints=1,
+                         bbox_to_anchor=(1.25, 1.03))  # add the legend
+        leg.get_frame().set_alpha(0.7)
+
+        plt.savefig(plotname)
+        plt.clf()
+        plt.close('all')
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        plotname = outputdir+'acsmodel_gaussMINUSmodelimg_'+idstr+'.pdf'
+        if verbose: print ' - Generating '+plotname
+        fig = plt.figure(figsize=(3, 3))
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.15, right=0.9, bottom=0.1, top=0.9)
+        Fsize  = 10
+        lthick = 1
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif',size=Fsize)
+        plt.rc('xtick', labelsize=Fsize)
+        plt.rc('ytick', labelsize=Fsize)
+        plt.clf()
+        plt.ioff()
+
+        plt.imshow(tg_acsmod-sc_acsmod,interpolation=None,origin='lower',vmin=vmin,vmax=vmax)
+        plt.colorbar()
+
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   sum(gauss-modelimg)     = ',np.sum(tg_acsmod-sc_acsmod)
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss-modelimg)  = ',np.median(tg_acsmod-sc_acsmod)
+
+        plt.savefig(plotname)
+        plt.clf()
+        plt.close('all')
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        plotname = outputdir+'acsmodelWCS_gaussMINUSmodelimg_'+idstr+'.pdf'
+        if verbose: print ' - Generating '+plotname
+        fig = plt.figure(figsize=(3, 3))
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.15, right=0.9, bottom=0.1, top=0.9)
+        Fsize  = 10
+        lthick = 1
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif',size=Fsize)
+        plt.rc('xtick', labelsize=Fsize)
+        plt.rc('ytick', labelsize=Fsize)
+        plt.clf()
+        plt.ioff()
+
+        plt.imshow(tg_cubWCS-sc_cubWCS,interpolation=None,origin='lower',vmin=vmin,vmax=vmax)
+        plt.colorbar()
+
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   sum(gauss-modelimg)   = ',np.sum(tg_cubWCS-sc_cubWCS)
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss-modelimg)= ',np.median(tg_cubWCS-sc_cubWCS)
+
+        plt.savefig(plotname)
+        plt.clf()
+        plt.close('all')
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        plotname = outputdir+'modelcubeSum1D_gaussOVERmodelimg_'+idstr+'.pdf'
+        if verbose: print ' - Generating '+plotname
+        fig = plt.figure(figsize=(10, 3))
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
+        Fsize  = 10
+        lthick = 1
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif',size=Fsize)
+        plt.rc('xtick', labelsize=Fsize)
+        plt.rc('ytick', labelsize=Fsize)
+        plt.clf()
+        plt.ioff()
+
+        tg_modelsum = np.sum(np.sum(tg_model,axis=1),axis=1)
+        sc_modelsum = np.sum(np.sum(sc_model,axis=1),axis=1)
+        ratio       = tg_modelsum/sc_modelsum
+
+        plt.plot(tg_spec['wave'],ratio,'-k',lw=lthick)
+        plt.plot(xrange,[1.0,1.0],'--k',alpha=0.5,lw=lthick)
+
+        plt.plot([tg_spec['wave'][plotcubelayer],tg_spec['wave'][plotcubelayer]],yrange,'--k',alpha=0.5,
+                 label='Layer '+str(plotcubelayer))
+
+
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   mean(gauss/modelimg)   = ',np.mean(ratio)
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss/modelimg) = ',np.median(ratio)
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   std(gauss/modelimg)    = ',np.std(ratio)
+
+        plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
+        plt.ylabel('sum(modelcube): "gauss" / "modelimg"', fontsize=Fsize)
+
+        plt.xlim(xrange)
+        plt.ylim(yrange)
+
+        leg = plt.legend(fancybox=True, loc='upper right',prop={'size':Fsize},ncol=1,numpoints=1,
+                         bbox_to_anchor=(1.25, 1.03))  # add the legend
+        leg.get_frame().set_alpha(0.7)
+
+        plt.savefig(plotname)
+        plt.clf()
+        plt.close('all')
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        plotname = outputdir+'modelcubeSum1DOVERWavescl_'+idstr+'.pdf'
+        if verbose: print ' - Generating '+plotname
+        fig = plt.figure(figsize=(10, 3))
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
+        Fsize  = 10
+        lthick = 1
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif',size=Fsize)
+        plt.rc('xtick', labelsize=Fsize)
+        plt.rc('ytick', labelsize=Fsize)
+        plt.clf()
+        plt.ioff()
+
+        plt.plot(tg_spec['wave'],tg_modelsum/tg_scales[0],'-k',label='TDOSE "gauss"',lw=lthick)
+        plt.plot(sc_spec['wave'],sc_modelsum/sc_scales[0],'--r',label='TDOSE "modelimg"',lw=lthick)
+
+        plt.plot(xrange,[1.0,1.0],'--k',alpha=0.5,lw=lthick)
+
+        plt.plot([tg_spec['wave'][plotcubelayer],tg_spec['wave'][plotcubelayer]],yrange,'--k',alpha=0.5,
+                 label='Layer '+str(plotcubelayer))
+
+        plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
+        plt.ylabel('sum(modelcube) / wavescales', fontsize=Fsize)
+
+        plt.xlim(xrange)
+        plt.ylim(yrange)
+
+        leg = plt.legend(fancybox=True, loc='upper right',prop={'size':Fsize},ncol=1,numpoints=1,
+                         bbox_to_anchor=(1.25, 1.03))  # add the legend
+        leg.get_frame().set_alpha(0.7)
+
+        plt.savefig(plotname)
+        plt.clf()
+        plt.close('all')
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        plotname = outputdir+'modelcube_gaussMINUSmodelimg_'+idstr+'.pdf'
+        if verbose: print ' - Generating '+plotname
+        fig = plt.figure(figsize=(3, 3))
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.15, right=0.9, bottom=0.1, top=0.9)
+        Fsize  = 10
+        lthick = 1
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif',size=Fsize)
+        plt.rc('xtick', labelsize=Fsize)
+        plt.rc('ytick', labelsize=Fsize)
+        plt.clf()
+        plt.ioff()
+
+        plt.imshow(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:],interpolation=None,origin='lower',vmin=vmin,vmax=vmax)
+        plt.colorbar()
+
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   sum(gauss-modelimg)     = ',np.sum(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:])
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss-modelimg)  = ',np.median(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:])
+
+        plt.savefig(plotname)
+        plt.clf()
+        plt.close('all')
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        plotname = outputdir+'psfcube_gaussMINUSmodelimg_'+idstr+'.pdf'
+        if verbose: print ' - Generating '+plotname
+        fig = plt.figure(figsize=(3, 3))
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.15, right=0.9, bottom=0.1, top=0.9)
+        Fsize  = 10
+        lthick = 1
+        plt.rc('text', usetex=True)
+        plt.rc('font', family='serif',size=Fsize)
+        plt.rc('xtick', labelsize=Fsize)
+        plt.rc('ytick', labelsize=Fsize)
+        plt.clf()
+        plt.ioff()
+
+        plt.imshow(tg_psf[plotcubelayer,:,:]-sc_psf[plotcubelayer,:,:],interpolation=None,origin='lower',vmin=vmin,vmax=vmax)
+        plt.colorbar()
+
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   sum(gauss-modelimg)       = ',np.sum(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:])
+        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss-modelimg)    = ',np.median(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:])
+
+        plt.savefig(plotname)
+        plt.clf()
+        plt.close('all')
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
