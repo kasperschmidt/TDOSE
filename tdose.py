@@ -175,18 +175,19 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
             skipthisobj = False
             if skipextractedobjects or (int(extid) in skipidlist):
-                nameext2check = setupdic['spec1D_name']+'_'+setupdic['source_model']
-                id2check      = str("%.10d" % extid)
-                specdir2check = setupdic['spec1D_directory']
-                file2check    = specdir2check+nameext2check+'_'+id2check+'.fits'
-                if os.path.isfile(file2check):
+                if int(extid) in skipidlist:
                     skipthisobj = True
-                    if int(extid) in skipidlist:
-                        infostr = infostr+'  -> skipping per request           '
-                    else:
-                        infostr = infostr+'  -> skipping as spectrum exists    '
+                    infostr = infostr+'  -> skipping per request           '
                 else:
-                    infostr = infostr+'                                            '
+                    nameext2check = setupdic['spec1D_name']+'_'+setupdic['source_model']
+                    id2check      = str("%.10d" % extid)
+                    specdir2check = setupdic['spec1D_directory']
+                    file2check    = specdir2check+nameext2check+'_'+id2check+'.fits'
+                    if os.path.isfile(file2check):
+                        skipthisobj = True
+                        infostr = infostr+'  -> skipping as spectrum exists    '
+                    else:
+                        infostr = infostr+'                                            '
 
             if verbose:
                 if verbosefull:
