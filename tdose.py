@@ -28,7 +28,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                        performcutout=True,generatesourcecat=True,modelrefimage=True,refimagemodel2cubewcs=True,
                        definePSF=True,modeldatacube=True,createsourcecube=True,store1Dspectra=True,plot1Dspectra=True,
                        plotS2Nspectra=True,save_init_model_output=False,clobber=False,verbose=True,verbosefull=False,
-                       logterminaloutput=False,skipextractedobjects=False):
+                       logterminaloutput=False,skipextractedobjects=False,skipspecificobjects=None):
     """
     Perform extraction of spectra from data cube based on information in TDOSE setup file
 
@@ -62,9 +62,12 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                            a matching 'spec1D_name'*.fits file in the 'spec1D_directory', set this keyword to True.
                            NB This keyword does not apply to the cutouts; to ignore this process use the
                               performcutout and generatesourcecat keywords.
-                           NB Note that spectra extracted with parent ids will not be recognized and therfore skipped.
+                           NB Note that spectra extracted with parent ids will not be recognized and therefore skipped.
                               Hence only a standard TDOSE extraction will work in combinations with skipextractedobjects
                               However, this generates all nescessary models and files for post-modeling parent extractions.
+    skipspecificobjects    In addition to skipextractedobjects to skip specific objects (irrespective of whether they
+                           have already been extracted or not) provide a list of source IDs to this keyword.
+                           The same causions mentioned under skipextractedobjects applies to skipspecificobjects as well.
 
     --- EXAMPLE OF USE ---
     import tdose
@@ -80,7 +83,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
     # defining function within the routine that can be called by the output logger at the end
     def tdosefunction(setupfile,performcutout,generatesourcecat,modelrefimage,refimagemodel2cubewcs,
                        definePSF,modeldatacube,createsourcecube,store1Dspectra,plot1Dspectra,
-                       plotS2Nspectra,save_init_model_output,clobber,verbose,verbosefull,skipextractedobjects):
+                       plotS2Nspectra,save_init_model_output,clobber,verbose,verbosefull,skipextractedobjects,skipspecificobjects):
         start_time = time.clock()
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbose: print '=================================================================================================='
@@ -157,6 +160,11 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             Nloops    = Nextractions
             loopnames = extractids
 
+        if skipspecificobjects is None:
+            skipidlist = []
+        else:
+            skipidlist = [int(id) for id in skipspecificobjects]
+
         for oo, extid in enumerate(loopnames):
             if verbose:
                 infostr = ' - Starting extraction for object '+str("%4.f" % (oo+1))+' / '+\
@@ -166,14 +174,17 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             imgstr, imgsize, refimg, datacube, variancecube, sourcecat = tu.get_datinfo(extid,setupdic)
 
             skipthisobj = False
-            if skipextractedobjects:
+            if skipextractedobjects or (int(extid) in skipidlist):
                 nameext2check = setupdic['spec1D_name']+'_'+setupdic['source_model']
                 id2check      = str("%.10d" % extid)
                 specdir2check = setupdic['spec1D_directory']
                 file2check    = specdir2check+nameext2check+'_'+id2check+'.fits'
                 if os.path.isfile(file2check):
                     skipthisobj = True
-                    infostr = infostr+'  -> skipping as spectrum exists '
+                    if int(extid) in skipidlist:
+                        infostr = infostr+'  -> skipping per request           '
+                    else:
+                        infostr = infostr+'  -> skipping as spectrum exists    '
                 else:
                     infostr = infostr+'                                            '
 
@@ -522,14 +533,16 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
         tdosefunction(setupfile,performcutout,generatesourcecat,modelrefimage,refimagemodel2cubewcs,
                       definePSF,modeldatacube,createsourcecube,store1Dspectra,plot1Dspectra,
-                      plotS2Nspectra,save_init_model_output,clobber,verbose,verbosefull,skipextractedobjects)
+                      plotS2Nspectra,save_init_model_output,clobber,verbose,verbosefull,
+                      skipextractedobjects,skipspecificobjects)
 
         sys.stdout = sys.__stdout__
         f.close()
     else:
         tdosefunction(setupfile,performcutout,generatesourcecat,modelrefimage,refimagemodel2cubewcs,
                       definePSF,modeldatacube,createsourcecube,store1Dspectra,plot1Dspectra,
-                      plotS2Nspectra,save_init_model_output,clobber,verbose,verbosefull,skipextractedobjects)
+                      plotS2Nspectra,save_init_model_output,clobber,verbose,verbosefull,
+                      skipextractedobjects,skipspecificobjects)
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generateFullFoVmodel=True,generateOverviewPlots=True,
@@ -537,7 +550,7 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generate
                                     performcutout=True,generatesourcecat=True,modelrefimage=True,refimagemodel2cubewcs=True,
                                     definePSF=True,modeldatacube=True,createsourcecube=True,store1Dspectra=True,plot1Dspectra=True,
                                     plotS2Nspectra=True,save_init_model_output=False,clobber=False,verbosePE=True,verbosefull=False,
-                                    logterminaloutput=True,skipextractedobjects=False):
+                                    logterminaloutput=True,skipextractedobjects=False,skipspecificobjects=None):
     """
     Run multiple TDOSE setups in parallel
 
@@ -565,7 +578,7 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generate
     def parallel_worker(setupfiles,performcutout,generatesourcecat,modelrefimage,refimagemodel2cubewcs,definePSF,
                         modeldatacube,createsourcecube,store1Dspectra,plot1Dspectra,plotS2Nspectra,
                         save_init_model_output,clobber,verbose,verbosefull,logterminaloutput,
-                        generateFullFoVmodel=True,generateOverviewPlots=True,skipextractedobjects=False):
+                        generateFullFoVmodel=True,generateOverviewPlots=True,skipextractedobjects=False,skipspecificobjects=None):
         """
         Multiprocessing worker function
         """
@@ -576,7 +589,7 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generate
                                      store1Dspectra=store1Dspectra,plot1Dspectra=plot1Dspectra,plotS2Nspectra=plotS2Nspectra,
                                      save_init_model_output=save_init_model_output,clobber=clobber,
                                      verbose=verbose,verbosefull=verbosefull,logterminaloutput=logterminaloutput,
-                                     skipextractedobjects=skipextractedobjects)
+                                     skipextractedobjects=skipextractedobjects,skipspecificobject=skipspecificobjects)
             if generateFullFoVmodel:
                 tdose.gen_fullFoV_from_cutouts(setupfile)
 
@@ -626,7 +639,7 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generate
                                                refimagemodel2cubewcs,definePSF,modeldatacube,createsourcecube,store1Dspectra,
                                                plot1Dspectra,plotS2Nspectra,save_init_model_output,clobber,
                                                verbose,verbosefull,logterminaloutput,
-                                               generateFullFoVmodel,generateOverviewPlots,skipextractedobjects),
+                                               generateFullFoVmodel,generateOverviewPlots,skipextractedobjects,skipspecificobjects),
                                       name  = jobname)
 
         jobs.append(job)
