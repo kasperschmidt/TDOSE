@@ -589,7 +589,7 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generate
                                      store1Dspectra=store1Dspectra,plot1Dspectra=plot1Dspectra,plotS2Nspectra=plotS2Nspectra,
                                      save_init_model_output=save_init_model_output,clobber=clobber,
                                      verbose=verbose,verbosefull=verbosefull,logterminaloutput=logterminaloutput,
-                                     skipextractedobjects=skipextractedobjects,skipspecificobject=skipspecificobjects)
+                                     skipextractedobjects=skipextractedobjects,skipspecificobjects=skipspecificobjects)
             if generateFullFoVmodel:
                 tdose.gen_fullFoV_from_cutouts(setupfile)
 
