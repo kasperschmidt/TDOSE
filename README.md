@@ -7,7 +7,7 @@ README for the optimal spectral extraction software TDOSE.
 
 [//]: # "presented by Schmidt et al. (some day)"
 
-TDOSE will be presented in a forthcoming publication ([Schmidt et al. in prep.](#referemces)), until this publication has appeared, please reference the TDOSE GitHub repository (https://github.com/kasperschmidt/TDOSE) if you find TDOSE useful. 
+TDOSE will be presented in a forthcoming publication ([Schmidt et al. in prep.](#references)), until this publication has appeared, please reference the TDOSE GitHub repository (https://github.com/kasperschmidt/TDOSE) if you find TDOSE useful. 
 
 ## Table of Content
 <a href="TDOSElogo.png"><img src="TDOSElogo.png" align="right" height="300" ></a>
@@ -28,7 +28,7 @@ TDOSE will be presented in a forthcoming publication ([Schmidt et al. in prep.](
 
 The software for Three Dimensional Optimal Spectra Extraction (TDOSE) is build in Python to extract spectra of both point sources and extended sources from integral field data cubes, i.e., three dimensional data with spatial (x,y) and wavelength dimensions (λ). TDOSE was build for spectral extraction from MUSE data cubes. However, TDOSE was also build to be as broadly appliable as possible. Therefore, TDOSE should be able to extract 1D spectra from any 3D FITS data cube.
 
-TDOSE broadly follows the point source extraction software described by [Kamann, Wisotzki and Roth (2013)](#referemces) adding the capability of modeling sources as non-point sources, e.g., via (multiple) multivariate gaussian modeling or GALFIT modeling (in which case the GALFIT FITS model of the reference image is passed directly to TDOSE), and using these non-point source models to guide the three dimensional extractions to approach optimal spectral extraction of extended objects.
+TDOSE broadly follows the point source extraction software described by [Kamann, Wisotzki and Roth (2013)](#references) adding the capability of modeling sources as non-point sources, e.g., via (multiple) multivariate gaussian modeling or GALFIT modeling (in which case the GALFIT FITS model of the reference image is passed directly to TDOSE), and using these non-point source models to guide the three dimensional extractions to approach optimal spectral extraction of extended objects.
 
 As each sources in the field-of-view are modeled and the fluxes are optimized simultaneously in each individual wavelength layer, TDOSE also offers natural de-blending of neighboring sources.
 
