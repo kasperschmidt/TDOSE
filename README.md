@@ -20,7 +20,7 @@ TDOSE will be presented in a forthcoming publication (Schmidt et al.), until thi
 - [Running TDOSE](#running-tdose)
   - [Default Run](#default-run-of-tdose)
   - [Individual TDOSE Function Runs](#individual-tdose-function-runs)
-- [TDOSE Output Overview](#tdose-utput-verview)  
+- [TDOSE Output Overview](#tdose-output-overview) 
 - [References](#references)
 - [Schematic Overview of TDOSE](#schematic-overview-of-tdose)
 
@@ -209,7 +209,7 @@ The following presents and overview and description of the outputs that can be g
 - [Kamann, Wisotzki and Roth (2013)](http://adsabs.harvard.edu/abs/2013A%26A...549A..71K)
 
 ## Schematic Overview of TDOSE
-TDOSE_illustration_v2.png (displayed below) presents a schemative overview of the different elements making up TDOSE and the workflow for the available extractions. The outputs shown are described in [TDOSE Output Overview](#tdose-utput-verview) above.
+TDOSE_illustration_v2.png (displayed below) presents a schemative overview of the different elements making up TDOSE and the workflow for the available extractions. The outputs shown are described in [TDOSE Output Overview](#tdose-output-overview) above.
 
 <a href="TDOSE_illustration.png"><img src="TDOSE_illustration_v2.png" align="center" height="1200" ></a>
 
