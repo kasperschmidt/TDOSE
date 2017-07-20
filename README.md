@@ -209,6 +209,7 @@ The following presents and overview and description of the main outputs generate
 ## References 
 
 - [Kamann, Wisotzki and Roth (2013)](http://adsabs.harvard.edu/abs/2013A%26A...549A..71K)
+- Schmidt et al. in prep.
 
 ## Schematic Overview of TDOSE
 `TDOSE_illustration_v2.png` (displayed below) presents a schemative overview of the different elements making up TDOSE and the workflow for the available extractions. The outputs shown are described in [TDOSE Output Overview](#tdose-output-overview) above.
