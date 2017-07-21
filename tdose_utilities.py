@@ -132,17 +132,13 @@ img_extension          0                                  # Name or number of fi
 wht_image              /path/refimage_wht.fits            # Path and name of fits file containing weight map of reference image (only cut out; useful for galfit modeling)
 wht_extension          0                                  # Name or number of fits extension containing weight map
 
-ref_image_model        None                               # If a model of the reference image exists provide it here.
-                                                          # If a model is provided the PSF convolution and flux optimization is done numerically.
-model_extension        0                                  # Name or number of fits extension containing reference image model
-
 source_catalog         /path/tdose_sourcecat.fits         # Path and name of source catalog containing sources to extract spectra for
 sourcecat_IDcol        id                                 # Column containing source IDs in source_catalog
 sourcecat_xposcol      x_image                            # Column containing x pixel position in source_catalog
 sourcecat_yposcol      y_image                            # Column containing y pixel position in source_catalog
 sourcecat_racol        ra                                 # Column containing ra  position in source_catalog (used to position cutouts if model_cutouts = True)
 sourcecat_deccol       dec                                # Column containing dec position in source_catalog (used to position cutouts if model_cutouts = True)
-sourcecat_fluxcol      fluxscale                          # Column containing dec position in source_catalog (used to position cutouts if model_cutouts = True)
+sourcecat_fluxcol      fluxscale                          # Column containing a flux scale used for the modeling if no gauss_guess is provided
 sourcecat_parentIDcol  None                               # Column containing parent source IDs grouping source IDs into objects. Set to None to used id column
                                                           # corresponding to assigning each source to a single object
                                                           # if not None the parentid is used to group source models when storing 1D spectra. All models keep sources separate.
