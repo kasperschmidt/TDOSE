@@ -219,69 +219,65 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if verbosefull: print '--------------------------------------------------------------------------------------------------'
-            if setupdic['ref_image_model'] is None:
-                FoV_modelexists = False
-                # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-                if setupdic['source_model'] == 'galfit':
-                    if verbosefull: print ' Looking for galfit model of source ... ',
-                    model_file    = setupdic['galfit_directory']+'galfit_'+\
-                                    setupdic['ref_image'].split('/')[-1].replace('.fits','_output.fits')
+            FoV_modelexists = False
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if setupdic['source_model'] == 'galfit':
+                if verbosefull: print ' Looking for galfit model of source ... ',
+                model_file    = setupdic['galfit_directory']+'galfit_'+\
+                                setupdic['ref_image'].split('/')[-1].replace('.fits','_output.fits')
 
-                    if setupdic['model_cutouts']:
-                        model_file = model_file.replace('.fits',imgstr+'.fits')
+                if setupdic['model_cutouts']:
+                    model_file = model_file.replace('.fits',imgstr+'.fits')
 
-                    if os.path.isfile(model_file):
-                        if verbosefull: print 'found it, so it will be used'
-                        FoV_modelexists = True
-                        FoV_modelfile   = model_file
-                        FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['galfit_model_extension']].data
+                if os.path.isfile(model_file):
+                    if verbosefull: print 'found it, so it will be used'
+                    FoV_modelexists = True
+                    FoV_modelfile   = model_file
+                    FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['galfit_model_extension']].data
+                else:
+                    if verbosefull: print 'did not find it, so will generate gaussian TDOSE model'
+                sys.exit(' ---> Loading parameters and building model from galfit output is not enabled yet; sorry. '
+                         'If you have the model try the source_model = modelimg setup')
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if setupdic['source_model'] == 'modelimg':
+                if verbosefull: print ' Looking for ref_image model of source in "modelimg_directory"... ',
+                model_file    = setupdic['modelimg_directory']+'model_'+\
+                                setupdic['ref_image'].split('/')[-1]
+                if setupdic['model_cutouts']:
+                    model_file = model_file.replace('.fits',imgstr+'.fits')
+
+                if os.path.isfile(model_file):
+                    if verbosefull: print 'found it, so it will be used'
+                    FoV_modelexists = True
+                    FoV_modelfile   = model_file
+                    FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
+                else:
+                    if verbosefull: print 'did not find the model\n    '+model_file+'\n   so will skip object '+str(extid)
+                    continue
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if not FoV_modelexists:
+                if verbosefull: print ' TDOSE: Model reference image                               '+\
+                                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+                regionfile    = setupdic['models_directory']+'/'+\
+                                refimg.split('/')[-1].replace('.fits','_'+setupdic['model_param_reg']+'_'+setupdic['source_model']+'.reg')
+                modelparam    = modelimg.replace('.fits','_objparam.fits') # output from reference image modeling
+
+                names         = []
+                sourceids     = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']]
+                for ii, sid in enumerate(sourceids):
+                    if setupdic['sourcecat_parentIDcol'] is not None:
+                        parentid = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']][ii]
+                        namestr  = str(parentid)+'>>'+str(sid)
                     else:
-                        if verbosefull: print 'did not find it, so will generate gaussian TDOSE model'
-                    sys.exit(' ---> Loading parameters and building model from galfit output is not enabled yet; sorry. '
-                             'If you have the model try the source_model = modelimg setup')
-                # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-                if setupdic['source_model'] == 'modelimg':
-                    if verbosefull: print ' Looking for ref_image model of source in "modelimg_directory"... ',
-                    model_file    = setupdic['modelimg_directory']+'model_'+\
-                                    setupdic['ref_image'].split('/')[-1]
-                    if setupdic['model_cutouts']:
-                        model_file = model_file.replace('.fits',imgstr+'.fits')
+                        namestr  = str(sid)
+                    names.append(namestr)
 
-                    if os.path.isfile(model_file):
-                        if verbosefull: print 'found it, so it will be used'
-                        FoV_modelexists = True
-                        FoV_modelfile   = model_file
-                        FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
-                    else:
-                        if verbosefull: print 'did not find the model\n    '+model_file+'\n   so will skip object '+str(extid)
-                        continue
-                # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-                if not FoV_modelexists:
-                    if verbosefull: print ' TDOSE: Model reference image                               '+\
-                                          '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
-                    regionfile    = setupdic['models_directory']+'/'+\
-                                    refimg.split('/')[-1].replace('.fits','_'+setupdic['model_param_reg']+'_'+setupdic['source_model']+'.reg')
-                    modelparam    = modelimg.replace('.fits','_objparam.fits') # output from reference image modeling
-
-                    names         = []
-                    sourceids     = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']]
-                    for ii, sid in enumerate(sourceids):
-                        if setupdic['sourcecat_parentIDcol'] is not None:
-                            parentid = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']][ii]
-                            namestr  = str(parentid)+'>>'+str(sid)
-                        else:
-                            namestr  = str(sid)
-                        names.append(namestr)
-
-                    if modelrefimage:
-                        tdose.model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
-                                             save_init_model_output=save_init_model_output,clobber=clobber,verbose=verbose,
-                                             verbosefull=verbosefull)
-                    else:
-                        if verbose: print ' >>> Skipping modeling reference image (assume models exist)'
-            else:
-                if verbose: print ' >>> Skipping modeling reference image (model provided in setup file)'
-                sys.exit(' ---> Use of the setup parameter ref_image_model is not enabled yet and must be set to "None"; sorry.')
+                if modelrefimage:
+                    tdose.model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
+                                         save_init_model_output=save_init_model_output,clobber=clobber,verbose=verbose,
+                                         verbosefull=verbosefull)
+                else:
+                    if verbose: print ' >>> Skipping modeling reference image (assume models exist)'
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if verbosefull: print '--------------------------------------------------------------------------------------------------'
             if verbosefull: print ' TDOSE: Convert ref. image model to cube WCS                '+\
