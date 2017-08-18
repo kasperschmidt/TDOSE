@@ -588,7 +588,7 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generate
                                      verbose=verbose,verbosefull=verbosefull,logterminaloutput=logterminaloutput,
                                      skipextractedobjects=skipextractedobjects,skipspecificobjects=skipspecificobjects)
             if generateFullFoVmodel:
-                tdose.gen_fullFoV_from_cutouts(setupfile)
+                tdose.gen_fullFoV_from_cutouts(setupfile,clobber=clobber)
 
             if generateOverviewPlots:
                 tu.gen_overview_plot('all',setupfile)
