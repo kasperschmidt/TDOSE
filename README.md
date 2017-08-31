@@ -14,6 +14,7 @@ TDOSE will be presented in a forthcoming publication ([Schmidt et al. in prep.](
 
 - [Description](#description)
 - [Script Overview](#script-overview)
+- [Installing TDOSE](#installing-tdose)
 - [Dependencies and Requirements](#dependencies-and-requirements)
   - [Standard Packages](#standard-packages)
   - [Special Packages](#special-packages)
@@ -58,9 +59,20 @@ A schematic overview is provided in the [Schematic Overview of TDOSE](#schematic
 - `tdose_build_mock_cube.py`
   - Routines and functions used to build mock data cubes which can be useful for testing and trouble shooting TDOSE.
 
+## Installing TDOSE
+
+TDOSE does not require any installation. Simply cloning the TDOSE GitHub repository (or downloading one of the releses from https://github.com/kasperschmidt/TDOSE/releases) and importing the scripts should be enough.
+Hence, TDOSE is "installed" by doing:
+`git clone https://github.com/kasperschmidt/TDOSE.git`
+After adding the TDOSE directory to the `PYTHONPATH` or changing location to the TDOSE directory, TDOSE can be imported in `python` with:
+```python
+import tdose
+```
+If the import does not generate any errors, i.e., if the TDOSE dependencies and requirements listed in the following section are met, TDOSE is ready for use.
+
 ## Dependencies and Requirements
 
-TDOSE is written in Python and uses a range of default packages included in standard installations of Python. As TDOSE was developed using STScI's [`ureka`](http://ssb.stsci.edu/ureka/) Python instalation, "standard" here referes to packages available from a `ureka` (or [`AstroConda`](#http://astroconda.readthedocs.io/en/latest/)) STScI Python installation. A list of 'special packages' that needs to be installed on top of that to get TDOSE running are also give below.
+TDOSE is written in Python and uses a range of default packages included in standard installations of Python. As TDOSE was developed using STScI's [`ureka`](http://ssb.stsci.edu/ureka/) Python instalation, "standard" here referes to packages available from a `ureka` (or [`AstroConda`](#http://astroconda.readthedocs.io/en/latest/)) STScI Python installation. A list of 'special packages' that needs to be installed on top of that to get TDOSE running are also given below.
 
 ### Standard Packages
 
