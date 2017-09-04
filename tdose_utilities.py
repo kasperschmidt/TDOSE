@@ -8,6 +8,7 @@ from astropy import units
 from astropy import convolution
 import astropy.convolution as ac # convolve, convolve_fft, Moffat2DKernel, Gaussian2DKernel
 from astropy.coordinates import SkyCoord
+from astropy.modeling.models import Sersic2D
 from astropy.wcs.utils import pixel_to_skycoord
 from astropy.nddata import Cutout2D
 import pyfits
@@ -610,7 +611,7 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
     method        Method to use for generating 2D gaussian:
                    'scipy'    Using the class multivariate_normal from the scipy.stats library
                    'matrix'   Use direct matrix expression for PDF of 2D gaussian               (slow!)
-    show2Dgauss   display image of generated 2D gaussian
+    show2Dgauss   Save plot of generated 2D gaussian
     verbose       Toggler verbosity
 
     --- EXAMPLE OF USE ---
@@ -683,6 +684,67 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
         plt.savefig(savename)
         plt.clf()
     return gauss2D
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_2Dsersic(size,parameters,normalize=False,show2Dsersic=False,verbose=True):
+    """
+    Generating a 2D sersic with specified parameters using astropy's generator
+
+    --- INPUT ---
+    size          The dimensions of the array to return. Expects [ysize,xsize].
+                  The 2D gauss will be positioned in the center of the array (shifting by 0.5 pixel if dimensions even)
+    parameters    List of the sersic parameters.
+                  Expects [amplitude,effective radiues,Sersic index,ellipticity,rotation angle]
+                  The rotation angle should be in degrees, counterclockwise from the positive x-axis.
+    normalize     Normalize the profile so sum(img) = amplitude. Otherwise, amplitude central surface brightness,
+                  within the effective radius provided
+    show2Dsersic  Save plot of generated 2D Sersic
+    verbose       Toggler verbosity
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    size       = [20,40]
+    size       = [67,67]
+    parameters = [1,6.7,1.7,1.0-0.67,17.76-90]
+    sersic2D   = tu.gen_2Dsersic(size,parameters,show2Dsersic=True)
+
+    """
+    x, y  = np.meshgrid(np.arange(size[1]), np.arange(size[0]))
+    #x, y  = np.mgrid[-np.floor(size[0]/2.):np.ceil(size[0]/2.):1.0, -np.floor(size[1]/2.):np.ceil(size[1]/2.):1.0]
+
+    if float(size[0]/2.) - float(int(size[0]/2.)) == 0.0:
+        if verbose: print ' - Y-dimension even; adding shift of 0.5 to y-dimension to center at sub-pixel level'
+        yshift = -0.5
+        ypos   = np.asarray(size[0])/2.0+yshift
+    else:
+        ypos   = np.asarray(size[0])/2.0
+
+    if float(size[1]/2.) - float(int(size[1]/2.)) == 0.0:
+        if verbose: print ' - X-dimension even; adding shift of 0.5 to x-dimension to center at sub-pixel level'
+        xshift = -0.5
+        xpos   = np.asarray(size[1])/2.0+xshift
+    else:
+        xpos   = np.asarray(size[1])/2.0
+
+    model = Sersic2D(amplitude=parameters[0], r_eff=parameters[1], n=parameters[2], ellip=parameters[3],
+                     theta=parameters[4]*np.pi/180., x_0=xpos, y_0=ypos)
+    sersic2D = model(x, y)
+
+    if normalize:
+        sersic2D = sersic2D / np.sum(sersic2D) * parameters[0]
+
+    if show2Dsersic:
+        savename = './Generated2Dsersic.pdf'
+        if verbose: print ' - Displaying resulting image of 2D sersic in '+savename
+        centerdot = sersic2D*0.0
+        center    = [int(sersic2D.shape[0]/2.),int(sersic2D.shape[1]/2.)]
+        # centerdot[center[1],center[0]] = 2.0*np.max(sersic2D)
+        print ' - Center of Sersic (pixelized - marked in plot):',center
+        plt.imshow(sersic2D,interpolation=None,origin='lower')
+        plt.colorbar()
+        plt.title('Generated 2D Sersic')
+        plt.savefig(savename)
+        plt.clf()
+    return sersic2D
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False,origin=1):
     """
@@ -2183,7 +2245,7 @@ def galfit_convertmodel2cube(galfitmodelfiles,magzeropoints=25.947,includewcs=Tr
 
     --- EXAMPLE OF USE ---
     fileG   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model8685multicomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id8685_cutout7p0x7p0arcsec.fits' # Gauss components
-    fileS   = '/Users/kschmidt/work/MUSE/uvEmissionlineSearch/imgblocks_josieGALFITmodels/imgblock_101011026.fits' # Sersic components
+    fileS   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model8685multicomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id9262_cutout2p0x2p0arcsec.fits' # Sersic components
 
     param  = tu.galfit_convertmodel2cube([fileG,fileS])
 
@@ -2213,32 +2275,48 @@ def galfit_convertmodel2cube(galfitmodelfiles,magzeropoints=25.947,includewcs=Tr
 
         cube = np.zeros([Ncomp,modelarr.shape[0],modelarr.shape[1]])
         for cc,component in enumerate(compkeys):
-            compnumber = str(cc+1)
-            x,y        = tu.gen_gridcomponents(modelarr.shape)
+            compnumber    = str(cc+1)
+
             if headerinfo[component] == 'gaussian':
                 xc, xcerr     = tu.galfit_getheadervalue(compnumber,'XC',headerinfo)
                 yc, ycerr     = tu.galfit_getheadervalue(compnumber,'YC',headerinfo)
                 mag, magerr   = tu.galfit_getheadervalue(compnumber,'MAG',headerinfo)
-                fwhm, fwhmerr = tu.galfit_getheadervalue(compnumber,'FWHM',headerinfo)
                 ar, arerr     = tu.galfit_getheadervalue(compnumber,'AR',headerinfo)
                 pa, paerr     = tu.galfit_getheadervalue(compnumber,'PA',headerinfo)
-
-                sigma2fwhm    = 2.0*np.sqrt(2.0*np.log(2.0)) # ~ 2.355
-                sigmax        = fwhm/sigma2fwhm
-                sigmay        = fwhm/sigma2fwhm*ar
                 fluxscale     = 10.0**((mag-magzeropoints[gg])/(-2.5)) # GALFIT readme eq 34
                 angle         = pa + 90.0
 
-                covmatrix   = tu.build_2D_cov_matrix(sigmax,sigmay,angle,verbose=verbose)
-                gauss2Dimg  = tu.gen_2Dgauss(modelarr.shape,covmatrix,fluxscale,show2Dgauss=True,verbose=verbose,method='scipy')
-                img_shift   = tu.shift_2Dprofile(gauss2Dimg,[yc,xc],padvalue=0.0,showprofiles=True,origin=1)
+                fwhm, fwhmerr = tu.galfit_getheadervalue(compnumber,'FWHM',headerinfo)
+                sigma2fwhm    = 2.0*np.sqrt(2.0*np.log(2.0)) # ~ 2.355
+                sigmax        = fwhm/sigma2fwhm
+                sigmay        = fwhm/sigma2fwhm*ar
 
-                cubelayer   = img_shift
+                covmatrix     = tu.build_2D_cov_matrix(sigmax,sigmay,angle,verbose=verbose)
+                gauss2Dimg    = tu.gen_2Dgauss(modelarr.shape,covmatrix,fluxscale,show2Dgauss=True,verbose=verbose,method='scipy')
+                img_shift     = tu.shift_2Dprofile(gauss2Dimg,[yc,xc],padvalue=0.0,showprofiles=True,origin=1)
+                cubelayer     = img_shift
 
             elif headerinfo[component] == 'sersic':
-                X = -99
+                xc, xcerr     = tu.galfit_getheadervalue(compnumber,'XC',headerinfo)
+                yc, ycerr     = tu.galfit_getheadervalue(compnumber,'YC',headerinfo)
+                mag, magerr   = tu.galfit_getheadervalue(compnumber,'MAG',headerinfo)
+                ar, arerr     = tu.galfit_getheadervalue(compnumber,'AR',headerinfo)
+                pa, paerr     = tu.galfit_getheadervalue(compnumber,'PA',headerinfo)
+                fluxscale     = 10.0**((mag-magzeropoints[gg])/(-2.5)) # GALFIT readme eq 34
+                angle         = pa + 90.0
+
+                Re, Reerr           = tu.galfit_getheadervalue(compnumber,'RE',headerinfo)
+                nsersic, nsersicerr = tu.galfit_getheadervalue(compnumber,'N',headerinfo)
+                #             [amplitude,r_e,Sersic index,ellipticity,rotation angle]
+                parameters  = [fluxscale,Re,nsersic,1.0-ar,pa-90]
+                sersic2Dimg = tu.gen_2Dsersic(modelarr.shape,parameters,show2Dsersic=True,normalize=True)
+
+                img_shift   = tu.shift_2Dprofile(sersic2Dimg,[yc,xc],padvalue=0.0,showprofiles=True,origin=1)
+                cubelayer   = img_shift
+            elif headerinfo[component] == 'sky':
+                pass
             else:
-                sys.exit(' ---> Dealing with a '+headerinfo[component]+' GALFIT model component is not implemented yet; sorry. '
+                sys.exit(' ---> Dealing with a "'+headerinfo[component]+'" GALFIT model component is not implemented yet; sorry. '
                                                                        'Try using "gaussian" or "sersic" components to build your model')
 
             cube[cc,:,:] = cubelayer
@@ -2295,30 +2373,30 @@ def galfit_convertmodel2cube(galfitmodelfiles,magzeropoints=25.947,includewcs=Tr
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             hduimg  = pyfits.PrimaryHDU(cubesum)
 
-        if includewcs:
-            if verbose: print ' - Including WCS information from GALFIT reference image extension   '
-            wcsheader = pyfits.open(galfitmodel)[1].header
-            # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
-            hduimg.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
-            hduimg.header.append(('CRPIX1 ',wcsheader['CRPIX1']  ,' Pixel coordinate of reference point'),end=True)
-            hduimg.header.append(('CRPIX2 ',wcsheader['CRPIX2']  ,' Pixel coordinate of reference point'),end=True)
-            hduimg.header.append(('CD1_1  ',wcsheader['CD1_1 ']  ,' Coordinate transformation matrix element'),end=True)
-            hduimg.header.append(('CD1_2  ',wcsheader['CD1_2 ']  ,' Coordinate transformation matrix element'),end=True)
-            hduimg.header.append(('CD2_1  ',wcsheader['CD2_1 ']  ,' Coordinate transformation matrix element'),end=True)
-            hduimg.header.append(('CD2_2  ',wcsheader['CD2_2 ']  ,' Coordinate transformation matrix element'),end=True)
-            hduimg.header.append(('CTYPE1 ',wcsheader['CTYPE1']  ,' Right ascension, gnomonic projection'),end=True)
-            hduimg.header.append(('CTYPE2 ',wcsheader['CTYPE2']  ,' Declination, gnomonic projection'),end=True)
-            hduimg.header.append(('CRVAL1 ',wcsheader['CRVAL1']  ,' '),end=True)
-            hduimg.header.append(('CRVAL2 ',wcsheader['CRVAL2']  ,' '),end=True)
-            try:
-                hduimg.header.append(('CSYER1 ',wcsheader['CSYER1']  ,' [deg] Systematic error in coordinate'),end=True)
-                hduimg.header.append(('CSYER2 ',wcsheader['CSYER2']  ,' [deg] Systematic error in coordinate'),end=True)
-                hduimg.header.append(('CUNIT1 ',wcsheader['CUNIT1']  ,' Units of coordinate increment and value'),end=True)
-                hduimg.header.append(('CUNIT2 ',wcsheader['CUNIT2']  ,' Units of coordinate increment and value'),end=True)
-            except:
-                pass
+            if includewcs:
+                if verbose: print ' - Including WCS information from GALFIT reference image extension   '
+                wcsheader = pyfits.open(galfitmodel)[1].header
+                # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
+                hduimg.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
+                hduimg.header.append(('CRPIX1 ',wcsheader['CRPIX1']  ,' Pixel coordinate of reference point'),end=True)
+                hduimg.header.append(('CRPIX2 ',wcsheader['CRPIX2']  ,' Pixel coordinate of reference point'),end=True)
+                hduimg.header.append(('CD1_1  ',wcsheader['CD1_1 ']  ,' Coordinate transformation matrix element'),end=True)
+                hduimg.header.append(('CD1_2  ',wcsheader['CD1_2 ']  ,' Coordinate transformation matrix element'),end=True)
+                hduimg.header.append(('CD2_1  ',wcsheader['CD2_1 ']  ,' Coordinate transformation matrix element'),end=True)
+                hduimg.header.append(('CD2_2  ',wcsheader['CD2_2 ']  ,' Coordinate transformation matrix element'),end=True)
+                hduimg.header.append(('CTYPE1 ',wcsheader['CTYPE1']  ,' Right ascension, gnomonic projection'),end=True)
+                hduimg.header.append(('CTYPE2 ',wcsheader['CTYPE2']  ,' Declination, gnomonic projection'),end=True)
+                hduimg.header.append(('CRVAL1 ',wcsheader['CRVAL1']  ,' '),end=True)
+                hduimg.header.append(('CRVAL2 ',wcsheader['CRVAL2']  ,' '),end=True)
+                try:
+                    hduimg.header.append(('CSYER1 ',wcsheader['CSYER1']  ,' [deg] Systematic error in coordinate'),end=True)
+                    hduimg.header.append(('CSYER2 ',wcsheader['CSYER2']  ,' [deg] Systematic error in coordinate'),end=True)
+                    hduimg.header.append(('CUNIT1 ',wcsheader['CUNIT1']  ,' Units of coordinate increment and value'),end=True)
+                    hduimg.header.append(('CUNIT2 ',wcsheader['CUNIT2']  ,' Units of coordinate increment and value'),end=True)
+                except:
+                    pass
 
-            hdus = [hduimg]
+                hdus = [hduimg]
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             hdulist = pyfits.HDUList(hdus)            # turn header into to hdulist
             hdulist.writeto(imgname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
@@ -2335,10 +2413,25 @@ def galfit_getheadervalue(compnumber,key,headerinfo):
     headerinfo      Header to extract info from.
 
     """
-    value = float(headerinfo[compnumber+'_'+key].split('+/-')[0])
-    error = float(headerinfo[compnumber+'_'+key].split('+/-')[1])
-    return value, error
+    hdrinfo = headerinfo[compnumber+'_'+key]
 
+    if '+/-' in hdrinfo:
+        value   = float(hdrinfo.split('+/-')[0])
+        error   = float(hdrinfo.split('+/-')[1])
+    else:
+        value   = float(hdrinfo[1:-1])
+        error   = None
+
+    if (key == 'XC') or (key == 'YC'):
+        xrange, yrange = headerinfo['FITSECT'][1:-1].split(',')
+        xrange = np.asarray(xrange.split(':')).astype(float)
+        yrange = np.asarray(yrange.split(':')).astype(float)
+        if key == 'XC':
+            value = value - xrange[0] + 1.0
+        if key == 'YC':
+            value = value - yrange[0] + 1.0
+
+    return value, error
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def reshape_array(array, newsize, pixcombine='sum'):
     """
