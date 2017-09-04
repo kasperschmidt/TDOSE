@@ -192,6 +192,9 @@ galfit_model_extension 2                                  # Fits extension conta
 # - - - - - - - - - - - - - - - - - - - - - - - - MODEL IMAGE SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
 modelimg_directory     /path/models_cutouts/              # If source_model = modelimg provide the path to directory containing the individual source models
                                                           # TDOSE will look for model_*ref_image*.fits (incl. the cutout string if model_cutouts=True). If no model is found the object is skipped
+                                                          # If a model image named model_*ref_image*_cube.fits is foound, TDOSE assumes this file contains a cube with the individual model
+                                                          # components isolated in individual layers of the cube. TDOSE will instead use this model and expects a file named model_*ref_image*_cube_compkey.txt
+                                                          # Defining what components belong to the object of interest (i.e., to extract a spectrum for) and what components are contaminating sources in the field-of-view.
 
 modelimg_extension     0                                  # Fits extension containing model
 
