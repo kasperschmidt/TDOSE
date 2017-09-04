@@ -679,8 +679,6 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
         plt.title('Generated 2D Gauss')
         plt.savefig(savename)
         plt.clf()
-        #plt.show()
-        pdb.set_trace()
     return gauss2D
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False,origin=1):
@@ -718,11 +716,13 @@ def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False,origin=1):
                                                         mode='constant', cval=0.0, prefilter=True)
 
     if showprofiles:
+        savename = './Shifted2Dprofile.pdf'
         vmaxval = np.max(profile_shifted)
-        plt.imshow(profile_shifted,interpolation='none',vmin=-vmaxval, vmax=vmaxval)
+        plt.imshow(profile_shifted,interpolation='none',vmin=-vmaxval, vmax=vmaxval,origin='lower')
+        plt.colorbar()
         plt.title('Positioned Source')
-        plt.show()
-
+        plt.savefig(savename)
+        plt.clf()
     return profile_shifted
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def roll_2Dprofile(profile,position,padvalue=0.0,showprofiles=False):
@@ -2164,6 +2164,179 @@ def galfit_results2paramlist(galfitresults,verbose=True):
             if verbose: print ' - WARNING modeltype='+modeltype+' for object '+str(objno)+' is unknonw; not added to paramlist'
     fin.close()
     return paramlist
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def galfit_convertmodel2cube(galfitmodelfiles,magzeropoints=25.947,includewcs=True,savecubesumimg=False,clobber=True,verbose=True):
+    """
+    Convert a GALFIT model output file into a model cube, where each model component occopy a different layer in the cube.
+
+    --- INPUT ---
+    galfitmodelfile     Output from running GALFIT
+    magzeropoints       List of magnitude zeropoints used when generating the galfit models provided in galfitmodelfile
+    wcslist             Include WCS information in header? If False no WCS information is included, if True the WCS
+                        information from the reference image extension in the GALFIT model (extension 1) is used.
+    savecubesumimg      Save image of of sum over cube components (useful for comparison with input GALFIT models)
+    clobber             Overwrite existing files
+    verbose             Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    fileG   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model8685multicomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id8685_cutout7p0x7p0arcsec.fits' # Gauss components
+    fileS   = '/Users/kschmidt/work/MUSE/uvEmissionlineSearch/imgblocks_josieGALFITmodels/imgblock_101011026.fits' # Sersic components
+
+    param  = tu.galfit_convertmodel2cube([fileG,fileS])
+
+    """
+    if verbose: print ' - Will convert the '+str(len(galfitmodelfiles))+' GALFIT models into cubes '
+    if verbose: print '\n'
+    if type(magzeropoints) is float:
+        magzeropoints = [magzeropoints] * len(galfitmodelfiles)
+
+    for gg, galfitmodel in enumerate(galfitmodelfiles):
+        if verbose: print ' - Extracting number of components from model extenstion (ext=2) of GALFIT model:\n   '+galfitmodel
+        headerinfo = pyfits.open(galfitmodel)[2].header
+        modelarr   = pyfits.open(galfitmodel)[2].data
+
+        compkeys = []
+        for key in headerinfo.keys():
+            if 'COMP_' in key:
+                compkeys.append(key)
+        Ncomp = len(compkeys)
+
+        if Ncomp == 1:
+            if verbose: print ' - Only found one component in header so not turning GALFIT model into cube'
+        elif Ncomp == 0:
+            sys.exit(' ---> Did not find _any_ components in the GALFIT model header')
+        else:
+            if verbose: print ' - Found '+str(Ncomp)+' components in GALFIT model header to populate cube with'
+
+        cube = np.zeros([Ncomp,modelarr.shape[0],modelarr.shape[1]])
+        for cc,component in enumerate(compkeys):
+            compnumber = str(cc+1)
+            x,y        = tu.gen_gridcomponents(modelarr.shape)
+            if headerinfo[component] == 'gaussian':
+                xc, xcerr     = tu.galfit_getheadervalue(compnumber,'XC',headerinfo)
+                yc, ycerr     = tu.galfit_getheadervalue(compnumber,'YC',headerinfo)
+                mag, magerr   = tu.galfit_getheadervalue(compnumber,'MAG',headerinfo)
+                fwhm, fwhmerr = tu.galfit_getheadervalue(compnumber,'FWHM',headerinfo)
+                ar, arerr     = tu.galfit_getheadervalue(compnumber,'AR',headerinfo)
+                pa, paerr     = tu.galfit_getheadervalue(compnumber,'PA',headerinfo)
+
+                sigma2fwhm    = 2.0*np.sqrt(2.0*np.log(2.0)) # ~ 2.355
+                sigmax        = fwhm/sigma2fwhm
+                sigmay        = fwhm/sigma2fwhm*ar
+                fluxscale     = 10.0**((mag-magzeropoints[gg])/(-2.5)) # GALFIT readme eq 34
+                angle         = pa + 90.0
+
+                covmatrix   = tu.build_2D_cov_matrix(sigmax,sigmay,angle,verbose=verbose)
+                gauss2Dimg  = tu.gen_2Dgauss(modelarr.shape,covmatrix,fluxscale,show2Dgauss=True,verbose=verbose,method='scipy')
+                img_shift   = tu.shift_2Dprofile(gauss2Dimg,[yc,xc],padvalue=0.0,showprofiles=True,origin=1)
+
+                cubelayer   = img_shift
+
+            elif headerinfo[component] == 'sersic':
+                X = -99
+            else:
+                sys.exit(' ---> Dealing with a '+headerinfo[component]+' GALFIT model component is not implemented yet; sorry. '
+                                                                       'Try using "gaussian" or "sersic" components to build your model')
+
+            cube[cc,:,:] = cubelayer
+
+        # - - - - - - - - - - - - - - - - - - Saving Model Cube - - - - - - - - - - - - - - - - - -
+        cubename = galfitmodel.replace('.fits','_cube.fits')
+        if verbose: print ' - Saving model cube to \n   '+cubename
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        hducube  = pyfits.PrimaryHDU(cube)       # default HDU with default minimal header
+
+        if includewcs:
+            if verbose: print ' - Including WCS information from GALFIT reference image extension   '
+            wcsheader = pyfits.open(galfitmodel)[1].header
+            # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
+            hducube.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
+            hducube.header.append(('CRPIX1 ',wcsheader['CRPIX1']  ,' Pixel coordinate of reference point'),end=True)
+            hducube.header.append(('CRPIX2 ',wcsheader['CRPIX2']  ,' Pixel coordinate of reference point'),end=True)
+            hducube.header.append(('CD1_1  ',wcsheader['CD1_1 ']  ,' Coordinate transformation matrix element'),end=True)
+            hducube.header.append(('CD1_2  ',wcsheader['CD1_2 ']  ,' Coordinate transformation matrix element'),end=True)
+            hducube.header.append(('CD2_1  ',wcsheader['CD2_1 ']  ,' Coordinate transformation matrix element'),end=True)
+            hducube.header.append(('CD2_2  ',wcsheader['CD2_2 ']  ,' Coordinate transformation matrix element'),end=True)
+            hducube.header.append(('CTYPE1 ',wcsheader['CTYPE1']  ,' Right ascension, gnomonic projection'),end=True)
+            hducube.header.append(('CTYPE2 ',wcsheader['CTYPE2']  ,' Declination, gnomonic projection'),end=True)
+            hducube.header.append(('CRVAL1 ',wcsheader['CRVAL1']  ,' '),end=True)
+            hducube.header.append(('CRVAL2 ',wcsheader['CRVAL2']  ,' '),end=True)
+            try:
+                hducube.header.append(('CSYER1 ',wcsheader['CSYER1']  ,' [deg] Systematic error in coordinate'),end=True)
+                hducube.header.append(('CSYER2 ',wcsheader['CSYER2']  ,' [deg] Systematic error in coordinate'),end=True)
+                hducube.header.append(('CUNIT1 ',wcsheader['CUNIT1']  ,' Units of coordinate increment and value'),end=True)
+                hducube.header.append(('CUNIT2 ',wcsheader['CUNIT2']  ,' Units of coordinate increment and value'),end=True)
+            except:
+                pass
+
+            hducube.header.append(('CTYPE3 ','COMPONENT    '      ,' '),end=True)
+            hducube.header.append(('CUNIT3 ',''                   ,' '),end=True)
+            hducube.header.append(('CD3_3  ',                  1. ,' '),end=True)
+            hducube.header.append(('CRPIX3 ',                  1. ,' '),end=True)
+            hducube.header.append(('CRVAL3 ',                  1. ,' '),end=True)
+            hducube.header.append(('CD1_3  ',                  0. ,' '),end=True)
+            hducube.header.append(('CD2_3  ',                  0. ,' '),end=True)
+            hducube.header.append(('CD3_1  ',                  0. ,' '),end=True)
+            hducube.header.append(('CD3_2  ',                  0. ,' '),end=True)
+
+        hdus = [hducube]
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        hdulist = pyfits.HDUList(hdus)             # turn header into to hdulist
+        hdulist.writeto(cubename,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+
+        # - - - - - - - - - - - - - - - - - - Saving Sum Cube Image - - - - - - - - - - - - - - - - - -
+        if savecubesumimg:
+            imgname = galfitmodel.replace('.fits','_cubesum.fits')
+            if verbose: print ' - Saving model cube to \n   '+imgname
+            cubesum = np.sum(cube,axis=0)
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            hduimg  = pyfits.PrimaryHDU(cubesum)
+
+        if includewcs:
+            if verbose: print ' - Including WCS information from GALFIT reference image extension   '
+            wcsheader = pyfits.open(galfitmodel)[1].header
+            # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
+            hduimg.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
+            hduimg.header.append(('CRPIX1 ',wcsheader['CRPIX1']  ,' Pixel coordinate of reference point'),end=True)
+            hduimg.header.append(('CRPIX2 ',wcsheader['CRPIX2']  ,' Pixel coordinate of reference point'),end=True)
+            hduimg.header.append(('CD1_1  ',wcsheader['CD1_1 ']  ,' Coordinate transformation matrix element'),end=True)
+            hduimg.header.append(('CD1_2  ',wcsheader['CD1_2 ']  ,' Coordinate transformation matrix element'),end=True)
+            hduimg.header.append(('CD2_1  ',wcsheader['CD2_1 ']  ,' Coordinate transformation matrix element'),end=True)
+            hduimg.header.append(('CD2_2  ',wcsheader['CD2_2 ']  ,' Coordinate transformation matrix element'),end=True)
+            hduimg.header.append(('CTYPE1 ',wcsheader['CTYPE1']  ,' Right ascension, gnomonic projection'),end=True)
+            hduimg.header.append(('CTYPE2 ',wcsheader['CTYPE2']  ,' Declination, gnomonic projection'),end=True)
+            hduimg.header.append(('CRVAL1 ',wcsheader['CRVAL1']  ,' '),end=True)
+            hduimg.header.append(('CRVAL2 ',wcsheader['CRVAL2']  ,' '),end=True)
+            try:
+                hduimg.header.append(('CSYER1 ',wcsheader['CSYER1']  ,' [deg] Systematic error in coordinate'),end=True)
+                hduimg.header.append(('CSYER2 ',wcsheader['CSYER2']  ,' [deg] Systematic error in coordinate'),end=True)
+                hduimg.header.append(('CUNIT1 ',wcsheader['CUNIT1']  ,' Units of coordinate increment and value'),end=True)
+                hduimg.header.append(('CUNIT2 ',wcsheader['CUNIT2']  ,' Units of coordinate increment and value'),end=True)
+            except:
+                pass
+
+            hdus = [hduimg]
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            hdulist = pyfits.HDUList(hdus)            # turn header into to hdulist
+            hdulist.writeto(imgname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        if verbose: print '\n'
+        pdb.set_trace()
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def galfit_getheadervalue(compnumber,key,headerinfo):
+    """
+    Return the paramters of a GALFIT model header
+
+    --- INPUT ---
+    compnumber      A string containing the component number to extract info for (number after "COMP_" in header)
+    key             The key to extract (keyword after "COMPNUMBER_" in header)
+    headerinfo      Header to extract info from.
+
+    """
+    value = float(headerinfo[compnumber+'_'+key].split('+/-')[0])
+    error = float(headerinfo[compnumber+'_'+key].split('+/-')[1])
+    return value, error
+
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def reshape_array(array, newsize, pixcombine='sum'):
     """
