@@ -2324,7 +2324,6 @@ def galfit_convertmodel2cube(galfitmodelfiles,magzeropoints=25.947,includewcs=Tr
             hdulist.writeto(imgname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbose: print '\n'
-        pdb.set_trace()
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def galfit_getheadervalue(compnumber,key,headerinfo):
     """
