@@ -16,6 +16,7 @@ import subprocess
 import glob
 import shutil
 import scipy.ndimage
+import scipy.special
 import tdose_utilities as tu
 import tdose_model_FoV as tmf
 from scipy.stats import multivariate_normal
@@ -694,6 +695,7 @@ def gen_2Dsersic(size,parameters,normalize=False,show2Dsersic=False,verbose=True
                   The 2D gauss will be positioned in the center of the array (shifting by 0.5 pixel if dimensions even)
     parameters    List of the sersic parameters.
                   Expects [amplitude,effective radiues,Sersic index,ellipticity,rotation angle]
+                  The amplitude is the central surface brightness within the effective radius (Ftot/2 is within r_eff)
                   The rotation angle should be in degrees, counterclockwise from the positive x-axis.
     normalize     Normalize the profile so sum(img) = amplitude. Otherwise, amplitude central surface brightness,
                   within the effective radius provided
@@ -745,6 +747,53 @@ def gen_2Dsersic(size,parameters,normalize=False,show2Dsersic=False,verbose=True
         plt.savefig(savename)
         plt.clf()
     return sersic2D
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def get_2DsersicIeff(value,reff,sersicindex,axisratio,boxiness=0.0,returnFtot=False):
+    """
+    Get the surface brightness value at the effective radius of a 2D sersic profile (given GALFIT Sersic parameters).
+    Ieff is calculated using ewuations (4) and (5) in Peng et al. (2010), AJ 139:2097.
+    This Ieff is what is referred to as 'amplitude' in astropy.modeling.models.Sersic2D
+    used in tdose_utilities.gen_2Dsersic()
+
+    --- INPUT ---
+    value         If returnFtot=False "value" corresponds to Ftot of the profile (total flux for profile integrated
+                  til r=infty) and Ieff will be returned.
+                  If instead returnFtot=True "value" should provide Ieff so Ftot can be returned
+    reff          Effective radius
+    sersicindex   Sersic index of profile
+    axisratio     Ratio between the minor and major axis (0<axisratio<1)
+    boxiness      The boxiness of the profile
+    returnFtot    If Ftot is not known, but Ieff is, set returnFtot=True to return Ftot instead (providing Ieff to "value")
+
+    --- EXAMPLE OF USE ---
+    Ieff        = 1.0
+    reff        = 25.0
+    sersicindex = 4.0
+    axisratio   = 1.0
+    Ftot_calc   = tu.get_2DsersicIeff(Ieff,reff,sersicindex,axisratio,returnFtot=True)
+    Ieff_calc   = tu.get_2DsersicIeff(Ftot,reff,sersicindex,axisratio)
+
+    size = 1000
+    x,y = np.meshgrid(np.arange(size), np.arange(size))
+    mod = Sersic2D(amplitude = Ieff, r_eff = reff, n=sersicindex, x_0=size/2.0, y_0=size/2.0, ellip=1-axisratio, theta=-1)
+    img = mod(x, y)
+    hducube  = pyfits.PrimaryHDU(img)
+    hdus = [hducube]
+    hdulist = pyfits.HDUList(hdus)
+    hdulist.writeto('/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model_sersic_spherical.fits',clobber=True)
+
+    """
+    gam2n  = scipy.special.gamma(2.0*sersicindex)
+    kappa  = scipy.special.gammaincinv(2.0*sersicindex,0.5)
+    Rfct   = np.pi*(boxiness+2.)/4./scipy.special.beta(1./(boxiness+2.),1.+1./(boxiness+2.))
+    factor = 2.0 * np.pi * reff**2.0 * np.exp(kappa) * sersicindex * kappa**(-2*sersicindex) * gam2n * axisratio / Rfct
+
+    if returnFtot:
+        Ftot = value * factor
+        return Ftot
+    else:
+        Ieff  = value / factor
+        return Ieff
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False,origin=1):
     """
@@ -2230,13 +2279,12 @@ def galfit_results2paramlist(galfitresults,verbose=True):
     fin.close()
     return paramlist
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def galfit_convertmodel2cube(galfitmodelfiles,magzeropoints=25.947,includewcs=True,savecubesumimg=False,clobber=True,verbose=True):
+def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=False,clobber=True,verbose=True):
     """
-    Convert a GALFIT model output file into a model cube, where each model component occopy a different layer in the cube.
+    Convert a GALFIT model output file into a model cube, where each model component occupy a different layer in the cube.
 
     --- INPUT ---
     galfitmodelfile     Output from running GALFIT
-    magzeropoints       List of magnitude zeropoints used when generating the galfit models provided in galfitmodelfile
     wcslist             Include WCS information in header? If False no WCS information is included, if True the WCS
                         information from the reference image extension in the GALFIT model (extension 1) is used.
     savecubesumimg      Save image of of sum over cube components (useful for comparison with input GALFIT models)
@@ -2245,15 +2293,14 @@ def galfit_convertmodel2cube(galfitmodelfiles,magzeropoints=25.947,includewcs=Tr
 
     --- EXAMPLE OF USE ---
     fileG   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model8685multicomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id8685_cutout7p0x7p0arcsec.fits' # Gauss components
-    fileS   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model8685multicomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id9262_cutout2p0x2p0arcsec.fits' # Sersic components
+    fileS   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model9262GALFITdoublecomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id9262_cutout2p0x2p0arcsec.fits' # Sersic components
+    fileS   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model9262GALFITsinglecomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id9262_cutout2p0x2p0arcsec.fits' # Sersic components
 
-    param  = tu.galfit_convertmodel2cube([fileG,fileS])
+    param  = tu.galfit_convertmodel2cube([fileS,fileG],savecubesumimg=True,includewcs=True)
 
     """
     if verbose: print ' - Will convert the '+str(len(galfitmodelfiles))+' GALFIT models into cubes '
     if verbose: print '\n'
-    if type(magzeropoints) is float:
-        magzeropoints = [magzeropoints] * len(galfitmodelfiles)
 
     for gg, galfitmodel in enumerate(galfitmodelfiles):
         if verbose: print ' - Extracting number of components from model extenstion (ext=2) of GALFIT model:\n   '+galfitmodel
@@ -2283,17 +2330,17 @@ def galfit_convertmodel2cube(galfitmodelfiles,magzeropoints=25.947,includewcs=Tr
                 mag, magerr   = tu.galfit_getheadervalue(compnumber,'MAG',headerinfo)
                 ar, arerr     = tu.galfit_getheadervalue(compnumber,'AR',headerinfo)
                 pa, paerr     = tu.galfit_getheadervalue(compnumber,'PA',headerinfo)
-                fluxscale     = 10.0**((mag-magzeropoints[gg])/(-2.5)) # GALFIT readme eq 34
-                angle         = pa + 90.0
+                magzeropoint  = float(headerinfo['MAGZPT'])
+                fluxtot       = 10.0**((mag-magzeropoint)/(-2.5))
 
                 fwhm, fwhmerr = tu.galfit_getheadervalue(compnumber,'FWHM',headerinfo)
                 sigma2fwhm    = 2.0*np.sqrt(2.0*np.log(2.0)) # ~ 2.355
                 sigmax        = fwhm/sigma2fwhm
                 sigmay        = fwhm/sigma2fwhm*ar
 
-                covmatrix     = tu.build_2D_cov_matrix(sigmax,sigmay,angle,verbose=verbose)
-                gauss2Dimg    = tu.gen_2Dgauss(modelarr.shape,covmatrix,fluxscale,show2Dgauss=True,verbose=verbose,method='scipy')
-                img_shift     = tu.shift_2Dprofile(gauss2Dimg,[yc,xc],padvalue=0.0,showprofiles=True,origin=1)
+                covmatrix     = tu.build_2D_cov_matrix(sigmax,sigmay,pa+90.0,verbose=verbose)
+                gauss2Dimg    = tu.gen_2Dgauss(modelarr.shape,covmatrix,fluxtot,show2Dgauss=False,verbose=verbose,method='scipy')
+                img_shift     = tu.shift_2Dprofile(gauss2Dimg,[yc,xc],padvalue=0.0,showprofiles=False,origin=1)
                 cubelayer     = img_shift
 
             elif headerinfo[component] == 'sersic':
@@ -2302,19 +2349,25 @@ def galfit_convertmodel2cube(galfitmodelfiles,magzeropoints=25.947,includewcs=Tr
                 mag, magerr   = tu.galfit_getheadervalue(compnumber,'MAG',headerinfo)
                 ar, arerr     = tu.galfit_getheadervalue(compnumber,'AR',headerinfo)
                 pa, paerr     = tu.galfit_getheadervalue(compnumber,'PA',headerinfo)
-                fluxscale     = 10.0**((mag-magzeropoints[gg])/(-2.5)) # GALFIT readme eq 34
-                angle         = pa + 90.0
+                magzeropoint  = float(headerinfo['MAGZPT'])
+                fluxtot       = 10.0**((mag-magzeropoint)/(-2.5))
 
                 Re, Reerr           = tu.galfit_getheadervalue(compnumber,'RE',headerinfo)
                 nsersic, nsersicerr = tu.galfit_getheadervalue(compnumber,'N',headerinfo)
-                #             [amplitude,r_e,Sersic index,ellipticity,rotation angle]
-                parameters  = [fluxscale,Re,nsersic,1.0-ar,pa-90]
-                sersic2Dimg = tu.gen_2Dsersic(modelarr.shape,parameters,show2Dsersic=True,normalize=True)
 
-                img_shift   = tu.shift_2Dprofile(sersic2Dimg,[yc,xc],padvalue=0.0,showprofiles=True,origin=1)
+                Ieff          = tu.get_2DsersicIeff(fluxtot,Re,nsersic,ar,boxiness=0.0,returnFtot=False)
+                #             [amplitude,r_e,Sersic index,ellipticity,rotation angle]
+                ellipticity  = 1.0-ar
+
+                parameters  = [Ieff,Re,nsersic,ellipticity,pa-90]
+                if verbose: print ' - ',component,': Ieff=',Ieff,' calculated using Reff=',Re,'pix','n=',nsersic,'e=',ellipticity,'theta=',pa-90
+
+                sersic2Dimg = tu.gen_2Dsersic(modelarr.shape,parameters,show2Dsersic=False,normalize=False)
+                img_shift   = tu.shift_2Dprofile(sersic2Dimg,[yc,xc],padvalue=0.0,showprofiles=False,origin=1)
                 cubelayer   = img_shift
             elif headerinfo[component] == 'sky':
-                pass
+                sky, skyerr = tu.galfit_getheadervalue(compnumber,'SKY',headerinfo)
+                cubelayer   = np.zeros([modelarr.shape[0],modelarr.shape[1]])+sky
             else:
                 sys.exit(' ---> Dealing with a "'+headerinfo[component]+'" GALFIT model component is not implemented yet; sorry. '
                                                                        'Try using "gaussian" or "sersic" components to build your model')
@@ -2432,6 +2485,44 @@ def galfit_getheadervalue(compnumber,key,headerinfo):
             value = value - yrange[0] + 1.0
 
     return value, error
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def galfit_getcentralcoordinate(modelfile,coordorigin=1,verbose=True):
+    """
+    Return the central coordinates of a GALFIT model extracted using the reference image WCS and the FITSECT keyword
+
+    --- INPUT ---
+    modelfile       Path and name to GALFIT model fits file to retrieve central coordinates for
+    coordorigin     Origin of coordinates in reference image to use when converting pixels to degrees (skycoord)
+    verbose         Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    fileG   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model8685multicomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id8685_cutout7p0x7p0arcsec.fits' # Gauss components
+    fileS   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model8685multicomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id9262_cutout2p0x2p0arcsec.fits' # Sersic components
+
+    xpix, ypix, ra_model, dec_model = tu.galfit_getcentralcoordinate(fileG,coordorigin=1)
+
+    """
+    if verbose: print ' - Will extract central coordinates from '+modelfile
+    refimg_hdr     = pyfits.open(modelfile[0])[1].header
+    model_hdr      = pyfits.open(modelfile[0])[2].header
+    imgwcs         = wcs.WCS(tu.strip_header(refimg_hdr.copy()))
+
+    fit_region     = model_hdr['FITSECT']
+    cutrange_low_x = int(float(fit_region.split(':')[0].split('[')[-1]))
+    cutrange_low_y = int(float(fit_region.split(',')[-1].split(':')[0]))
+    xsize          = model_hdr['NAXIS1']
+    ysize          = model_hdr['NAXIS2']
+
+    xpix           = cutrange_low_x + int(xsize/2.)
+    ypix           = cutrange_low_y + int(ysize/2.)
+
+    if verbose: print ' - Converting pixel position to coordinates using a pixel origin='+str(coordorigin)
+    skycoord    = wcs.utils.pixel_to_skycoord(xpix,ypix,imgwcs,origin=coordorigin)
+
+    ra_model    = skycoord.ra.value
+    dec_model   = skycoord.dec.value
+
+    return xpix,ypix,ra_model,dec_model
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def reshape_array(array, newsize, pixcombine='sum'):
     """
