@@ -8,6 +8,7 @@ from astropy import units
 from astropy import convolution
 import astropy.convolution as ac # convolve, convolve_fft, Moffat2DKernel, Gaussian2DKernel
 from astropy.coordinates import SkyCoord
+from astropy.modeling.models import Sersic1D
 from astropy.modeling.models import Sersic2D
 from astropy.wcs.utils import pixel_to_skycoord
 from astropy.nddata import Cutout2D
@@ -17,6 +18,7 @@ import glob
 import shutil
 import scipy.ndimage
 import scipy.special
+import scipy.integrate as integrate
 import tdose_utilities as tu
 import tdose_model_FoV as tmf
 from scipy.stats import multivariate_normal
@@ -771,7 +773,7 @@ def get_2DsersicIeff(value,reff,sersicindex,axisratio,boxiness=0.0,returnFtot=Fa
     sersicindex = 4.0
     axisratio   = 1.0
     Ftot_calc   = tu.get_2DsersicIeff(Ieff,reff,sersicindex,axisratio,returnFtot=True)
-    Ieff_calc   = tu.get_2DsersicIeff(Ftot,reff,sersicindex,axisratio)
+    Ieff_calc   = tu.get_2DsersicIeff(Ftot_calc,reff,sersicindex,axisratio)
 
     size = 1000
     x,y = np.meshgrid(np.arange(size), np.arange(size))
@@ -785,7 +787,7 @@ def get_2DsersicIeff(value,reff,sersicindex,axisratio,boxiness=0.0,returnFtot=Fa
     """
     gam2n  = scipy.special.gamma(2.0*sersicindex)
     kappa  = scipy.special.gammaincinv(2.0*sersicindex,0.5)
-    Rfct   = np.pi*(boxiness+2.)/4./scipy.special.beta(1./(boxiness+2.),1.+1./(boxiness+2.))
+    Rfct   = np.pi * (boxiness + 2.) / (4. * scipy.special.beta(1./(boxiness+2.),1.+1./(boxiness+2.)) )
     factor = 2.0 * np.pi * reff**2.0 * np.exp(kappa) * sersicindex * kappa**(-2*sersicindex) * gam2n * axisratio / Rfct
 
     if returnFtot:
@@ -952,7 +954,7 @@ def numerical_convolution_image(imgarray,kerneltype,saveimg=False,clobber=False,
     verbose         Toggle verbosity
 
     """
-    if kerneltype is np.array:
+    if (type(kerneltype) is np.ndarray):
         kernel    = kerneltype
         kernelstr = 'numpy array'
     else:
@@ -2279,24 +2281,32 @@ def galfit_results2paramlist(galfitresults,verbose=True):
     fin.close()
     return paramlist
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=False,clobber=True,verbose=True):
+def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=False,convkernels=None,clobber=True,verbose=True):
     """
     Convert a GALFIT model output file into a model cube, where each model component occupy a different layer in the cube.
 
     --- INPUT ---
-    galfitmodelfile     Output from running GALFIT
-    wcslist             Include WCS information in header? If False no WCS information is included, if True the WCS
+    galfitmodelfiles    Output from running GALFIT
+    includewcs          Include WCS information in header? If False no WCS information is included, if True the WCS
                         information from the reference image extension in the GALFIT model (extension 1) is used.
     savecubesumimg      Save image of of sum over cube components (useful for comparison with input GALFIT models)
+    convkernels         List of numpy arrays or astropy kernels to use for convolution. This can be used to apply a PSF
+                        to the model re-generated from the GALFIT parameters. This is useful as GALFIT is modeling the
+                        component paramters before PSF convolution 
     clobber             Overwrite existing files
     verbose             Toggle verbosity
 
     --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    import pyfits
+
     fileG   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model8685multicomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id8685_cutout7p0x7p0arcsec.fits' # Gauss components
     fileS   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model9262GALFITdoublecomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id9262_cutout2p0x2p0arcsec.fits' # Sersic components
     fileS   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model9262GALFITsinglecomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id9262_cutout2p0x2p0arcsec.fits' # Sersic components
 
-    param  = tu.galfit_convertmodel2cube([fileS,fileG],savecubesumimg=True,includewcs=True)
+    PSFmodel = pyfits.open('/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/F814Wpsfmodel_imgblock_6475.fits')[2].data
+
+    tu.galfit_convertmodel2cube([fileS,fileG],savecubesumimg=True,includewcs=True,convkernels=[PSFmodel,None])
 
     """
     if verbose: print ' - Will convert the '+str(len(galfitmodelfiles))+' GALFIT models into cubes '
@@ -2355,10 +2365,9 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                 Re, Reerr           = tu.galfit_getheadervalue(compnumber,'RE',headerinfo)
                 nsersic, nsersicerr = tu.galfit_getheadervalue(compnumber,'N',headerinfo)
 
-                Ieff          = tu.get_2DsersicIeff(fluxtot,Re,nsersic,ar,boxiness=0.0,returnFtot=False)
+                Ieff        = tu.get_2DsersicIeff(fluxtot,Re,nsersic,ar,boxiness=0.0,returnFtot=False)
+                ellipticity = 1.0-ar
                 #             [amplitude,r_e,Sersic index,ellipticity,rotation angle]
-                ellipticity  = 1.0-ar
-
                 parameters  = [Ieff,Re,nsersic,ellipticity,pa-90]
                 if verbose: print ' - ',component,': Ieff=',Ieff,' calculated using Reff=',Re,'pix','n=',nsersic,'e=',ellipticity,'theta=',pa-90
 
@@ -2372,7 +2381,18 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                 sys.exit(' ---> Dealing with a "'+headerinfo[component]+'" GALFIT model component is not implemented yet; sorry. '
                                                                        'Try using "gaussian" or "sersic" components to build your model')
 
+            if convkernels is not None:
+                convkernel = convkernels[gg]
+                if convkernel is None:
+                    if verbose: print ' - Not convoling model with kernel as kernel in "convkernels" list for model '+str(gg)+' was None'
+                else:
+                    if verbose: print ' - Convoling model with kernel provided'
+                    cubelayer = tu.numerical_convolution_image(cubelayer,convkernel,saveimg=False,clobber=clobber,imgmask=None,
+                                                               fill_value=0.0,norm_kernel=True,convolveFFT=False,
+                                                               use_scipy_conv=False,verbose=verbose)
+
             cube[cc,:,:] = cubelayer
+            cubelayer    = cubelayer*0.0 # resetting cube layer
 
         # - - - - - - - - - - - - - - - - - - Saving Model Cube - - - - - - - - - - - - - - - - - -
         cubename = galfitmodel.replace('.fits','_cube.fits')
@@ -3488,4 +3508,95 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
         plt.savefig(plotname)
         plt.clf()
         plt.close('all')
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5,size=1000,
+                        outputdir='/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/',verbose=True):
+    """
+    Function to generate and investigate sersic profiles.
+
+    --- EXAMPLE OF USE ---
+    tu.test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5)
+
+    """
+    if verbose: print ' - Input: \n   Ieff      =',Ieff,'\n   reff      =',reff,\
+        '\n   n         =',sersicindex,'\n   axisratio =',sersicindex
+
+    x,y = np.meshgrid(np.arange(size), np.arange(size))
+
+    mod = Sersic2D(amplitude = Ieff, r_eff = reff, n=sersicindex, x_0=size/2.0, y_0=size/2.0, ellip=1-axisratio, theta=-1)
+    img = mod(x, y)
+    hducube  = pyfits.PrimaryHDU(img)
+    hdus = [hducube]
+    hdulist = pyfits.HDUList(hdus)
+    hdulist.writeto(outputdir+'model_sersic.fits',clobber=True)
+
+    mod = Sersic2D(amplitude = Ieff, r_eff = reff, n=sersicindex, x_0=size/2.0, y_0=size/2.0, ellip=0, theta=-1)
+    img = mod(x, y)
+    hducube  = pyfits.PrimaryHDU(img)
+    hdus = [hducube]
+    hdulist = pyfits.HDUList(hdus)
+    hdulist.writeto(outputdir+'model_sersic_spherical.fits',clobber=True)
+
+    # integrate.nquad(mod, [[-np.inf, np.inf],[-np.inf, np.inf]])
+    # integrate.nquad(mod, [[size/2.0-reff, size/2.0+reff],[size/2.0-reff, size/2.0+reff]])
+
+    plt.figure()
+    plt.subplot(111, xscale='log', yscale='log')
+    s1 = Sersic1D(amplitude=Ieff, r_eff=reff,n=sersicindex)
+    r=np.arange(0, size, 0.01)
+
+    plt.plot(r, s1(r), color='red')
+    plt.plot([reff,reff],[0,s1(reff)],color='red')
+    plt.plot([0,reff],[s1(reff),s1(reff)],color='red')
+
+    plt.axis([1e-3,1e3, 1e-3, 1e3])
+    plt.xlabel('log Radius')
+    plt.ylabel('log Surface Brightness')
+    plt.savefig(outputdir+'model_sersic_1D.pdf')
+
+    ent_eff       = np.where(s1(r) == s1(reff))[0][0]
+    Ftot_1D       = np.trapz(s1(r),x=r,dx=0.01)
+    Ftot_eff_1D   = np.trapz(s1(r[:ent_eff]),x=r[:ent_eff],dx=0.01)
+    Ftot_outer_1D = np.trapz(s1(r[ent_eff:]),x=r[ent_eff:],dx=0.01)
+
+    if verbose: print ' - np.trapz of 1D profile for r=[0;'+str(size)+']:     Ftot_reff=',Ftot_1D
+    if verbose: print ' - np.trapz of 1D profile for r=[0;r_eff]:    Ftot_reff=',Ftot_eff_1D
+    if verbose: print ' - np.trapz of 1D profile for r=[r_eff;'+str(size)+']: Ftot_outer=',Ftot_outer_1D
+
+    Ftot_2D       = integrate.quad(lambda x: x*s1(x),0 ,np.inf)[0] * 2 * np.pi
+    Ftot_eff_2D   = integrate.quad(lambda x: x*s1(x),0 ,reff)[0] * 2 * np.pi
+    Ftot_outer_2D = integrate.quad(lambda x: x*s1(x),reff,np.inf)[0] * 2 * np.pi
+
+    if verbose: print ' - scipy.integrate.quad of 2D profile for r=[0;np.inf]:       Ftot_2D       =',Ftot_2D
+    if verbose: print ' - scipy.integrate.quad of 2D profile for r=[0;r_eff]:        Ftot_reff_2D  =',Ftot_eff_2D
+    if verbose: print ' - scipy.integrate.quad of 2D profile for r=[r_eff;np.inf]:   Ftot_2D_outer =',Ftot_outer_2D
+
+    Ftot_full = integrate.quad(lambda x: x*s1(x),reff,size/2.)[0] * 2 * np.pi
+    if verbose: print ' - scipy.integrate.quad of 2D profile for r=[0;'+str(int(size/2.))+\
+                      ']:          Ftot_2D_r'+str(int(size/2.))+'  =',Ftot_full
+
+    Ftot_calc   = tu.get_2DsersicIeff(Ieff,reff,sersicindex,1.0,returnFtot=True)
+    if verbose: print ' - tu.get_2DsersicIeff calculation of Ftot:                   Ftot_calc     =',Ftot_calc
+
+    Ieff_calc   = tu.get_2DsersicIeff(Ftot_2D,reff,sersicindex,1.0)
+    if verbose: print ' - tu.get_2DsersicIeff calculation of Ieff from Ftot_2D:      I_eff         =',Ieff_calc
+
+    Ieff_calc   = tu.get_2DsersicIeff(Ftot_eff_2D,reff,sersicindex,1.0)
+    if verbose: print ' - tu.get_2DsersicIeff calculation of Ieff from Ftot_reff_2D: I_eff         =',Ieff_calc
+
+    # Summing in circular mask to mimic DS9 "integration"
+    r    = reff
+    y,x  = np.ogrid[-size/2.0:size/2.0, -size/2.0:size/2.0]
+    mask = x*x + y*y <= r*r
+
+    sum_mask_reff = np.sum(img[mask])
+    if verbose: print ' - Sum of pixels within r_eff of sersic img array:                Fsum_reff =',sum_mask_reff
+
+    r    = size/2.0
+    y,x  = np.ogrid[-size/2.0:size/2.0, -size/2.0:size/2.0]
+    mask = x*x + y*y <= r*r
+
+    sum_mask = np.sum(img[mask])
+    if verbose: print ' - Sum of pixels within r_eff of sersic img array:                Fsum_r'+str(int(size/2.))+' =',sum_mask
+
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
