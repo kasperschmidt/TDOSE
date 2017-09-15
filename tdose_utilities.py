@@ -2398,9 +2398,15 @@ def galfit_results2paramlist(galfitresults,verbose=True):
     fin.close()
     return paramlist
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=False,convkernels=None,clobber=True,verbose=True):
+def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=False,convkernels=None,normalizecomponents=False,
+                             clobber=True,verbose=True):
     """
     Convert a GALFIT model output file into a model cube, where each model component occupy a different layer in the cube.
+
+    NB! The absolute flux scales of the indvidual Sersic components are off.
+        To accommodate this, set normalizecomponents=True and manually scale
+        either the indiviodual components or the 'cubesum' image.
+        TDOSE works with normalized components so this offsets does not affect the spectral extractions.
 
     --- INPUT ---
     galfitmodelfiles    Output from running GALFIT
@@ -2410,6 +2416,8 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
     convkernels         List of numpy arrays or astropy kernels to use for convolution. This can be used to apply a PSF
                         to the model re-generated from the GALFIT parameters. This is useful as GALFIT is modeling the
                         component paramters before PSF convolution
+    normalizecomponents Normalize each individual components so sum(component image) = 1?
+                        TDOSE is expecting a cube with normalizecomponents=True for spectral extraction
     clobber             Overwrite existing files
     verbose             Toggle verbosity
 
@@ -2513,6 +2521,9 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                                                                fill_value=0.0,norm_kernel=True,convolveFFT=False,
                                                                use_scipy_conv=False,verbose=verbose)
 
+            if normalizecomponents:
+                cubelayer = cubelayer / np.sum(cubelayer)
+
             cube[cc,:,:] = cubelayer
             cubelayer    = cubelayer*0.0 # resetting cube layer
 
@@ -2566,6 +2577,7 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
             if verbose: print ' - Saving model cube to \n   '+imgname
             cubesum = np.sum(cube,axis=0)
 
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             # KBS170915 Manually scaling to max value of model for testing:
             scaletomaxmodelpix = False
             if scaletomaxmodelpix:
@@ -2575,6 +2587,7 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                 print '          max(cubesum) = ',np.max(cubesum)
                 cubesum    = cubesum * scalfactor
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
             hduimg  = pyfits.PrimaryHDU(cubesum)
 
             if includewcs:
