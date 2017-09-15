@@ -600,13 +600,13 @@ def gen_aperture(imgsize,ypos,xpos,radius,pixval=1,showaperture=False,verbose=Tr
 
     return aperture
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
+def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,savefits=False,verbose=True):
     """
     Generating a 2D gaussian with specified parameters
 
     --- INPUT ---
     size          The dimensions of the array to return. Expects [ysize,xsize].
-                  The 2D gauss will be positioned in the center of the array (shifting by 0.5 pixel if dimensions even)
+                  The 2D gauss will be positioned in the center of the array
     cov           Covariance matrix of gaussian, i.e., variances and rotation
                   Can be build with cov = build_2D_cov_matrix(stdx,stdy,angle)
     scale         Scaling the 2D gaussian. By default scale = 1 returns normalized 2D Gaussian.
@@ -615,6 +615,7 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
                    'scipy'    Using the class multivariate_normal from the scipy.stats library
                    'matrix'   Use direct matrix expression for PDF of 2D gaussian               (slow!)
     show2Dgauss   Save plot of generated 2D gaussian
+    savefits      Save generated profile to fits file
     verbose       Toggler verbosity
 
     --- EXAMPLE OF USE ---
@@ -628,7 +629,11 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
     covmatrix       = tu.build_2D_cov_matrix(sigmax,sigmay,0)
     scale           = 1 # returns normalized gaussian
     Nsigwidth       = 15
-    gauss2DimgNorm  = tu.gen_2Dgauss([sigmay*Nsigwidth,sigmax*Nsigwidth],covmatrix,scale,show2Dgauss=True)
+    gauss2DimgNorm  = tu.gen_2Dgauss([sigmay*Nsigwidth,sigmax*Nsigwidth],covmatrix,scale,show2Dgauss=True,savefits=True)
+
+    covmatrix       = tu.build_2D_cov_matrix(4,2,45)
+    scale           = 1 # returns normalized gaussian
+    gauss2DimgNorm  = tu.gen_2Dgauss([33,33],covmatrix,scale,show2Dgauss=True,savefits=True)
 
     """
     if verbose: print ' - Generating multivariate_normal object for generating 2D gauss using ',
@@ -655,18 +660,14 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
                 gauss2D[int(ypix),int(xpix)] = norm * np.exp(-0.5 * MTXexpr)
 
     if float(size[0]/2.) - float(int(size[0]/2.)) == 0.0:
-        if verbose: print ' - Y-dimension even; adding shift of 0.5 to y-dimension to center at sub-pixel level'
-        yshift = -0.5
-        ypos   = np.asarray(size[0])/2.0+yshift
+        ypos   = np.asarray(size[0])/2.0-1.0
     else:
-        ypos   = np.asarray(size[0])/2.0
+        ypos   = np.floor(np.asarray(size[0])/2.0)
 
     if float(size[1]/2.) - float(int(size[1]/2.)) == 0.0:
-        if verbose: print ' - X-dimension even; adding shift of 0.5 to x-dimension to center at sub-pixel level'
-        xshift = -0.5
-        xpos   = np.asarray(size[1])/2.0+xshift
+        xpos   = np.asarray(size[1])/2.0-1.0
     else:
-        xpos   = np.asarray(size[1])/2.0
+        xpos   = np.floor(np.asarray(size[1])/2.0)
 
     gauss2D = tu.shift_2Dprofile(gauss2D,[ypos,xpos],showprofiles=False,origin=0)
 
@@ -675,7 +676,8 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
 
     if show2Dgauss:
         savename = './Generated2Dgauss.pdf'
-        if verbose: print ' - Displaying resulting image of 2D gaussian in '+savename
+        if verbose: print ' - Saving resulting image of 2D gaussian to '+savename
+        plt.clf()
         centerdot = gauss2D*0.0
         center    = [int(gauss2D.shape[0]/2.),int(gauss2D.shape[1]/2.)]
         centerdot[center[1],center[0]] = 2.0*np.max(gauss2D)
@@ -686,57 +688,66 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,verbose=True):
         plt.title('Generated 2D Gauss')
         plt.savefig(savename)
         plt.clf()
+
+    if savefits:
+        fitsname = './Generated2Dgauss.fits'
+        hduimg   = pyfits.PrimaryHDU(gauss2D)
+        hdus     = [hduimg]
+        hdulist  = pyfits.HDUList(hdus)           # turn header into to hdulist
+        hdulist.writeto(fitsname,clobber=True)    # write fits file (clobber=True overwrites excisting file)
+        if verbose: print ' - Saved image of shifted profile to '+fitsname
     return gauss2D
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def gen_2Dsersic(size,parameters,normalize=False,show2Dsersic=False,verbose=True):
+def gen_2Dsersic(size,parameters,normalize=False,show2Dsersic=False,savefits=False,verbose=True):
     """
     Generating a 2D sersic with specified parameters using astropy's generator
 
     --- INPUT ---
     size          The dimensions of the array to return. Expects [ysize,xsize].
-                  The 2D gauss will be positioned in the center of the array (shifting by 0.5 pixel if dimensions even)
+                  The 2D gauss will be positioned in the center of the array
     parameters    List of the sersic parameters.
-                  Expects [amplitude,effective radiues,Sersic index,ellipticity,rotation angle]
+                  Expects [amplitude,effective radius, Sersic index,ellipticity,rotation angle]
                   The amplitude is the central surface brightness within the effective radius (Ftot/2 is within r_eff)
                   The rotation angle should be in degrees, counterclockwise from the positive x-axis.
-    normalize     Normalize the profile so sum(img) = amplitude. Otherwise, amplitude central surface brightness,
-                  within the effective radius provided
+    normalize     Normalize the profile so sum(profile img) = 1.
     show2Dsersic  Save plot of generated 2D Sersic
+    savefits      Save generated profile to fits file
     verbose       Toggler verbosity
 
     --- EXAMPLE OF USE ---
     import tdose_utilities as tu
-    size       = [20,40]
-    size       = [67,67]
+    size       = [30,40]
+    size       = [31,41]
     parameters = [1,6.7,1.7,1.0-0.67,17.76-90]
-    sersic2D   = tu.gen_2Dsersic(size,parameters,show2Dsersic=True)
+    sersic2D   = tu.gen_2Dsersic(size,parameters,show2Dsersic=True,savefits=True)
+
+    size       = [30,30]
+    size       = [31,31]
+    parameters = [1,5,1.7,0.5,45]
+    sersic2D   = tu.gen_2Dsersic(size,parameters,show2Dsersic=True,savefits=True)
 
     """
     x, y  = np.meshgrid(np.arange(size[1]), np.arange(size[0]))
-    #x, y  = np.mgrid[-np.floor(size[0]/2.):np.ceil(size[0]/2.):1.0, -np.floor(size[1]/2.):np.ceil(size[1]/2.):1.0]
 
     if float(size[0]/2.) - float(int(size[0]/2.)) == 0.0:
-        if verbose: print ' - Y-dimension even; adding shift of 0.5 to y-dimension to center at sub-pixel level'
-        yshift = -0.5
-        ypos   = np.asarray(size[0])/2.0+yshift
+        ypos   = np.asarray(size[0])/2.0-0.5
     else:
-        ypos   = np.asarray(size[0])/2.0
+        ypos   = np.floor(np.asarray(size[0])/2.0)
 
     if float(size[1]/2.) - float(int(size[1]/2.)) == 0.0:
-        if verbose: print ' - X-dimension even; adding shift of 0.5 to x-dimension to center at sub-pixel level'
-        xshift = -0.5
-        xpos   = np.asarray(size[1])/2.0+xshift
+        xpos   = np.asarray(size[1])/2.0-0.5
     else:
-        xpos   = np.asarray(size[1])/2.0
+        xpos   = np.floor(np.asarray(size[1])/2.0)
 
     model = Sersic2D(amplitude=parameters[0], r_eff=parameters[1], n=parameters[2], ellip=parameters[3],
                      theta=parameters[4]*np.pi/180., x_0=xpos, y_0=ypos)
     sersic2D = model(x, y)
 
     if normalize:
-        sersic2D = sersic2D / np.sum(sersic2D) * parameters[0]
+        sersic2D = sersic2D / np.sum(sersic2D)
 
     if show2Dsersic:
+        plt.clf()
         savename = './Generated2Dsersic.pdf'
         if verbose: print ' - Displaying resulting image of 2D sersic in '+savename
         centerdot = sersic2D*0.0
@@ -748,6 +759,15 @@ def gen_2Dsersic(size,parameters,normalize=False,show2Dsersic=False,verbose=True
         plt.title('Generated 2D Sersic')
         plt.savefig(savename)
         plt.clf()
+
+    if savefits:
+        fitsname = './Generated2Dsersic.fits'
+        hduimg   = pyfits.PrimaryHDU(sersic2D)
+        hdus     = [hduimg]
+        hdulist  = pyfits.HDUList(hdus)           # turn header into to hdulist
+        hdulist.writeto(fitsname,clobber=True)    # write fits file (clobber=True overwrites excisting file)
+        if verbose: print ' - Saved image of shifted profile to '+fitsname
+
     return sersic2D
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def get_2DsersicIeff(value,reff,sersicindex,axisratio,boxiness=0.0,returnFtot=False):
@@ -797,7 +817,7 @@ def get_2DsersicIeff(value,reff,sersicindex,axisratio,boxiness=0.0,returnFtot=Fa
         Ieff  = value / factor
         return Ieff
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False,origin=1):
+def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False,origin=1,splineorder=3,savefits=False,verbose=True):
     """
     Shift 2D profile to given position in array by rolling it in x and y.
     Can move by sub-pixel amount using interpolation
@@ -808,37 +828,59 @@ def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False,origin=1):
     padvalue        the values to padd the images with when shifting profile
     origin          The orging of the position values. If 0-based pixels postions the
                     center calculation is updated to refelect this.
-    showprofiles    Show profile when shifted?
+    showprofiles    Save plot of profile when shifted?
+    splineorder     Order of spline interpolation to use when shifting
+    savefits        Save a fitsfile of the shifted profile
+    verbose         Toggle verbosity
 
     --- EXAMPLE OF USE ---
+    profile = np.ones([35,35])
+    profile[17,17] = 5.0
+    fitsname = './Shifted2Dprofile_initial.fits'
+    hduimg   = pyfits.PrimaryHDU(profile)
+    hdus     = [hduimg]
+    hdulist  = pyfits.HDUList(hdus)
+    hdulist.writeto(fitsname,clobber=True)
+
+    profile_shifted = tu.shift_2Dprofile(profile,[20.5,20.5],padvalue=0.0,showprofiles=False,origin=1,splineorder=3,savefits=True)
 
     """
     profile_dim = profile.shape
     yposition   = np.asarray(position[0])
     xposition   = np.asarray(position[1])
 
-    #if (yposition > 16) & (yposition < 16.4): pdb.set_trace()
     if origin == 1:
-        yposition = yposition - 0.5
-        xposition = xposition - 0.5
+        yposition = yposition - 1.0
+        xposition = xposition - 1.0
 
-    ycenter     = np.float(profile_dim[0])/2. #+ 1.#5 # pixels to get true center as plotted by DS9
-    xcenter     = np.float(profile_dim[1])/2. #+ 1.#5 # pixels to get true center as plotted by DS9
+    ycenter_img     = profile_dim[0]/2.-0.5 # sub-pixel center to use as reference when estimating shift
+    xcenter_img     = profile_dim[1]/2.-0.5 # sub-pixel center to use as reference when estimating shift
 
-    yshift = np.float(yposition)-ycenter
-    xshift = np.float(xposition)-xcenter
+    yshift = np.float(yposition)-ycenter_img
+    xshift = np.float(xposition)-xcenter_img
 
-    profile_shifted = scipy.ndimage.interpolation.shift(profile, [yshift,xshift], output=None, order=3,
+    profile_shifted = scipy.ndimage.interpolation.shift(profile, [yshift,xshift], output=None, order=splineorder,
                                                         mode='constant', cval=0.0, prefilter=True)
 
     if showprofiles:
+        plt.clf()
         savename = './Shifted2Dprofile.pdf'
         vmaxval = np.max(profile_shifted)
-        plt.imshow(profile_shifted,interpolation='none',vmin=-vmaxval, vmax=vmaxval,origin='lower')
+        plt.imshow(profile_shifted,interpolation=None,origin='lower') # ,vmin=-vmaxval, vmax=vmaxval
         plt.colorbar()
         plt.title('Positioned Source')
         plt.savefig(savename)
         plt.clf()
+        if verbose: print ' - Saved image of shifted profile to '+savename
+
+    if savefits:
+        fitsname = './Shifted2Dprofile.fits'
+        hduimg   = pyfits.PrimaryHDU(profile_shifted)
+        hdus     = [hduimg]
+        hdulist  = pyfits.HDUList(hdus)           # turn header into to hdulist
+        hdulist.writeto(fitsname,clobber=True)    # write fits file (clobber=True overwrites excisting file)
+        if verbose: print ' - Saved image of shifted profile to '+fitsname
+
     return profile_shifted
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def roll_2Dprofile(profile,position,padvalue=0.0,showprofiles=False):
@@ -966,7 +1008,7 @@ def numerical_convolution_image(imgarray,kerneltype,saveimg=False,clobber=False,
 
     if (np.float(kernel.shape[0]/2.0)-np.int(kernel.shape[0]/2.0) == 0) or \
        (np.float(kernel.shape[1]/2.0)-np.int(kernel.shape[1]/2.0) == 0) or use_scipy_conv:
-        if verbose: print ' - Convolving using scipy.ndimage.filters.convolve() as at leat one dimension of kernel is even; ' \
+        if verbose: print ' - Convolving using scipy.ndimage.filters.convolve() as at least one dimension of kernel is even; ' \
                           'no interpolation over NaN values'
         if norm_kernel & (np.sum(kernel) != 1.0):
             kernel = kernel/np.sum(kernel)
@@ -977,22 +1019,97 @@ def numerical_convolution_image(imgarray,kerneltype,saveimg=False,clobber=False,
 
         img_conv  = scipy.ndimage.filters.convolve(imgarray,kernel,cval=fill_value,origin=0)
     else:
+        if (kernel.shape[0] < imgarray.shape[0]) or (kernel.shape[1] < imgarray.shape[1]):
+            sys.exit(' ---> Astropy convolution requires kernel to have same size as image (but at least one size is smaller)')
+
+        if (kernel.shape[0] > imgarray.shape[0]) or (kernel.shape[1] > imgarray.shape[1]):
+            if verbose: print ' - Astropy convolution requires kernel to have same size as image (but it is larger); '
+            if verbose: print '   Extracting center of kernel to use for convolution'
+            kernel_use = tu.get_kernelcenter(imgarray.shape,kernel,useMaxAsCenter=True,verbose=False)
+        else:
+            kernel_use = kernel
+
         if convolveFFT:
             if verbose: print ' - Convolving using astropy.convolution.convolve_fft(); interpolation over NaN values'
-            img_conv = convolution.convolve_fft(imgarray, kernel, boundary='fill',
+            img_conv = convolution.convolve_fft(imgarray, kernel_use, boundary='fill',
                                                 fill_value=fill_value,normalize_kernel=norm_kernel, mask=imgmask,
                                                 crop=True, return_fft=False, fft_pad=None,
                                                 psf_pad=None, interpolate_nan=False, quiet=False,
                                                 ignore_edge_zeros=False, min_wt=0.0)
         else:
             if verbose: print ' - Convolving using astropy.convolution.convolve(); interpolation over NaN values'
-            img_conv = convolution.convolve(imgarray, kernel, boundary='fill',
+            img_conv = convolution.convolve(imgarray, kernel_use, boundary='fill',
                                             fill_value=fill_value, normalize_kernel=norm_kernel, mask=imgmask)
+
     if saveimg:
         hdulist = pyfits.PrimaryHDU(data=img_conv)
         hdulist.writeto(saveimg,clobber=clobber)
 
     return img_conv
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def get_kernelcenter(shape,kernel,useMaxAsCenter=False,verbose=True):
+    """
+    Cutting out kernel center (with a given shape).
+    Used to ensure that kernels have the right size for numerical convolution where they are required to have
+    the same shape as the image to be convolved.
+
+    NB! Assumes that the kernel is _larger_ than the image. In the other case, e.g.,
+        add zeros around kernel to grow it's size
+
+    --- INFO ---
+    shape           Shape of center of kernel to cut out
+    kernel          Kernel to extract central region from
+    useMaxAsCenter  The default is to extract kernel around center of kjernelshape. To use the maximum value
+                    of the kernel to define the extraction center set useMaxAsCenter=True
+    verbose         Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    img     = np.ones([61,61])
+    kernel  = np.ones([121,121])
+    kernel[60,60] = 10.0
+    kcenter = tu.get_kernelcenter(img.shape,kernel,useMaxAsCenter=True)
+
+    img     = np.ones([40,30])
+    kernel  = np.ones([190,190])
+    kernel[60,60] = 10.0
+    kcenter = tu.get_kernelcenter(img.shape,kernel,useMaxAsCenter=True)
+
+    """
+    if useMaxAsCenter:
+        cenpix = np.where(kernel == np.max(kernel))
+        if len(cenpix[0]) > 1:
+            print ' WARNING: '+str(len(cenpix[0]))+' pixels with value max(Kernel). Using the first as center'
+        xcen   = cenpix[1][0]
+        ycen   = cenpix[0][0]
+    else:
+        xcen = np.floor(kernel.shape[1]/2.)
+        ycen = np.floor(kernel.shape[0]/2.)
+
+    dx   = np.floor(shape[1]/2.)
+    dy   = np.floor(shape[0]/2.)
+
+    if (np.floor(shape[0]/2.) != shape[0]/2.) & (np.floor(shape[1]/2.) != shape[1]/2.):
+        kernelcen = kernel[int(ycen)-int(dy):int(ycen)+int(dy)+1, int(xcen)-int(dx):int(xcen)+int(dx)+1]
+    elif (np.floor(shape[0]/2.) != shape[0]/2.) & (np.floor(shape[1]/2.) == shape[1]/2.):
+        kernelcen = kernel[int(ycen)-int(dy):int(ycen)+int(dy)+1, int(xcen)-int(dx):int(xcen)+int(dx)]
+    elif (np.floor(shape[0]/2.) == shape[0]/2.) & (np.floor(shape[1]/2.) != shape[1]/2.):
+        kernelcen = kernel[int(ycen)-int(dy):int(ycen)+int(dy),   int(xcen)-int(dx):int(xcen)+int(dx)+1]
+    elif (np.floor(shape[0]/2.) == shape[0]/2.) & (np.floor(shape[1]/2.) == shape[1]/2.):
+        kernelcen = kernel[int(ycen)-int(dy):int(ycen)+int(dy),   int(xcen)-int(dx):int(xcen)+int(dx)]
+    else:
+        kernelcen = None
+
+    if verbose: print ' - Input kernel shape:                     ',kernel.shape
+    if verbose: print ' - Returned kernel center shape:           ',kernelcen.shape
+
+    if verbose: print ' - Max value of input kernel:              ',np.max(kernel)
+    if verbose: print ' - Max value of returned kernel center:    ',np.max(kernelcen)
+
+    if verbose: print ' - Location of max value in input kernel:  ',np.where(kernel == np.max(kernel))
+    if verbose: print ' - Location of max value in kernel center: ',np.where(kernelcen == np.max(kernelcen))
+
+    return kernelcen
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def convert_paramarray(paramarray,hdr,hdr_new,type='gauss',verbose=True):
     """
@@ -2292,7 +2409,7 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
     savecubesumimg      Save image of of sum over cube components (useful for comparison with input GALFIT models)
     convkernels         List of numpy arrays or astropy kernels to use for convolution. This can be used to apply a PSF
                         to the model re-generated from the GALFIT parameters. This is useful as GALFIT is modeling the
-                        component paramters before PSF convolution 
+                        component paramters before PSF convolution
     clobber             Overwrite existing files
     verbose             Toggle verbosity
 
@@ -2307,6 +2424,8 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
     PSFmodel = pyfits.open('/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/F814Wpsfmodel_imgblock_6475.fits')[2].data
 
     tu.galfit_convertmodel2cube([fileS,fileG],savecubesumimg=True,includewcs=True,convkernels=[PSFmodel,None])
+
+    tu.test_sersicprofiles(Ieff=0.0184304803665,reff=1.72,sersicindex=1.0,axisratio=0.3,size=67,angle=-177.98)
 
     """
     if verbose: print ' - Will convert the '+str(len(galfitmodelfiles))+' GALFIT models into cubes '
@@ -2366,13 +2485,16 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                 nsersic, nsersicerr = tu.galfit_getheadervalue(compnumber,'N',headerinfo)
 
                 Ieff        = tu.get_2DsersicIeff(fluxtot,Re,nsersic,ar,boxiness=0.0,returnFtot=False)
-                ellipticity = 1.0-ar
-                #             [amplitude,r_e,Sersic index,ellipticity,rotation angle]
-                parameters  = [Ieff,Re,nsersic,ellipticity,pa-90]
-                if verbose: print ' - ',component,': Ieff=',Ieff,' calculated using Reff=',Re,'pix','n=',nsersic,'e=',ellipticity,'theta=',pa-90
+                if verbose: print ' -',component,': Ieff=',Ieff,' calculated using Ftot = ',fluxtot,'Reff=',Re,'pix','n=',nsersic,\
+                    'axisratio=',ar
 
-                sersic2Dimg = tu.gen_2Dsersic(modelarr.shape,parameters,show2Dsersic=False,normalize=False)
-                img_shift   = tu.shift_2Dprofile(sersic2Dimg,[yc,xc],padvalue=0.0,showprofiles=False,origin=1)
+                ellipticity = 1.0-ar
+                parameters  = [Ieff,Re,nsersic,ellipticity,pa-90]
+                if verbose: print ' -',component,': 2D sersic parameters [Ieff,Reff,Sersic index,ellipticity,angle] =',parameters
+
+                if verbose: print ' - central coordinates are',[yc,xc]
+                sersic2Dimg = tu.gen_2Dsersic(modelarr.shape,parameters,show2Dsersic=True,normalize=False)
+                img_shift   = tu.shift_2Dprofile(sersic2Dimg,[yc,xc],padvalue=0.0,showprofiles=True,origin=1,splineorder=3)
                 cubelayer   = img_shift
             elif headerinfo[component] == 'sky':
                 sky, skyerr = tu.galfit_getheadervalue(compnumber,'SKY',headerinfo)
@@ -2443,6 +2565,15 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
             imgname = galfitmodel.replace('.fits','_cubesum.fits')
             if verbose: print ' - Saving model cube to \n   '+imgname
             cubesum = np.sum(cube,axis=0)
+
+            # KBS170915 Manually scaling to max value of model for testing:
+            scaletomaxmodelpix = False
+            if scaletomaxmodelpix:
+                scalfactor = np.max(modelarr)/np.max(cubesum)
+                print ' -------> Scaled cubesum output by a factor ',scalfactor,' [ max(model)/max(cubesum) ]'
+                print '          max(model)   = ',np.max(modelarr)
+                print '          max(cubesum) = ',np.max(cubesum)
+                cubesum    = cubesum * scalfactor
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             hduimg  = pyfits.PrimaryHDU(cubesum)
 
@@ -3509,7 +3640,7 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
         plt.clf()
         plt.close('all')
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5,size=1000,
+def test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5,size=1000,angle=-57,
                         outputdir='/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/',verbose=True):
     """
     Function to generate and investigate sersic profiles.
@@ -3518,19 +3649,21 @@ def test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5,size=10
     tu.test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5)
 
     """
+    theta = angle/180.0*np.pi
+
     if verbose: print ' - Input: \n   Ieff      =',Ieff,'\n   reff      =',reff,\
-        '\n   n         =',sersicindex,'\n   axisratio =',sersicindex
+        '\n   n         =',sersicindex,'\n   axisratio =',axisratio,'\n   angle     =',angle,'\n   theta     =',theta
 
     x,y = np.meshgrid(np.arange(size), np.arange(size))
 
-    mod = Sersic2D(amplitude = Ieff, r_eff = reff, n=sersicindex, x_0=size/2.0, y_0=size/2.0, ellip=1-axisratio, theta=-1)
+    mod = Sersic2D(amplitude = Ieff, r_eff = reff, n=sersicindex, x_0=size/2.0, y_0=size/2.0, ellip=1-axisratio, theta=theta)
     img = mod(x, y)
     hducube  = pyfits.PrimaryHDU(img)
     hdus = [hducube]
     hdulist = pyfits.HDUList(hdus)
     hdulist.writeto(outputdir+'model_sersic.fits',clobber=True)
 
-    mod = Sersic2D(amplitude = Ieff, r_eff = reff, n=sersicindex, x_0=size/2.0, y_0=size/2.0, ellip=0, theta=-1)
+    mod = Sersic2D(amplitude = Ieff, r_eff = reff, n=sersicindex, x_0=size/2.0, y_0=size/2.0, ellip=0, theta=theta)
     img = mod(x, y)
     hducube  = pyfits.PrimaryHDU(img)
     hdus = [hducube]
@@ -3559,7 +3692,7 @@ def test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5,size=10
     Ftot_eff_1D   = np.trapz(s1(r[:ent_eff]),x=r[:ent_eff],dx=0.01)
     Ftot_outer_1D = np.trapz(s1(r[ent_eff:]),x=r[ent_eff:],dx=0.01)
 
-    if verbose: print ' - np.trapz of 1D profile for r=[0;'+str(size)+']:     Ftot_reff=',Ftot_1D
+    if verbose: print '\n - np.trapz of 1D profile for r=[0;'+str(size)+']:     Ftot_reff=',Ftot_1D
     if verbose: print ' - np.trapz of 1D profile for r=[0;r_eff]:    Ftot_reff=',Ftot_eff_1D
     if verbose: print ' - np.trapz of 1D profile for r=[r_eff;'+str(size)+']: Ftot_outer=',Ftot_outer_1D
 
@@ -3567,7 +3700,7 @@ def test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5,size=10
     Ftot_eff_2D   = integrate.quad(lambda x: x*s1(x),0 ,reff)[0] * 2 * np.pi
     Ftot_outer_2D = integrate.quad(lambda x: x*s1(x),reff,np.inf)[0] * 2 * np.pi
 
-    if verbose: print ' - scipy.integrate.quad of 2D profile for r=[0;np.inf]:       Ftot_2D       =',Ftot_2D
+    if verbose: print '\n - scipy.integrate.quad of 2D profile for r=[0;np.inf]:       Ftot_2D       =',Ftot_2D
     if verbose: print ' - scipy.integrate.quad of 2D profile for r=[0;r_eff]:        Ftot_reff_2D  =',Ftot_eff_2D
     if verbose: print ' - scipy.integrate.quad of 2D profile for r=[r_eff;np.inf]:   Ftot_2D_outer =',Ftot_outer_2D
 
@@ -3576,7 +3709,7 @@ def test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5,size=10
                       ']:          Ftot_2D_r'+str(int(size/2.))+'  =',Ftot_full
 
     Ftot_calc   = tu.get_2DsersicIeff(Ieff,reff,sersicindex,1.0,returnFtot=True)
-    if verbose: print ' - tu.get_2DsersicIeff calculation of Ftot:                   Ftot_calc     =',Ftot_calc
+    if verbose: print '\n - tu.get_2DsersicIeff calculation of Ftot:                   Ftot_calc     =',Ftot_calc
 
     Ieff_calc   = tu.get_2DsersicIeff(Ftot_2D,reff,sersicindex,1.0)
     if verbose: print ' - tu.get_2DsersicIeff calculation of Ieff from Ftot_2D:      I_eff         =',Ieff_calc
@@ -3590,13 +3723,23 @@ def test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5,size=10
     mask = x*x + y*y <= r*r
 
     sum_mask_reff = np.sum(img[mask])
-    if verbose: print ' - Sum of pixels within r_eff of sersic img array:                Fsum_reff =',sum_mask_reff
+    if verbose: print '\n - Sum of pixels within r_eff of sersic img array (spherical):    Fsum_reff =',sum_mask_reff
 
     r    = size/2.0
     y,x  = np.ogrid[-size/2.0:size/2.0, -size/2.0:size/2.0]
     mask = x*x + y*y <= r*r
 
     sum_mask = np.sum(img[mask])
-    if verbose: print ' - Sum of pixels within r_eff of sersic img array:                Fsum_r'+str(int(size/2.))+' =',sum_mask
+    if verbose: print ' - Sum of pixels within r_eff of sersic img array (spherical):    Fsum_r'+str(int(size/2.))+' =',sum_mask
+
+
+    Ftot_calc   = tu.get_2DsersicIeff(Ieff,reff,sersicindex,axisratio,returnFtot=True)
+    if verbose: print '\n - tu.get_2DsersicIeff calculation of Ftot (axisratio='+str(axisratio)+'):               Ftot_calc  =',Ftot_calc
+
+    Ieff_calc   = tu.get_2DsersicIeff(Ftot_2D,reff,sersicindex,axisratio)
+    if verbose: print ' - tu.get_2DsersicIeff calculation of Ieff from Ftot_2D (axisratio='+str(axisratio)+'):      I_eff  =',Ieff_calc
+
+    Ieff_calc   = tu.get_2DsersicIeff(Ftot_eff_2D,reff,sersicindex,axisratio)
+    if verbose: print ' - tu.get_2DsersicIeff calculation of Ieff from Ftot_reff_2D (axisratio='+str(axisratio)+'): I_eff  =',Ieff_calc
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
