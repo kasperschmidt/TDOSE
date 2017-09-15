@@ -2501,8 +2501,8 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                 if verbose: print ' -',component,': 2D sersic parameters [Ieff,Reff,Sersic index,ellipticity,angle] =',parameters
 
                 if verbose: print ' - central coordinates are',[yc,xc]
-                sersic2Dimg = tu.gen_2Dsersic(modelarr.shape,parameters,show2Dsersic=True,normalize=False)
-                img_shift   = tu.shift_2Dprofile(sersic2Dimg,[yc,xc],padvalue=0.0,showprofiles=True,origin=1,splineorder=3)
+                sersic2Dimg = tu.gen_2Dsersic(modelarr.shape,parameters,show2Dsersic=False,normalize=False)
+                img_shift   = tu.shift_2Dprofile(sersic2Dimg,[yc,xc],padvalue=0.0,showprofiles=False,origin=1,splineorder=3)
                 cubelayer   = img_shift
             elif headerinfo[component] == 'sky':
                 sky, skyerr = tu.galfit_getheadervalue(compnumber,'SKY',headerinfo)
