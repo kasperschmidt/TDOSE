@@ -27,15 +27,15 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
     datacube           Data cube to generate model for
     sourceparam        List of parameters describing sources to generate model for.
                        The expected format of the list is set by paramtype
-                       A complete model can also be provide in a 2D numby array.
-                       In this case paramtype should be set to 'model'
+                       A complete model can also be provide in a 2D or 3D numpy array.
+                       In this case paramtype should be set to 'modelimg'
     psfparam           Wavelength dependent psf paramters to use for modeling.
     paramtype          The format expected in the sourceparam keyword is determined by this value.
                        Choose between:
                           'gauss'    Expects a source paramter list dividable by 6 containing the paramters
                                      [yposition,xposition,fluxscale,sigmay,sigmax,angle] for each source. I.e,
                                      the length of the list should be Nobjects * 6
-                          'modelimg' A full 2D model of the field-of-view is provided to source param.
+                          'modelimg' A full 2D or 3D model of the field-of-view is provided to source param.
                                      This option needs to have psfcube specified for the numerical convolution.
     psfparamtype       The format expected in the psfparam keyword is determined by this value
                        Choose between:
@@ -83,7 +83,10 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                 cov_obj          = tu.build_2D_cov_matrix(params[nn][4],params[nn][3],params[nn][5],verbose=False)
                 cov_objs[nn,:,:] = cov_obj
         elif paramtype == 'modelimg':
-            Nsource = 1
+            if len(sourceparam) == 3:
+                Nsource = sourceparam.shape[0]
+            else:
+                Nsource = 1
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         datashape = datacube.shape
         if verbose: print ' - Looping over '+str(datashape[0])+' wavelength layers, convolve sources with'
@@ -139,7 +142,6 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
             else:
                 if verbose & (ll==0): print ' - Performing numerical convolution of sources in-loop'
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
             if loopverbose: print ' - Build layer image'
 
             if fit_source_scales:
@@ -195,17 +197,20 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                             convkernel = img_psf
 
                             if paramtype == 'modelimg':
-                                inputmodel = sourceparam
+                                if len(sourceparam.shape) == 3:
+                                    inputmodel = sourceparam[ss,:,:]
+                                else:
+                                    inputmodel = sourceparam
                             else:
                                 sys.exit(' ---> Building of model for numerical intergration is not enabled yet')
 
                             psfedLayername = False #cubename.replace('.fits','_RefImageModelPSFconvolved_PSFparamtype_'+psfparamtype+'.fits')
+
                             img_model_init  = tu.numerical_convolution_image(inputmodel,convkernel,saveimg=psfedLayername,
                                                                              clobber=clobber,imgmask=comb_mask,
                                                                              fill_value=0.0,norm_kernel=True,convolveFFT=False,
                                                                              verbose=loopverbose)
-
-                            img_model  = img_model_init/np.sum(img_model_init) # normalizing model
+                            img_model  = img_model_init/np.sum(img_model_init)         # normalizing model (component)
                         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                         img_model  = img_model/noisecube_layer
                         modelravel = img_model.ravel()
@@ -232,7 +237,12 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                             output_layerMTX   = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
                                                               sourcescale=scalesMTX,verbose=loopverbose)
                         else:
-                            output_layerMTX   = img_model_init/np.sum(img_model_init) * scalesMTX
+                            if Nsource == 1:
+                                output_layerMTX   = img_model_init/np.sum(img_model_init) * scalesMTX
+                            else:
+                                output_layerMTX = np.zeros(datacube.shape[1:])
+                                for component in xrange(len(scalesMTX)):
+                                    output_layerMTX = output_layerMTX + sourceparam[component,:,:] * scalesMTX[component]
 
                         output_layer   = output_layerMTX
                         output_scales  = scalesMTX
@@ -667,8 +677,15 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
         if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
 
     elif paramtype == 'modelimg':
-        if verbose: print ' - Storing single source (object) from model image in source cube (no source disentangling) '
-        Nsource   = 1
+        if len(sourceparam) == 2:
+            if verbose: print ' - Storing single source (object) from model image in source cube (no source disentangling) '
+            Nsource   = 1
+        elif len(sourceparam) == 3:
+            if verbose: print ' - Storing model components in source cube (incl. source disentangling) '
+            Nsource   = sourceparam.shape[0]
+        else:
+            sys.exit(' ---> Shape of model data array is not 2 (image) or 3 (cube) ')
+
         out_cube  = np.zeros([Nsource,cubeshape[0],cubeshape[1],cubeshape[2]])
 
         if verbose: print ' - Loop over layers to fill output cube with data '
@@ -683,7 +700,11 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
 
                 img_psf    = psfcube[ll,:,:]
                 convkernel = img_psf
-                inputmodel = sourceparam
+
+                if len(sourceparam.shape) == 3:
+                    inputmodel = sourceparam[ss,:,:]
+                else:
+                    inputmodel = sourceparam
 
                 img_model_init  = tu.numerical_convolution_image(inputmodel,convkernel,saveimg=False,clobber=clobber,imgmask=None,
                                                                  fill_value=0.0,norm_kernel=True,convolveFFT=False,verbose=False)

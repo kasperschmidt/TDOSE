@@ -154,7 +154,8 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         if verbose: print ' TDOSE: Defining and loading data for extractions           '+\
                           '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
         Nloops    = 1
-        loopnames = [-9999]
+        loopnames = [-9999] # Default: Extracting objects from full FoV.
+                            # If to be done in cutouts, loopnames will be replaced with individual IDs
 
         if setupdic['model_cutouts']:
             Nloops    = Nextractions
@@ -246,13 +247,20 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 if setupdic['model_cutouts']:
                     model_file = model_file.replace('.fits',imgstr+'.fits')
 
-                if os.path.isfile(model_file):
+                cube_model_file = model_file.replace('.fits','_cube.fits')
+                if os.path.isfile(cube_model_file):
+                    if verbosefull: print 'found a cube model, so will use that (instead of any model files)'
+                    FoV_modelexists     = True
+                    FoV_modelfile       = cube_model_file
+                    FoV_modeldata       = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
+                elif os.path.isfile(model_file):
                     if verbosefull: print 'found it, so it will be used'
-                    FoV_modelexists = True
-                    FoV_modelfile   = model_file
-                    FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
+                    FoV_modelexists     = True
+                    FoV_modelfile       = model_file
+                    FoV_modeldata       = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
                 else:
-                    if verbosefull: print 'did not find the model\n    '+model_file+'\n   so will skip object '+str(extid)
+                    if verbosefull: print 'did not find any model or cube model:\n    '+model_file+'\n    '+cube_model_file+\
+                                          '\n   so will skip object '+str(extid)
                     continue
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if not FoV_modelexists:
@@ -305,12 +313,30 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 if not FoV_modelexists:
                     modelimgsize = cube_data.shape[1:]
                 else:
-                    projected_image, footprint = reproject_interp( (FoV_modeldata, img_wcs), cube_wcs2D, shape_out=cube_data.shape[1:])
+                    if len(FoV_modeldata.shape) == 2:
+                        FoV_modeldata_reproject = FoV_modeldata
+                    elif len(FoV_modeldata.shape) == 3:
+                        FoV_modeldata_reproject = np.sum(FoV_modeldata, axis=0)
+                    else:
+                        sys.exit(' ---> Shape of model data array is not 2 (image) or 3 (cube) ')
+
+                    projected_image, footprint = reproject_interp( (FoV_modeldata_reproject, img_wcs), cube_wcs2D,
+                                                                   shape_out=cube_data.shape[1:])
                     projected_image[np.isnan(projected_image)] = 0.0 # replacing NaNs from reprojection with 0s
                     paramCUBE  = projected_image/np.sum(projected_image)*np.sum(FoV_modeldata) # normalize and scale to match FoV_modeldata
 
                 tmf.save_modelimage(cubewcsimg,paramCUBE,modelimgsize,modeltype=setupdic['source_model'].lower(),
                                     param_init=False,clobber=clobber,outputhdr=cubehdu.header,verbose=verbosefull)
+
+                if FoV_modelexists:
+                    if (len(FoV_modeldata.shape) == 3):
+                        paramCUBE = np.zeros([FoV_modeldata.shape[0],cube_data.shape[1],cube_data.shape[2]])
+                        if verbose: print ' - Reprojecting and normalizing individual components in object model cube to use for extraction '
+                        for component in xrange(FoV_modeldata.shape[0]):
+                            projected_comp, footprint_comp = reproject_interp( (FoV_modeldata[component,:,:], img_wcs), cube_wcs2D,
+                                                                               shape_out=cube_data.shape[1:])
+                            projected_comp[np.isnan(projected_comp)] = 0.0
+                            paramCUBE[component,:,:] = projected_comp/ np.sum(projected_comp)
             else:
                 if verbose: print ' >>> Skipping converting reference image model to cube WCS frame (assume models exist)'
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -386,7 +412,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             if FoV_modelexists:
                 sourceids = np.array([extid])
 
-            if extid == -9999:
+            if extid == -9999: # If full FoV is modeled
                 if setupdic['sources_to_extract'] == 'all':
                     for ss, sid in enumerate(extractids):
                         SAD[str("%.10d" % int(sid))] = [ss]
@@ -403,7 +429,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                         for ss, sid in enumerate(extractids):
                             SAD[str("%.10d" % int(sid))] = [ss]
 
-            else:
+            else:  # If cutouts are modeled instead of full FoV
                 if setupdic['sourcecat_parentIDcol'] is not None:
                     parentids = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']]
                     sourceent = np.where(sourceids == extid)[0]
@@ -1053,7 +1079,7 @@ def model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_varianc
     rescubename             Name of residual cube to generate
     cube_data               Data cube
     cube_variance           Variance for data cube (cube_data)
-    paramCUBE               Parmaters of objects in data cube
+    paramCUBE               Parameters of objects in data cube
     cube_hdr                Header of data cube
     paramPSF                Parameters of PSF
     psfcubename             Name of PSF cube to use for numerical convolutions
