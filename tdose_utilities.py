@@ -10,7 +10,6 @@ import astropy.convolution as ac # convolve, convolve_fft, Moffat2DKernel, Gauss
 from astropy.coordinates import SkyCoord
 from astropy.modeling.models import Sersic1D
 from astropy.modeling.models import Sersic2D
-from astropy.wcs.utils import pixel_to_skycoord
 from astropy.nddata import Cutout2D
 import pyfits
 import subprocess
@@ -1475,7 +1474,7 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
         if os.path.isfile(outputfile):
             sys.exit(' ---> File already exists and clobber = False')
     fout = open(outputfile,'w')
-    fout.write("# Region file format: DS9 version 4.1 \nfk5\n")
+    fout.write("# Region file format: DS9 version 4.1 \nicrs\n")
 
     if textlist is None:
         textstrings = pyfits.open(fitstable)[1].data['obj'].astype(int).astype(str)
@@ -1890,7 +1889,7 @@ def create_simpleDS9region(outputfile,ralist,declist,color='red',circlesize=0.5,
             sys.exit('File already exists and clobber = False --> ABORTING')
     fout = open(outputfile,'w')
 
-    fout.write("# Region file format: DS9 version 4.1 \nfk5\n")
+    fout.write("# Region file format: DS9 version 4.1 \nicrs\n")
 
     for rr, ra in enumerate(ralist):
         string = 'circle('+str(ra)+','+str(declist[rr])+','+str(circlesize)+'") # color='+color+' width=3 '
@@ -2398,8 +2397,8 @@ def galfit_results2paramlist(galfitresults,verbose=True):
     fin.close()
     return paramlist
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=False,convkernels=None,normalizecomponents=False,
-                             clobber=True,verbose=True):
+def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=False,convkernels=None,sourcecat_compinfo=None,
+                             normalizecomponents=False,clobber=True,verbose=True):
     """
     Convert a GALFIT model output file into a model cube, where each model component occupy a different layer in the cube.
 
@@ -2416,8 +2415,24 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
     convkernels         List of numpy arrays or astropy kernels to use for convolution. This can be used to apply a PSF
                         to the model re-generated from the GALFIT parameters. This is useful as GALFIT is modeling the
                         component paramters before PSF convolution
+    sourcecat_compinfo  A source catalog with parent IDs, i.e. IDs assigning individual model components to the main
+                        object and to contaminants, is needed for TDOSE to succesfully disentangle and deblend sources
+                        based on the model cube. To save a TDOSE-like source catalog with parent ids, provide a file
+                        containing "compoent info" to the sourcecat_compinfo keyword. A piece of compoent info is a string
+                        including the model name followed by an object ID and 'X:Y' strings indicating what each component
+                        (X; starting from 1 corresponding to the COMP_X GALFIT keyword) corresponds to. In the latter
+                        Y indicates whether a model component is
+                           Y=1     a source in the main object
+                           Y=2     a contaminating source
+                           Y=3     a sky model
+                        Hence, the following "component info" line indicates a model with components 1 and 3 being
+                        sources in the object of interest (ID=12345), contaminating sources modeled by components 2 and 4,
+                        and a sky model in the 5th model component:
+
+                             name_of_GALFIT_model_for_ID12345.fits  12345  1:1  2:2  3:1  4:2  5:3
+
     normalizecomponents Normalize each individual components so sum(component image) = 1?
-                        TDOSE is expecting a cube with normalizecomponents=True for spectral extraction
+                        TDOSE will normalize cube for extraction optimization irrespective of input
     clobber             Overwrite existing files
     verbose             Toggle verbosity
 
@@ -2431,18 +2446,57 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
 
     PSFmodel = pyfits.open('/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/F814Wpsfmodel_imgblock_6475.fits')[2].data
 
-    tu.galfit_convertmodel2cube([fileS,fileG],savecubesumimg=True,includewcs=True,convkernels=[PSFmodel,None])
+    tu.galfit_convertmodel2cube([fileS,fileG],savecubesumimg=True,includewcs=True,convkernels=[PSFmodel,None],normalizecomponents=False)
 
     tu.test_sersicprofiles(Ieff=0.0184304803665,reff=1.72,sersicindex=1.0,axisratio=0.3,size=67,angle=-177.98)
 
     """
     if verbose: print ' - Will convert the '+str(len(galfitmodelfiles))+' GALFIT models into cubes '
     if verbose: print '\n'
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if sourcecat_compinfo is not None:
+        compinfo = {}
+        with open(sourcecat_compinfo) as scci:
+            for componentinfo in scci:
+                if componentinfo.startswith('#'):
+                    pass
+                else:
+                    cisplit = componentinfo.split()
+                    compinfo[cisplit[0]] = {}
+                    compinfo[cisplit[0]]['id'] = cisplit[1]
+                    for cinfo in cisplit[2:]:
+                        if ':' in cinfo:
+                            cno   = cinfo.split(':')[0]
+                            cinfo = cinfo.split(':')[1]
+                            compinfo[cisplit[0]]['COMP_'+cno] = cinfo
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     for gg, galfitmodel in enumerate(galfitmodelfiles):
         if verbose: print ' - Extracting number of components from model extenstion (ext=2) of GALFIT model:\n   '+galfitmodel
         headerinfo = pyfits.open(galfitmodel)[2].header
         modelarr   = pyfits.open(galfitmodel)[2].data
+
+        if sourcecat_compinfo is not None:
+            sourcecat = galfitmodel.replace('.fits','_sourcecatalog')+'.txt'
+            if verbose: print ' - Component info provided so opening source catalog file:\n   '+sourcecat
+            scat = open(sourcecat,'w')
+            scat.write('# Source catalog for '+galfitmodel+'\n')
+            scat.write('# Based on component info in '+sourcecat_compinfo+'\n')
+            scat.write('# Generated with tdose_utilities.galfit_convertmodel2cube() on '+tu.get_now_string()+'\n# \n')
+            scat.write('# parent_id id ra dec x_image y_image fluxscale \n')
+
+            refimg_hdr = pyfits.open(galfitmodel)[1].header
+            modelwcs   = wcs.WCS(tu.strip_header(refimg_hdr.copy()))
+
+            cutrange_low_x = int(float(refimg_hdr['OBJECT'].split(':')[0].split('[')[-1]))
+            cutrange_low_y = int(float(refimg_hdr['OBJECT'].split(',')[-1].split(':')[0]))
+
+            xpix_mod, ypix_mod, ra_mod, dec_mod = tu.galfit_getcentralcoordinate(galfitmodel,coordorigin=1)
+            objdic     = compinfo[galfitmodel.split('/')[-1]]
+            objid      = objdic['id']
+            modstring  = ' 99999 '+objid+' '+str(ra_mod)+' '+str(dec_mod)+' '+\
+                         str(xpix_mod-cutrange_low_x+1)+' '+str(ypix_mod-cutrange_low_y+1)+' 1.0'
+            scat.write(modstring+'\n')
 
         compkeys = []
         for key in headerinfo.keys():
@@ -2505,7 +2559,10 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                 img_shift   = tu.shift_2Dprofile(sersic2Dimg,[yc,xc],padvalue=0.0,showprofiles=False,origin=1,splineorder=3)
                 cubelayer   = img_shift
             elif headerinfo[component] == 'sky':
+                xc, xcerr   = tu.galfit_getheadervalue(compnumber,'XC',headerinfo)
+                yc, ycerr   = tu.galfit_getheadervalue(compnumber,'YC',headerinfo)
                 sky, skyerr = tu.galfit_getheadervalue(compnumber,'SKY',headerinfo)
+                fluxtot     = sky
                 cubelayer   = np.zeros([modelarr.shape[0],modelarr.shape[1]])+sky
             else:
                 sys.exit(' ---> Dealing with a "'+headerinfo[component]+'" GALFIT model component is not implemented yet; sorry. '
@@ -2527,8 +2584,37 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
             cube[cc,:,:] = cubelayer
             cubelayer    = cubelayer*0.0 # resetting cube layer
 
+            if sourcecat_compinfo is not None:
+                cval   = objdic[component]
+                if cval == '1': # Object component
+                    id_parent = objid
+                    id_source = objid+str("%.3d" % int(compnumber))
+                elif cval == '2': # Contaminant
+                    id_parent = objid+str("%.3d" % int(compnumber))#+'002'
+                    id_source = objid+str("%.3d" % int(compnumber))#+'002'
+                elif cval == '3': # Sky
+                    id_parent = objid+str("%.3d" % int(compnumber))#+'003'
+                    id_source = objid+str("%.3d" % int(compnumber))#+'003'
+                else:
+                    id_parent = 'WARNING - invalud value of component info. Component info file provides "'+str(cval)+'" for '+component
+                    id_source = ' '
+
+                skycoord   = wcs.utils.pixel_to_skycoord(cutrange_low_x+xc-1,cutrange_low_y+yc-1,modelwcs,origin=1)
+                racomp     = skycoord.ra.value
+                deccomp    = skycoord.dec.value
+                compstring = ' '+id_parent+' '+id_source+' '+str(racomp)+' '+str(deccomp)+' '+str(xc)+' '+str(yc)+' '+str(fluxtot)
+                scat.write(compstring+'\n')
+
+        if sourcecat_compinfo is not None:
+            scat.close()
+            fitscat = sourcecat.replace('.txt','.fits')
+            if verbose: print ' - Save fits version of source catalog to '+fitscat
+            fitsfmt       = ['D','D','D','D','D','D','D']
+            sourcecatfits = tu.ascii2fits(sourcecat,asciinames=True,skip_header=4,fitsformat=fitsfmt,verbose=verbose)
+
+
         # - - - - - - - - - - - - - - - - - - Saving Model Cube - - - - - - - - - - - - - - - - - -
-        cubename = galfitmodel.replace('.fits','_cube.fits')
+        cubename = galfitmodel.replace('.fits','_cube')+'.fits'
         if verbose: print ' - Saving model cube to \n   '+cubename
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         hducube  = pyfits.PrimaryHDU(cube)       # default HDU with default minimal header
@@ -2667,8 +2753,8 @@ def galfit_getcentralcoordinate(modelfile,coordorigin=1,verbose=True):
 
     """
     if verbose: print ' - Will extract central coordinates from '+modelfile
-    refimg_hdr     = pyfits.open(modelfile[0])[1].header
-    model_hdr      = pyfits.open(modelfile[0])[2].header
+    refimg_hdr     = pyfits.open(modelfile)[1].header
+    model_hdr      = pyfits.open(modelfile)[2].header
     imgwcs         = wcs.WCS(tu.strip_header(refimg_hdr.copy()))
 
     fit_region     = model_hdr['FITSECT']
