@@ -1282,7 +1282,7 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if os.path.isfile(outname) & (clobber == False):
         sys.exit(outname+' already exists and clobber=False ')
-    skyc      = SkyCoord(ra, dec, frame='icrs', unit=(units.deg,units.deg))
+    skyc      = SkyCoord(ra, dec, frame='fk5', unit=(units.deg,units.deg))
     size      = units.Quantity((  cutoutsize[1], cutoutsize[0]), units.arcsec)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1403,7 +1403,7 @@ def extract_subimage(imgfile,ra,dec,cutoutsize,outname=None,clobber=False,imgext
                       'from fits header as "newline" is non-ascii character'
     striphdr = tu.strip_header(imghdr.copy())
     imgwcs   = wcs.WCS(striphdr)
-    skyc     = SkyCoord(ra, dec, frame='icrs', unit=(units.deg,units.deg))
+    skyc     = SkyCoord(ra, dec, frame='fk5', unit=(units.deg,units.deg))
     size     = units.Quantity((  cutoutsize[1], cutoutsize[0]), units.arcsec)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1474,7 +1474,7 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
         if os.path.isfile(outputfile):
             sys.exit(' ---> File already exists and clobber = False')
     fout = open(outputfile,'w')
-    fout.write("# Region file format: DS9 version 4.1 \nicrs\n")
+    fout.write("# Region file format: DS9 version 4.1 \nfk5\n")
 
     if textlist is None:
         textstrings = pyfits.open(fitstable)[1].data['obj'].astype(int).astype(str)
@@ -1561,7 +1561,7 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
         if verbose: print ' - Image header provided; converting ra and dec values using wcs info from header'
         striphdr   = tu.strip_header(imgheader.copy(),verbose=verbose)
         wcs_in     = wcs.WCS(striphdr)
-        skycoord   = SkyCoord(ras, decs, frame='icrs', unit='deg')
+        skycoord   = SkyCoord(ras, decs, frame='fk5', unit='deg')
         pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in,origin=1)
         xpos       = pixcoord[0]
         ypos       = pixcoord[1]
@@ -1675,7 +1675,7 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
             xpos       = sourcedat[racol][oo]
             ypos       = sourcedat[deccol][oo]
         else:
-            skycoord   = SkyCoord(sourcedat[racol][oo], sourcedat[deccol][oo], frame='icrs', unit='deg')
+            skycoord   = SkyCoord(sourcedat[racol][oo], sourcedat[deccol][oo], frame='fk5', unit='deg')
             pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in,origin=1)
             xpos, ypos = pixcoord[0], pixcoord[1]
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1889,7 +1889,7 @@ def create_simpleDS9region(outputfile,ralist,declist,color='red',circlesize=0.5,
             sys.exit('File already exists and clobber = False --> ABORTING')
     fout = open(outputfile,'w')
 
-    fout.write("# Region file format: DS9 version 4.1 \nicrs\n")
+    fout.write("# Region file format: DS9 version 4.1 \nfk5\n")
 
     for rr, ra in enumerate(ralist):
         string = 'circle('+str(ra)+','+str(declist[rr])+','+str(circlesize)+'") # color='+color+' width=3 '

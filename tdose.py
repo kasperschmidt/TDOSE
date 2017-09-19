@@ -777,7 +777,7 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                 striphdr   = tu.strip_header(cutout_hdr.copy())
                 wcs_in     = wcs.WCS(striphdr)
                 skycoord   = SkyCoord(cut_sourcedat[ii][setupdic['sourcecat_racol']],
-                                      cut_sourcedat[ii][setupdic['sourcecat_deccol']], frame='icrs', unit='deg')
+                                      cut_sourcedat[ii][setupdic['sourcecat_deccol']], frame='fk5', unit='deg')
                 pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in,origin=1)
                 cut_sourcedat[ii][setupdic['sourcecat_xposcol']] = pixcoord[0]
                 cut_sourcedat[ii][setupdic['sourcecat_yposcol']] = pixcoord[1]
@@ -924,7 +924,7 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
 
             ra_obj        = subsourcecat[setupdic['sourcecat_racol']][objid_modelent]
             dec_obj       = subsourcecat[setupdic['sourcecat_deccol']][objid_modelent]
-            skyc          = SkyCoord(ra_obj, dec_obj, frame='icrs', unit=(units.deg,units.deg))
+            skyc          = SkyCoord(ra_obj, dec_obj, frame='fk5', unit=(units.deg,units.deg))
             size          = units.Quantity((  cutoutsize[1], cutoutsize[0]), units.arcsec)
             cutout_layer  = Cutout2D(cube_data[0,:,:], skyc, size, wcs=cubewcs_2D, mode='partial')
 
