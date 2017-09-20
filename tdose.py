@@ -410,7 +410,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             SAD    = collections.OrderedDict()
 
             if FoV_modelexists:
-                sourceids = np.array([extid])
+                sourceids = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']]
 
             if extid == -9999: # If full FoV is modeled
                 if setupdic['sources_to_extract'] == 'all':
@@ -434,14 +434,16 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                     parentids = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']]
                     sourceent = np.where(sourceids == extid)[0]
                     parent    = parentids[sourceent][0]
-                    groupent  = np.where(parentids == parent)[0]
+                    if float(parent) < 0: # ignoring parents with negative IDs. Looking for object IDs in parent list instead
+                        sourceent = np.where(parentids == extid)[0]
+                        parent    = parentids[sourceent][0]
 
+                    groupent  = np.where(parentids == parent)[0]
                     SAD[str("%.10d" % int(parent))+'-'+str("%.10d" % int(extid))] =  groupent.tolist()
                 else:
                     sourceent = np.where(sourceids == extid)[0]
                     SAD[str("%.10d" % int(extid))] =  sourceent.tolist()
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
             if store1Dspectra:
                 specfiles  = tes.extract_spectra(model_cube_file,model_cube_ext=setupdic['cube_extension'],
                                                  layer_scale_ext='WAVESCL',clobber=clobber,
