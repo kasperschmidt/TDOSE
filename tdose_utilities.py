@@ -2494,9 +2494,8 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
             xpix_mod, ypix_mod, ra_mod, dec_mod = tu.galfit_getcentralcoordinate(galfitmodel,coordorigin=1)
             objdic     = compinfo[galfitmodel.split('/')[-1]]
             objid      = objdic['id']
-            modstring  = ' 99999 '+objid+' '+str(ra_mod)+' '+str(dec_mod)+' '+\
+            modstring  = ' -99 '+objid+' '+str(ra_mod)+' '+str(dec_mod)+' '+\
                          str(xpix_mod-cutrange_low_x+1)+' '+str(ypix_mod-cutrange_low_y+1)+' 1.0'
-            scat.write(modstring+'\n')
 
         compkeys = []
         for key in headerinfo.keys():
@@ -2606,6 +2605,9 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                 scat.write(compstring+'\n')
 
         if sourcecat_compinfo is not None:
+            scat.write(modstring+'\n') # NB - The string describing the model center has to be put after the component
+                                       #      strings to ensure a proper assignment of layers to components when
+                                       #      extracting 1D spectra with TDOSE.
             scat.close()
             fitscat = sourcecat.replace('.txt','.fits')
             if verbose: print ' - Save fits version of source catalog to '+fitscat
