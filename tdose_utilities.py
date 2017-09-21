@@ -2398,7 +2398,7 @@ def galfit_results2paramlist(galfitresults,verbose=True):
     return paramlist
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=False,convkernels=None,sourcecat_compinfo=None,
-                             normalizecomponents=False,clobber=True,verbose=True):
+                             normalizecomponents=False,includesky=False,clobber=True,verbose=True):
     """
     Convert a GALFIT model output file into a model cube, where each model component occupy a different layer in the cube.
 
@@ -2431,6 +2431,8 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
 
                              name_of_GALFIT_model_for_ID12345.fits  12345  1:1  2:2  3:1  4:2  5:3
 
+    includesky          To include sky-components from the GALFIT header when building the component cube and putting
+                        together the source catalog, set includesky=True
     normalizecomponents Normalize each individual components so sum(component image) = 1?
                         TDOSE will normalize cube for extraction optimization irrespective of input
     clobber             Overwrite existing files
@@ -2500,7 +2502,14 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
         compkeys = []
         for key in headerinfo.keys():
             if 'COMP_' in key:
-                compkeys.append(key)
+                if headerinfo[key] == 'sky':
+                    if includesky:
+                        compkeys.append(key)
+                    else:
+                        pass
+                else:
+                    compkeys.append(key)
+
         Ncomp = len(compkeys)
 
         if Ncomp == 1:
