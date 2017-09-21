@@ -83,7 +83,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                 cov_obj          = tu.build_2D_cov_matrix(params[nn][4],params[nn][3],params[nn][5],verbose=False)
                 cov_objs[nn,:,:] = cov_obj
         elif paramtype == 'modelimg':
-            if len(sourceparam) == 3:
+            if len(sourceparam.shape) == 3:
                 Nsource = sourceparam.shape[0]
             else:
                 Nsource = 1
@@ -677,10 +677,10 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
         if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
 
     elif paramtype == 'modelimg':
-        if len(sourceparam) == 2:
+        if len(sourceparam.shape) == 2:
             if verbose: print ' - Storing single source (object) from model image in source cube (no source disentangling) '
             Nsource   = 1
-        elif len(sourceparam) == 3:
+        elif len(sourceparam.shape) == 3:
             if verbose: print ' - Storing model components in source cube (incl. source disentangling) '
             Nsource   = sourceparam.shape[0]
         else:
