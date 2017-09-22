@@ -14,7 +14,8 @@ import pdb
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,datanoise=None,
                   fluxscale='fluxscale',show_residualimg=False,generateimage=False,generateresidualimage=False,
-                  optimizer='curve_fit',clobber=False,outputhdr=None,param_initguess=None,max_centroid_shift=None,verbose=True):
+                  optimizer='curve_fit',clobber=False,outputhdr=None,param_initguess=None,max_centroid_shift=None,
+                  centralpointsource=False,ignore_radius=0.5,verbose=True):
     """
     Generate the full model of the FoV to extract spectra from
 
@@ -58,6 +59,11 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
     outputhdr                 Fits header to use as template for models
     param_initguess           To use a TDOSE parameter list as intial guess for image model provide it here
     max_centroid_shift        Maximum offset in pixels of (x,y) centroid position allowed when modeling
+    centralpointsource        To add a point source (representing a non-detection) to the center of the model
+                              (replacing the source model closest to this location) set to true.
+                              Adding a point source, all source models within ignore_radius will be ignored
+    ignore_radius             Radius (in pixels) around central point source (pointsource=True) where source models
+                              will be ignored, i.e., set to 0 via a fluxscale=0 in the parameterlist
     verbose                   Toggle verbosity
 
     --- EXAMPLE OF USE ---
@@ -90,6 +96,31 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
 
         fit_output      = tmf.model_objects_gauss(param_init,dataimg,optimizer=optimizer,max_centroid_shift=max_centroid_shift,
                                                   datanoise=datanoise,verbose=verbose,show_residualimg=show_residualimg)
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        if centralpointsource:
+            if verbose: print ' - Requested to insert central point source; modifying parameter list from FoV Gauss model fit'
+            ycen,xcen     = dataimg.shape[0]/2., dataimg.shape[1]/2.
+            if type(ignore_radius) == float:
+                ignore_radius = [ignore_radius]*2
+
+            Nsources  = int(len(fit_output[0])/6.)
+            for oo in xrange(Nsources):
+                obj_xpix = fit_output[0][1::6][oo]
+                obj_ypix = fit_output[0][0::6][oo]
+                if ((obj_ypix-ycen)**2.0 < ignore_radius[0]**2.0) & ((obj_xpix-xcen)**2.0 < ignore_radius[1]**2.0):
+                    fit_output[0][2::6][oo] = 0.0
+
+            r_diffs = np.abs(np.sqrt((fit_output[0][0::6]-ycen)**2.0 + (fit_output[0][1::6]-xcen)**2.0))
+            central_source = np.where(r_diffs == np.min(r_diffs))[0]
+            fit_output[0][1::6][central_source]  = xcen # xposition
+            fit_output[0][0::6][central_source]  = ycen # yposition
+            fit_output[0][2::6][central_source]  = 1.0  # fluxscale
+            fit_output[0][4::6][central_source]  = 1.0  # sigmax
+            fit_output[0][3::6][central_source]  = 1.0  # sigmay
+            fit_output[0][5::6][central_source]  = 0.0  # angle
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
     elif modeltype.lower() == 'galfit':
         if param_initguess is not None:
             if verbose: print (' TDOSE WARNING: Initial guess is not enabled for modeltype = galfit; setting param_initguess = None')
@@ -169,7 +200,7 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
 
     --- INPUT ---
     outname          File name to store model image to
-    paramlist        Parameter list of soources in model to be strored in the header of the fits file
+    paramlist        Parameter list of sources in model to be strored in the header of the fits file
     imgsize          Size of the image model
     modeltype        The type of model which was used to generate the image
     param_init       If intitial parameters exists provide this here.

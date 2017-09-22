@@ -280,10 +280,16 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                         namestr  = str(sid)
                     names.append(namestr)
 
+                centralpointsource = False
+                if setupdic['nondetections'] is not None:
+                    if extid in setupdic['nondetections']:
+                        if verbosefull: print ' - Object in list of non-detections. Adjusting model to contain central point source  '
+                        centralpointsource = True
+
                 if modelrefimage:
                     tdose.model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
-                                         save_init_model_output=save_init_model_output,clobber=clobber,verbose=verbose,
-                                         verbosefull=verbosefull)
+                                         save_init_model_output=save_init_model_output,centralpointsource=centralpointsource,
+                                         clobber=clobber,verbose=verbose,verbosefull=verbosefull)
                 else:
                     if verbose: print ' >>> Skipping modeling reference image (assume models exist)'
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -977,22 +983,23 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
-                   save_init_model_output=True,clobber=True,verbose=True,verbosefull=True):
+                   save_init_model_output=True,centralpointsource=False,clobber=True,verbose=True,verbosefull=True):
     """
     Modeling the refernce image
 
     --- INPUT ---
     setupdic                Dictionary containing the setup parameters read from the TDOSE setup file
     refimg                  Name of fits reference image to model
-    img_hdr                 Fits header of of reference image
+    img_hdr                 Fits header of reference image
     sourcecat               Source catalog providing coordinates of objects in reference image to model
     modelimg                Name of output file to store model to
     modelparam              Fits table to contain the model parameters (which will be turned into a DS9 region file)
-    regionfile              The name of the reegionfile to generate with model parameter regions
+    regionfile              The name of the regionfile to generate with model parameter regions
     img_wcs                 WCS of image to model
     img_data                Data of image array
     names                   Names of individual objects used in DS9 region
     save_init_model_output  Set to true to save the initial model to files
+    centralpointsource      To insert central point source set to true
     clobber                 Overwrite files if the already exist
     verbose                 Toggle verbosity
     verbosefull             Toggle extended verbosity
@@ -1058,12 +1065,22 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
     except:
         maxcenshift = None
 
+    if setupdic['nondetections']:
+        pixscales  = wcs.utils.proj_plane_pixel_scales(img_wcs)*3600.0
+        if type(setupdic['ignore_radius']) == float:
+            ignore_radius_pix = np.asarray([setupdic['ignore_radius']]*2) / pixscales
+        else:
+            ignore_radius_pix = np.asarray(setupdic['ignore_radius']) / pixscales
+    else:
+        ignore_radius_pix = 'dummy'
+
     pinit, fit    = tmf.gen_fullmodel(img_data,sourcecat,modeltype=setupdic['source_model'],verbose=verbosefull,
                                       xpos_col=setupdic['sourcecat_xposcol'],ypos_col=setupdic['sourcecat_yposcol'],
                                       datanoise=None,sigysigxangle=sigysigxangle,
                                       fluxscale=fluxscale,generateimage=modelimg,
                                       generateresidualimage=True,clobber=clobber,outputhdr=img_hdr,
-                                      param_initguess=param_initguess,max_centroid_shift=maxcenshift)
+                                      param_initguess=param_initguess,max_centroid_shift=maxcenshift,
+                                      centralpointsource=centralpointsource,ignore_radius=ignore_radius_pix)
 
     tu.model_ds9region(modelparam,regionfile,img_wcs,color='cyan',width=2,Nsigma=2,textlist=names,
                        fontsize=12,clobber=clobber)
