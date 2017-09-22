@@ -59,7 +59,7 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
         if setup_arr[ii,1].lower() == 'false': val = False
 
         if setup_arr[ii,0] in setup_dic.keys():
-            sys.exit(' Setup parameter "'+setup_arr[ii,0]+'" appers multiple times in the setup file\n             '+
+            sys.exit(' Setup parameter "'+setup_arr[ii,0]+'" appears multiple times in the setup file\n             '+
                      setupfile)
 
         dirs = ['sources_to_extract','model_cube_layers','cutout_sizes']
@@ -68,9 +68,9 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
             setup_dic[setup_arr[ii,0]] = val
             continue
 
-        lists = ['modify_sources_list','model_cube_layers','sources_to_extract','plot_1Dspec_xrange','plot_1Dspec_yrange',
+        lists = ['modify_sources_list','nondetections','model_cube_layers','sources_to_extract','plot_1Dspec_xrange','plot_1Dspec_yrange',
                  'plot_S2Nspec_xrange','plot_S2Nspec_yrange','cutout_sizes']
-        if (setup_arr[ii,0] in lists) & (setup_arr[ii,1] != 'all'):
+        if (setup_arr[ii,0] in lists) & (setup_arr[ii,1] != 'all') & (setup_arr[ii,1].lower() != 'none'):
             val = [float(vv) for vv in val.split('[')[-1].split(']')[0].split(',')]
             setup_dic[setup_arr[ii,0]] = val
             continue
@@ -216,6 +216,19 @@ psf_FWHMp1             -3.182e-5                          # p1 parameter to use 
 psf_savecube           True                               # To save fits file containing the PSF cube set psf_savecube = True
                                                           # This cube is used for the "source_model = modelimg" numerical PSF convolution
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - NON_DETECTIONS  - - - - - - - - - - - - - - - - - - - - - - - -
+nondetections          None                               # List of IDs of sources in source_catalog that are not detected in the reference image or which
+                                                          # have low flux levels in which cases the Gaussian modeling is likely to be inaccurate.
+                                                          # For long list of objects provide ascii file containing ids.
+                                                          #     If source_model = gauss    then sources will be extracted by replacing models within ignore_radius
+                                                          #                                with a single point source in the reference image model, which will then
+                                                          #                                be convolved with the PSF specified when extracting, as usual.
+                                                          #     If source_model = modelimg TDOSE assumes that the model already represents the desired extraction model
+                                                          #                                of the non-detection. I.e., if the object should be extracted as a (PSF
+                                                          #                                convolved) point source, the model image should include a point source.
+ignore_radius          0.5                                # Models within a radius of ignore_radius [arcsec] of the non-detection location will be replaced with a
+                                                          # point source for extractions with source_model = gauss before convolving with the PSF and adjusting the flux
+                                                          # leves in each model cube layer.
 # - - - - - - - - - - - - - - - - - - - - - - - - - CUBE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
 model_cube_layers      all                                # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
                                                           # To model source-specific layers provide ascii file containing ID layerlow and layerhigh.
