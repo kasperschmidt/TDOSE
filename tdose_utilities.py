@@ -2411,7 +2411,8 @@ def galfit_results2paramlist(galfitresults,verbose=True):
     return paramlist
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=False,convkernels=None,sourcecat_compinfo=None,
-                             normalizecomponents=False,includesky=False,clobber=True,verbose=True):
+                             normalizecomponents=False,pointsources=None,ignore_radius=0.5,pointsourcescales=1.0,
+                             includesky=False,clobber=True,verbose=True):
     """
     Convert a GALFIT model output file into a model cube, where each model component occupy a different layer in the cube.
 
@@ -2446,6 +2447,11 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
 
     includesky          To include sky-components from the GALFIT header when building the component cube and putting
                         together the source catalog, set includesky=True
+    pointsources        List of galfitmodelfiles where a point source should be added in the center of the field-of-view
+                        replacing all components withing ignore_radius
+    ignore_radius       Radius to ignore components within when building the model cube for point sources. Components are
+                        ignored by setting all pixels to 0 in component layer to conserved the component indexing.
+    pointsourcescales   The scaling (value) of the point source added. Default is normalizing point source to 1.0
     normalizecomponents Normalize each individual components so sum(component image) = 1?
                         TDOSE will normalize cube for extraction optimization irrespective of input
     clobber             Overwrite existing files
@@ -2532,6 +2538,20 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
         else:
             if verbose: print ' - Found '+str(Ncomp)+' components in GALFIT model header to populate cube with'
 
+        if pointsources is not None:
+            pointsourceadded  = False # Reset keyword to keep track of whether point source has been added when needed
+            if type(pointsourcescales) == float: pointsourcescales = [pointsourcescales]*len(pointsources)
+            pixscales         = wcs.utils.proj_plane_pixel_scales(modelwcs)*3600.0
+            if (pixscales[0] != pixscales[1]) & (type(ignore_radius) == float):
+                sys.exit(' ---> the pixel scale in y ('+str(pixscales[0])+
+                         ') is different from the pixel scale in x ('+str(pixscales[1])+
+                         '); provide ignore_radius as [r_y,r_x]')
+            else:
+                if type(ignore_radius) == float:
+                    ignore_radius_pix = np.asarray([ignore_radius]*2) / pixscales
+                else:
+                    ignore_radius_pix = np.asarray(ignore_radius) / pixscales
+
         cube = np.zeros([Ncomp,modelarr.shape[0],modelarr.shape[1]])
         for cc,component in enumerate(compkeys):
             compnumber    = str(cc+1)
@@ -2588,6 +2608,24 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
             else:
                 sys.exit(' ---> Dealing with a "'+headerinfo[component]+'" GALFIT model component is not implemented yet; sorry. '
                                                                        'Try using "gaussian" or "sersic" components to build your model')
+
+            if pointsources is not None:
+                if galfitmodel in pointsources:
+                    xpix_mod_cent = xpix_mod-cutrange_low_x
+                    ypix_mod_cent = ypix_mod-cutrange_low_y
+
+                    if ( (xc-xpix_mod_cent)**2.0 < ignore_radius_pix[1]**2.0 ) & ( (yc-xpix_mod_cent)**2.0 < ignore_radius_pix[0]**2.0 ):
+                        cubelayer = cubelayer*0.0 # resetting cube layer
+                        if not pointsourceadded:
+                            # ysize, xsize = modelarr.shape
+                            # x0   = xpix_mod_cent         # x center
+                            # a    = ignore_radius_pix[1]  # x width
+                            # y0   = ypix_mod_cent         # y center
+                            # b    = ignore_radius_pix[0]  # y width
+                            # y,x  = np.ogrid[-ysize/2.0:ysize/2.0, -xsize/2.0:xsize/2.0]
+                            # ellipsemask                            = ((x-x0)/a)**2 + ((y-y0)/b)**2 <= 1
+                            cubelayer[ypix_mod_cent,xpix_mod_cent] = pointsourcescales[cc] #np.sum(modelarr[ellipsemask])
+                            pointsourceadded                       = True
 
             if convkernels is not None:
                 convkernel = convkernels[gg]
