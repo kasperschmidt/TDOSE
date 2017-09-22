@@ -223,12 +223,14 @@ nondetections          None                               # List of IDs of sourc
                                                           #     If source_model = gauss    then sources will be extracted by replacing models within ignore_radius
                                                           #                                with a single point source in the reference image model, which will then
                                                           #                                be convolved with the PSF specified when extracting, as usual.
-                                                          #     If source_model = modelimg TDOSE assumes that the model already represents the desired extraction model
+                                                          #     If source_model = modelimg TDOSE assumes that the input model already represents the desired extraction model
                                                           #                                of the non-detection. I.e., if the object should be extracted as a (PSF
                                                           #                                convolved) point source, the model image should include a point source.
-ignore_radius          0.5                                # Models within a radius of ignore_radius [arcsec] of the non-detection location will be replaced with a
+                                                          #                                Hence, for source_model = modelimg the keyword nondetections is ignored.
+ignore_radius          0.3                                # Models within a radius of ignore_radius [arcsec] of the non-detection location will be replaced with a
                                                           # point source for extractions with source_model = gauss before convolving with the PSF and adjusting the flux
                                                           # leves in each model cube layer.
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - CUBE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
 model_cube_layers      all                                # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
                                                           # To model source-specific layers provide ascii file containing ID layerlow and layerhigh.
