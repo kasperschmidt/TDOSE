@@ -1494,8 +1494,9 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
     if textlist is None:
         textstrings = pyfits.open(fitstable)[1].data['obj'].astype(int).astype(str)
     else:
-        textstrings = pyfits.open(fitstable)[1].data['obj'].astype(int).astype(str)
-        for tt, obj in enumerate(textstrings):
+        textstrings_init = pyfits.open(fitstable)[1].data['obj'].astype(int).astype(str)
+        textstrings      = ['']*len(textstrings_init)
+        for tt, obj in enumerate(textstrings_init):
             textstrings[tt] = obj+': '+textlist[tt]
 
     if paramtype == 'gauss':
