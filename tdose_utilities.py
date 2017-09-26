@@ -2499,6 +2499,8 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
         if verbose: print ' - Extracting number of components from model extenstion (ext=2) of GALFIT model:\n   '+galfitmodel
         headerinfo = pyfits.open(galfitmodel)[2].header
         modelarr   = pyfits.open(galfitmodel)[2].data
+        refimg_hdr = pyfits.open(galfitmodel)[1].header
+        modelwcs   = wcs.WCS(tu.strip_header(refimg_hdr.copy()))
 
         if sourcecat_compinfo is not None:
             sourcecat = galfitmodel.replace('.fits','_sourcecatalog')+'.txt'
@@ -2508,9 +2510,6 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
             scat.write('# Based on component info in '+sourcecat_compinfo+'\n')
             scat.write('# Generated with tdose_utilities.galfit_convertmodel2cube() on '+tu.get_now_string()+'\n# \n')
             scat.write('# parent_id id ra dec x_image y_image fluxscale \n')
-
-            refimg_hdr = pyfits.open(galfitmodel)[1].header
-            modelwcs   = wcs.WCS(tu.strip_header(refimg_hdr.copy()))
 
             cutrange_low_x = int(float(refimg_hdr['OBJECT'].split(':')[0].split('[')[-1]))
             cutrange_low_y = int(float(refimg_hdr['OBJECT'].split(',')[-1].split(':')[0]))
@@ -2782,6 +2781,9 @@ def galfit_getheadervalue(compnumber,key,headerinfo):
 
     """
     hdrinfo = headerinfo[compnumber+'_'+key]
+
+    if '*' in hdrinfo: # handling parameters fixed in GALFIT run
+        hdrinfo = hdrinfo.replace('*','')
 
     if '+/-' in hdrinfo:
         value   = float(hdrinfo.split('+/-')[0])
