@@ -2770,6 +2770,52 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbose: print '\n'
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def galfit_model_ds9region(models,regionfileextension='ds9region',regcolor='red',clobber=False,verbose=True):
+    """
+    Generate DS9 region file to indicate GALFIT components
+
+    --- INPUT ---
+    model                  List of GALFIT models to generate region files for
+    regionfileextension    Extension for naming the DS9 region file
+    regcolor               Color of regions to draw
+    clobber                Overwrite existing file?
+    verbose                Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+
+    models = glob.glob('/path/to/models/model*.fits')
+    tu.galfit_model_ds9region(models,clobber=False)
+
+    """
+    Nmodels = len(models)
+    if verbose: print ' - Generating DS9 region files for '+str(Nmodels)+' GALFIT models provided '
+    for model in models:
+        modelhdr   = pyfits.open(model)[2].header
+        comkeys    = []
+        regionfile = model.replace('.fits','_'+regionfileextension+'.reg')
+        for key in modelhdr.keys():
+            if 'COMP_' in key:
+                comkeys.append(key)
+
+        if os.path.isfile(regionfile):
+            if not clobber:
+                sys.exit(' ---> File already exists and clobber = False')
+        fout = open(regionfile,'w')
+        fout.write("# Region file format: DS9 version 4.1 \nimage\n")
+
+        for comp in comkeys:
+            compNo = comp.split('OMP_')[-1]
+            if not modelhdr[comp] == 'sky':
+                XC, XCERR = tu.galfit_getheadervalue(compNo,'XC',modelhdr)
+                YC, YCERR = tu.galfit_getheadervalue(compNo,'YC',modelhdr)
+
+                regstr = '# text(%s,%s) color=%s font="times 24 bold roman" text={%s} \n' % (XC,YC,regcolor,compNo)
+                fout.write(regstr)
+
+        fout.close()
+        if verbose: print ' - Saved region file to \n   '+regionfile
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def galfit_getheadervalue(compnumber,key,headerinfo):
     """
     Return the paramters of a GALFIT model header
