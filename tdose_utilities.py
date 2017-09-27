@@ -2688,16 +2688,23 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
             wcsheader = pyfits.open(galfitmodel)[1].header
             # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
             hducube.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
-            hducube.header.append(('CRPIX1 ',wcsheader['CRPIX1']  ,' Pixel coordinate of reference point'),end=True)
-            hducube.header.append(('CRPIX2 ',wcsheader['CRPIX2']  ,' Pixel coordinate of reference point'),end=True)
             hducube.header.append(('CD1_1  ',wcsheader['CD1_1 ']  ,' Coordinate transformation matrix element'),end=True)
             hducube.header.append(('CD1_2  ',wcsheader['CD1_2 ']  ,' Coordinate transformation matrix element'),end=True)
             hducube.header.append(('CD2_1  ',wcsheader['CD2_1 ']  ,' Coordinate transformation matrix element'),end=True)
             hducube.header.append(('CD2_2  ',wcsheader['CD2_2 ']  ,' Coordinate transformation matrix element'),end=True)
             hducube.header.append(('CTYPE1 ',wcsheader['CTYPE1']  ,' Right ascension, gnomonic projection'),end=True)
             hducube.header.append(('CTYPE2 ',wcsheader['CTYPE2']  ,' Declination, gnomonic projection'),end=True)
-            hducube.header.append(('CRVAL1 ',wcsheader['CRVAL1']  ,' '),end=True)
-            hducube.header.append(('CRVAL2 ',wcsheader['CRVAL2']  ,' '),end=True)
+
+            if verbose: print '   Accounting for GALFIT model offset in WCS reference pixel '
+            modecenter_xpix, modecenter_ypix,ra_model,dec_model = tu.galfit_getcentralcoordinate(galfitmodel)
+            fit_region     = wcsheader['OBJECT']
+            cutrange_low_x = int(float(fit_region.split(':')[0].split('[')[-1]))
+            cutrange_low_y = int(float(fit_region.split(',')[-1].split(':')[0]))
+            hducube.header.append(('CRPIX1 ',modecenter_xpix-cutrange_low_x+1  ,' Pixel coordinate of reference point'),end=True)
+            hducube.header.append(('CRPIX2 ',modecenter_ypix-cutrange_low_y+1  ,' Pixel coordinate of reference point'),end=True)
+            hducube.header.append(('CRVAL1 ',ra_model  ,' '),end=True)
+            hducube.header.append(('CRVAL2 ',dec_model ,' '),end=True)
+
             try:
                 hducube.header.append(('CSYER1 ',wcsheader['CSYER1']  ,' [deg] Systematic error in coordinate'),end=True)
                 hducube.header.append(('CSYER2 ',wcsheader['CSYER2']  ,' [deg] Systematic error in coordinate'),end=True)
@@ -2745,16 +2752,23 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                 wcsheader = pyfits.open(galfitmodel)[1].header
                 # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
                 hduimg.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
-                hduimg.header.append(('CRPIX1 ',wcsheader['CRPIX1']  ,' Pixel coordinate of reference point'),end=True)
-                hduimg.header.append(('CRPIX2 ',wcsheader['CRPIX2']  ,' Pixel coordinate of reference point'),end=True)
                 hduimg.header.append(('CD1_1  ',wcsheader['CD1_1 ']  ,' Coordinate transformation matrix element'),end=True)
                 hduimg.header.append(('CD1_2  ',wcsheader['CD1_2 ']  ,' Coordinate transformation matrix element'),end=True)
                 hduimg.header.append(('CD2_1  ',wcsheader['CD2_1 ']  ,' Coordinate transformation matrix element'),end=True)
                 hduimg.header.append(('CD2_2  ',wcsheader['CD2_2 ']  ,' Coordinate transformation matrix element'),end=True)
                 hduimg.header.append(('CTYPE1 ',wcsheader['CTYPE1']  ,' Right ascension, gnomonic projection'),end=True)
                 hduimg.header.append(('CTYPE2 ',wcsheader['CTYPE2']  ,' Declination, gnomonic projection'),end=True)
-                hduimg.header.append(('CRVAL1 ',wcsheader['CRVAL1']  ,' '),end=True)
-                hduimg.header.append(('CRVAL2 ',wcsheader['CRVAL2']  ,' '),end=True)
+
+                if verbose: print '   Accounting for GALFIT model offset in WCS reference pixel '
+                modecenter_xpix, modecenter_ypix,ra_model,dec_model = tu.galfit_getcentralcoordinate(galfitmodel)
+                fit_region     = wcsheader['OBJECT']
+                cutrange_low_x = int(float(fit_region.split(':')[0].split('[')[-1]))
+                cutrange_low_y = int(float(fit_region.split(',')[-1].split(':')[0]))
+                hduimg.header.append(('CRPIX1 ',modecenter_xpix-cutrange_low_x+1  ,' Pixel coordinate of reference point'),end=True)
+                hduimg.header.append(('CRPIX2 ',modecenter_ypix-cutrange_low_y+1  ,' Pixel coordinate of reference point'),end=True)
+                hduimg.header.append(('CRVAL1 ',ra_model  ,' '),end=True)
+                hduimg.header.append(('CRVAL2 ',dec_model ,' '),end=True)
+
                 try:
                     hduimg.header.append(('CSYER1 ',wcsheader['CSYER1']  ,' [deg] Systematic error in coordinate'),end=True)
                     hduimg.header.append(('CSYER2 ',wcsheader['CSYER2']  ,' [deg] Systematic error in coordinate'),end=True)
@@ -2809,7 +2823,7 @@ def galfit_model_ds9region(models,regionfileextension='ds9region',regcolor='red'
                 XC, XCERR = tu.galfit_getheadervalue(compNo,'XC',modelhdr)
                 YC, YCERR = tu.galfit_getheadervalue(compNo,'YC',modelhdr)
 
-                regstr = '# text(%s,%s) color=%s font="times 24 bold roman" text={%s} \n' % (XC,YC,regcolor,compNo)
+                regstr = '# text(%s,%s) color=%s font="times 20 bold roman" text={%s} \n' % (XC,YC,regcolor,compNo)
                 fout.write(regstr)
 
         fout.close()
