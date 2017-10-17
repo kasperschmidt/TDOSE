@@ -2619,6 +2619,9 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                     if ( (xc-xpix_mod_cent)**2.0 < ignore_radius_pix[1]**2.0 ) & ( (yc-xpix_mod_cent)**2.0 < ignore_radius_pix[0]**2.0 ):
                         cubelayer = cubelayer*0.0 # resetting cube layer
                         if not pointsourceadded:
+                            if verbose: print(' - Adding central point source as requested. Setting model components within [y,x]=['+
+                                              ','.join(ignore_radius_pix.astype(str))+'] pixels radii of model center to 0.')
+                            if verbose: print('   Added as compoent '+component)
                             # ysize, xsize = modelarr.shape
                             # x0   = xpix_mod_cent         # x center
                             # a    = ignore_radius_pix[1]  # x width
