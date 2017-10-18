@@ -196,8 +196,9 @@ galfit_model_extension 2                                  # Fits extension conta
 modelimg_directory     /path/models_cutouts/              # If source_model = modelimg provide the path to directory containing the individual source models
                                                           # TDOSE will look for model_*ref_image*.fits (incl. the cutout string if model_cutouts=True). If no model is found the object is skipped
                                                           # If a model image named model_*ref_image*_cube.fits is foound, TDOSE assumes this file contains a cube with the individual model
-                                                          # components isolated in individual layers of the cube. TDOSE will instead use this model and expects a file named model_*ref_image*_cube_compkey.txt
-                                                          # Defining what components belong to the object of interest (i.e., to extract a spectrum for) and what components are contaminating sources in the field-of-view.
+                                                          # components isolated in individual layers of the cube. TDOSE will use this model instead of one generated within TDOSE.
+                                                          # Parent IDs in the source catalog can be used to define what components belong to the object of interest (i.e., to extract a spectrum for)
+                                                          # GALFIT models can be converted to TDOSE-suited model-cubes with tdose_utilities.galfit_convertmodel2cube()
 
 modelimg_extension     0                                  # Fits extension containing model
 
@@ -247,7 +248,7 @@ source_model_cube_ext  tdose_source_modelcube             # Name extension of fi
 
 # - - - - - - - - - - - - - - - - - - - - - - - - SPECTRAL EXTRACTION - - - - - - - - - - - - - - - - - - - - - - - - -
 sources_to_extract     [8685,9262,10195,29743]            # Sources in source_catalog to extract 1D spectra for.
-                                                          # If sourcecat_parentIDcol os not None all associated spectra are included in stored object spectra
+                                                          # If sourcecat_parentIDcol is not None all associated spectra are included in stored object spectra
                                                           # If set to 'all', 1D spectra for all sources in source_catalog is produced (without grouping according to parents).
                                                           # For long list of objects provide ascii file containing containing ids (here parent grouping will be performed)
 spec1D_name            tdose_spectrum                     # Name extension to use for extracted 1D spectra
@@ -2421,8 +2422,8 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
 
     NB! The absolute flux scales of the indvidual Sersic components are off.
         To accommodate this, set normalizecomponents=True and manually scale
-        either the indiviodual components or the 'cubesum' image.
-        TDOSE works with normalized components so this offsets does not affect the spectral extractions.
+        either the individual components or the 'cubesum' image.
+        TDOSE works with normalized components so this offset does not affect the spectral extractions.
 
     --- INPUT ---
     galfitmodelfiles    Output from running GALFIT
