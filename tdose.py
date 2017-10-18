@@ -252,7 +252,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                     if verbosefull: print 'found a cube model, so will use that (instead of any model files)'
                     FoV_modelexists     = True
                     FoV_modelfile       = cube_model_file
-                    FoV_modeldata       = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
+                    FoV_modeldata       = pyfits.open(FoV_modelfile)[0].data
                 elif os.path.isfile(model_file):
                     if verbosefull: print 'found it, so it will be used'
                     FoV_modelexists     = True
