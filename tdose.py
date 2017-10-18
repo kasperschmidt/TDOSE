@@ -792,7 +792,7 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
 
                 storearr[ii] = np.vstack(cut_sourcedat)[ii,:]
 
-            astropy.io.fits.writeto(cut_sourcecat,storearr,header=None,clobber=clobber)
+            astropy.io.fits.writeto(cut_sourcecat,storearr,header=None,overwrite=clobber)
         else:
             if verbose: print ' >>> Skipping generating the cutout source catalogs (assume they exist)'
 
