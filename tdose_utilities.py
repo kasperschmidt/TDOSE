@@ -8,6 +8,7 @@ from astropy import units
 from astropy import convolution
 import astropy.convolution as ac # convolve, convolve_fft, Moffat2DKernel, Gaussian2DKernel
 from astropy.coordinates import SkyCoord
+from astropy import units as u
 from astropy.modeling.models import Sersic1D
 from astropy.modeling.models import Sersic2D
 from astropy.nddata import Cutout2D
@@ -1534,6 +1535,121 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
         fout.write(string+' \n')
     fout.close()
     if verbose: print ' - Saved region file to '+outputfile
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,sourcecatradius,imgheader,
+                               outname='./tdose_sourcecat_from_fitscat.txt',newsources=None,
+                               fluxcol=None,fluxfactor=1.0,generateDS9reg=True,clobber=False,verbose=True):
+    """
+    Generate txt and fits TDOSE source catalog for modeling images with tdose_model_FoV.gen_fullmodel() based on
+    input fits catalog. With 'newsources' additional sources can be added to the catalog.
+
+    --- INPUT ---
+    fitscatalog         Fits catalog to based source catalog on
+    idcol               Column name of column containing the source IDs
+    racol               Column name of column containing the R.A.
+    deccol              Column name of column containing the Dec.
+    sourcecatcenter     Center of source catalog to generate: [ra,dec]
+    sourcecatradius     Radius of source catalog to generate in arc seconds. Everything within this radius of
+                        'sourcecatcenter' in fitscatalog will be included in source catalog.
+    imgheader           Fits header with WCS information to convert ra and dec into pixel positions x_image and y_image
+    outname             Name of source catalog to generate
+    newsources          List of new sources to add to source catalog. Expects format:
+                           [ [parent_id id ra dec fluxscale]_1, [...]_2, ...]
+                        x_image and y_image needed in TDOSE source catalogs will be calculated based on imgheader WCS
+    fluxcol             Column name of column containing flux scaling of sources. If None, set to 1.0
+    fluxfactor          Factor to apply to fluxcol values
+    generateDS9reg      Generate a DS9 region file showing the location of the sources?
+    clobber             Overwrite files if they exists
+    verbose             Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+    fitscatalog  = '/path/to/fitscatalog/to/base/sourcecat/on/catalog_photometry_candels-cdfs-02.fits'
+    imgheader    = pyfits.open('/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_cut_v1.0.fits')[0].header
+    sourcelist   = [ [1,  112022074,  53.10226655738314,  -27.81858267246394,     11],
+                     [2,  112027079,  53.10181406006402,  -27.81073930353368,     22],
+                     [3,  113005024,  53.10083587948985,  -27.83072022094289,     33],
+                     [4,  113007030,  53.11392281069391,  -27.83120536434684,     44]  ]
+    sourcecatcenter, sourcecatradius = [53.1023,  -27.8185], 30.0
+    outname      = './tdose_sourcecat_from_fitscat.txt'
+
+    sourcecat    = tu.gen_sourcecat_from_FitsCat(fitscatalog,'id','ra','dec',sourcecatcenter,sourcecatradius,imgheader,outname=outname,newsources=sourcelist,clobber=False)
+
+
+    """
+    if verbose: print ' - Generating TDOSE source catalog for FoV modeling'
+    catdat      = pyfits.open(fitscatalog)[1].data
+    ids_all     = catdat[idcol]
+    ras_all     = catdat[racol]
+    decs_all    = catdat[deccol]
+    if fluxcol is None:
+        fluxes_all  = np.ones(len(ids_all))*fluxfactor
+    else:
+        fluxes_all  = catdat[fluxcol]*fluxfactor
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Finding objects within r = '+str(sourcecatradius)+' of [ra,dec]_center = '+str(sourcecatcenter)
+    coordcenter     = SkyCoord(np.asarray([sourcecatcenter[0]]), np.asarray([sourcecatcenter[1]]), frame='fk5', unit=(units.deg,units.deg))
+    fitscatSkyCoord = SkyCoord(ra=ras_all*u.degree, dec=decs_all*u.degree)
+
+    entcen, entfits, sep2D, sep3D  = fitscatSkyCoord.search_around_sky(coordcenter, sourcecatradius*u.arcsec)
+    ids                            = ids_all[entfits]
+    parentids                      = ids
+    ras                            = ras_all[entfits]
+    decs                           = decs_all[entfits]
+    fluxes                         = fluxes_all[entfits]
+    seperations                    = sep2D.arcsec
+
+    if newsources is not None:
+        if verbose: print ' - Appending additional "newsources" to source list from fits catalog'
+        for newsource in newsources:
+            parentids   = np.append(parentids,newsource[0])
+            ids         = np.append(ids,newsource[1])
+            ras         = np.append(ras,newsource[2])
+            decs        = np.append(decs,newsource[3])
+            fluxes      = np.append(fluxes,newsource[4])
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if imgheader is None:
+        sys.exit(' ---> Image header not provided so cannot calculate pixel positions; please provide one')
+    else:
+        if verbose: print ' - Converting ra and dec values using wcs info from header to pixel positions'
+        striphdr   = tu.strip_header(imgheader.copy(),verbose=verbose)
+        wcs_in     = wcs.WCS(striphdr)
+        skycoord   = SkyCoord(ras, decs, frame='fk5', unit='deg')
+        pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in,origin=1)
+        xpos       = pixcoord[0]
+        ypos       = pixcoord[1]
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if (clobber == False) & os.path.isfile(outname):
+        if verbose: print ' - WARNING: Output ('+outname+') already exists and clobber=False, hence returning None'
+        return None
+    else:
+        if verbose: print ' - Will save source catalog to '+outname+' (overwriting any existing file)'
+        fout = open(outname,'w')
+        fout.write('# TDOSE Source catalog generated with tdose_utilities.gen_sourcecat_from_FitsCat() from:\n')
+        fout.write('# '+fitscatalog+'\n')
+
+        fout.write('# parent_id id ra dec x_image y_image fluxscale \n')
+        for ii, id in enumerate(ids):
+            fout.write(str(parentids[ii])+' '+str(ids[ii])+' '+str(ras[ii])+' '+str(decs[ii])+' '+
+                       str(xpos[ii])+' '+str(ypos[ii])+' '+str(fluxes[ii])+'  \n')
+
+        fout.close()
+
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        if generateDS9reg:
+            regionfile = outname.replace('.txt','.reg')
+            if verbose: print ' - Storing DS9 region file to '+regionfile
+            idsstr     = [str(id) for id in ids]
+            tu.create_simpleDS9region(regionfile,ras,decs,color='red',circlesize=0.5,textlist=idsstr,clobber=clobber)
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+        outnamefits = outname.replace('.txt','.fits')
+        if verbose: print ' - Save fits version of source catalog to '+outnamefits
+        fitsfmt       = ['D','D','D','D','D','D','D']
+        sourcecatfits = tu.ascii2fits(outname,asciinames=True,skip_header=2,fitsformat=fitsfmt,verbose=verbose)
+
+        return outname
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.txt',clobber=False,imgheader=None,
                                       idcol=0,racol=2,deccol=3,fluxcol=22,fluxfactor=100.,generateDS9reg=True,
