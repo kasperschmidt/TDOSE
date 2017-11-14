@@ -1557,7 +1557,9 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
                            [ [parent_id id ra dec fluxscale]_1, [...]_2, ...]
                         x_image and y_image needed in TDOSE source catalogs will be calculated based on imgheader WCS
     fluxcol             Column name of column containing flux scaling of sources. If None, set to 1.0
-    fluxfactor          Factor to apply to fluxcol values
+    fluxfactor          Factor to apply to fluxcol values. If fluxfactor = 'separation' the 'fluxscale' column in the
+                        output source catalog will contain the seperation of each object on the sky from the central
+                        coordinate.
     generateDS9reg      Generate a DS9 region file showing the location of the sources?
     clobber             Overwrite files if they exists
     verbose             Toggle verbosity
@@ -1582,10 +1584,19 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
     ids_all     = catdat[idcol]
     ras_all     = catdat[racol]
     decs_all    = catdat[deccol]
-    if fluxcol is None:
-        fluxes_all  = np.ones(len(ids_all))*fluxfactor
+
+    if type(fluxfactor) == str:
+        if fluxfactor == 'separation':
+            fluxf = 0.0
+        else:
+            sys.exit(' ---> Invalid fluxfactor ('+fluxfactor+') provided to gen_sourcecat_from_FitsCat(). Provide value or "separation".')
     else:
-        fluxes_all  = catdat[fluxcol]*fluxfactor
+        fluxf = fluxfactor
+
+    if fluxcol is None:
+        fluxes_all  = np.ones(len(ids_all))*fluxf
+    else:
+        fluxes_all  = catdat[fluxcol]*fluxf
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Finding objects within r = '+str(sourcecatradius)+' of [ra,dec]_center = '+str(sourcecatcenter)
     coordcenter     = SkyCoord(np.asarray([sourcecatcenter[0]]), np.asarray([sourcecatcenter[1]]), frame='fk5', unit=(units.deg,units.deg))
@@ -1597,7 +1608,9 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
     ras                            = ras_all[entfits]
     decs                           = decs_all[entfits]
     fluxes                         = fluxes_all[entfits]
-    seperations                    = sep2D.arcsec
+    separations                    = sep2D.arcsec
+    if fluxfactor == 'separation':
+        fluxes                     = separations
 
     if newsources is not None:
         if verbose: print ' - Appending additional "newsources" to source list from fits catalog'
@@ -1606,7 +1619,14 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
             ids         = np.append(ids,newsource[1])
             ras         = np.append(ras,newsource[2])
             decs        = np.append(decs,newsource[3])
-            fluxes      = np.append(fluxes,newsource[4])
+
+            if fluxfactor == 'separation':
+                newobjCoord = SkyCoord(np.asarray([newsource[2]]), np.asarray([newsource[3]]), frame='fk5', unit=(units.deg,units.deg))
+                separation  = newobjCoord.separation(coordcenter)
+                fluxes      = np.append(fluxes,separation.arcsec)
+            else:
+                fluxes      = np.append(fluxes,newsource[4])
+
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if imgheader is None:
         sys.exit(' ---> Image header not provided so cannot calculate pixel positions; please provide one')
@@ -1626,7 +1646,12 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
     else:
         if verbose: print ' - Will save source catalog to '+outname+' (overwriting any existing file)'
         fout = open(outname,'w')
-        fout.write('# TDOSE Source catalog generated with tdose_utilities.gen_sourcecat_from_FitsCat() from:\n')
+        if fluxfactor == 'separation':
+            sepstring = '(NB: "fluxscale" contains separations to central coordinate frp, running with fluxfactor="separations")'
+        else:
+            sepstring = ''
+
+        fout.write('# TDOSE Source catalog generated with tdose_utilities.gen_sourcecat_from_FitsCat() '+sepstring+' from:\n')
         fout.write('# '+fitscatalog+'\n')
 
         fout.write('# parent_id id ra dec x_image y_image fluxscale \n')
