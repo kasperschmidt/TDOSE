@@ -1359,6 +1359,8 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
                 keyvalue = hdrs_all[cc][key]
                 if type(keyvalue) == str:
                     keycomment = keyvalue.replace('Angstrom','A')
+                else:
+                    keycomment = ''
                 hducutout.header.append((key,keyvalue,keycomment),end=True)
         hducutout.header.append(('EXTNAME ',cx            ,' '),end=True)
         hdulist.append(hducutout)
@@ -1611,7 +1613,6 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
     separations                    = sep2D.arcsec
     if fluxfactor == 'separation':
         fluxes                     = separations
-
     if newsources is not None:
         if verbose: print ' - Appending additional "newsources" to source list from fits catalog'
         for newsource in newsources:
