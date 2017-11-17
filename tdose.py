@@ -1050,9 +1050,9 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
         sigysigxangle    = None
         param_initguess  = None
         pixscales        = wcs.utils.proj_plane_pixel_scales(img_wcs)*3600.0
-        pixscaleunique   = np.unique(pixscales)
+        pixscaleunique   = np.unique(np.round(pixscales,8))
         if len(pixscaleunique) != 1:
-            sys.exit(' ---> The pixel scale in the x and y direction of image are different')
+            sys.exit(' ---> The pixel scale in the x and y direction of image are different (pixscales='+str(pixscales)+')')
         else:
             sigysigxangle =  setupdic['aperture_size'] / pixscaleunique          # radius in pixels
             fluxscale     =  pyfits.open(sourcecat)[1].data['id'].astype(float)  # pixel values
