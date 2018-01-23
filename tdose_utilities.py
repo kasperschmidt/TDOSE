@@ -4113,5 +4113,42 @@ def test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5,size=10
 
     Ieff_calc   = tu.get_2DsersicIeff(Ftot_eff_2D,reff,sersicindex,axisratio)
     if verbose: print ' - tu.get_2DsersicIeff calculation of Ieff from Ftot_reff_2D (axisratio='+str(axisratio)+'): I_eff  =',Ieff_calc
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def add_hdrkeys2fitsfile(tdosespectrum,hdrkeydic,newname='default',clobber=False,verbose=True):
+    """
+    Add new (or updated existing) header keywords to extracted TDOSE spectrum fits file (or any fits file).
+    Keywords will be added to (updated for) the headers in all extensions.
 
+    --- INPUT ---
+    tdosespectrum    Fits file, e.g., TDOSE 1D spectrum, to add header keywords to
+    hdrkeydic        Dictionary containing keywords to add. Expects the format:
+                        hdrkeydic['KEYNAME'] = [value,'comment string']
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu
+
+    tdosespectrum = './tdose_spectrum_candels-cdfs-15_modelimg_0115003085-0115003085.fits'
+    hdrkeydic     = {}
+    hdrkeydic['KEY1'] = [111,'this is the first added keyword']
+    hdrkeydic['KEY2'] = ['222','this is the second added keyword']
+
+    tu.add_hdrkeys2fitsfile(tdosespectrum,hdrkeydic)
+
+    """
+    if verbose: print(' - Adding (updating) header keywords in \n   '+tdosespectrum)
+    tdosehdu = pyfits.open(tdosespectrum)
+
+    for ee, extension in enumerate(tdosehdu):
+        if verbose: print('   Updating extension '+str(ee))
+        hdr = extension.header
+        for key in hdrkeydic.keys():
+            if verbose: print('    '+key)
+            hdr[key] = (hdrkeydic[key][0], hdrkeydic[key][1])
+
+    if newname == 'default':
+        outname = tdosespectrum.replace('.fit','_addedhdrkeys.fit')
+    else:
+        outname = newname
+
+    tdosehdu.writeto(outname,clobber=clobber)
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
