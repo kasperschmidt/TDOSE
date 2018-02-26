@@ -745,13 +745,11 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
         if setupdic['wht_image'] is None:
             imgfiles = [setupdic['ref_image']]
             imgexts  = [setupdic['img_extension']]
-            cut_images.append(cut_img)
+            cut_img  = [cut_img]
         else:
             imgfiles = [setupdic['ref_image'],setupdic['wht_image']]
             imgexts  = [setupdic['img_extension'],setupdic['wht_extension']]
-            cut_images.append(cut_img[0])
-
-
+        cut_images.append(cut_img[0])
 
         if performcutout:
             if setupdic['data_cube'] == setupdic['variance_cube']:
