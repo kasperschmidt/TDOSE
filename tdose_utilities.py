@@ -87,6 +87,13 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
             continue
 
         setup_dic[setup_arr[ii,0]] = val
+
+    if verbose: print ' - Checking main keys are available; if not, adding them with None values'
+    checkkeys = ['nondetections','gauss_guess']
+    for ck in checkkeys:
+        if ck not in setup_dic.keys():
+            setup_dic[ck] = None
+
     if verbose: print ' - Returning dictionary containing setup parameters'
     return setup_dic
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
