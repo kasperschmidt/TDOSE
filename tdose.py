@@ -771,8 +771,12 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
 
         # --- SUB-SOURCE CAT ---
         if generatesourcecat:
-            obj_in_cut_fov = np.where( (sourcedat_init[setupdic['sourcecat_racol']] < (ra + cutoutsize[0]/2./3600.)) &
-                                       (sourcedat_init[setupdic['sourcecat_racol']] > (ra - cutoutsize[0]/2./3600.)) &
+            obj_in_cut_fov = np.where( (sourcedat_init[setupdic['sourcecat_racol']] <
+                                        (ra + cutoutsize[0]/2./3600. /
+                                         np.cos(np.deg2rad(sourcedat_init[setupdic['sourcecat_deccol']])))) &
+                                       (sourcedat_init[setupdic['sourcecat_racol']] >
+                                        (ra - cutoutsize[0]/2./3600. /
+                                         np.cos(np.deg2rad(sourcedat_init[setupdic['sourcecat_deccol']])))) &
                                        (sourcedat_init[setupdic['sourcecat_deccol']] < (dec + cutoutsize[1]/2./3600.)) &
                                        (sourcedat_init[setupdic['sourcecat_deccol']] > (dec - cutoutsize[1]/2./3600.)) )[0]
             Ngoodobj      = len(obj_in_cut_fov)
