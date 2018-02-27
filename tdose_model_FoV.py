@@ -465,6 +465,12 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',max_centroid_
         param_bounds = ([0        ,0        ,0        ,0       ,0       ,-np.inf ]*Nsources,
                         [np.inf   , np.inf  ,np.inf   , np.inf , np.inf ,np.inf  ]*Nsources)
 
+        Nnonfinite = len(dataimage[np.where(~np.isfinite(dataimage))])
+        if Nnonfinite > 0:
+            dataimage[np.where(~np.isfinite(dataimage))] = 0.0
+            if verbose: print(' WARNING: '+str(Nnonfinite)+' Pixels in dataimage that are not finite; '
+                                                           'setting them to 0 to prevent curve_fit crash')
+
         if max_centroid_shift is not None:
             init_y       = param_init[0::6]
             init_x       = param_init[1::6]
