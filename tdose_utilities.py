@@ -173,8 +173,9 @@ source_model           gauss                              # The source model to 
                                                           #   gauss          Each source is modeled as a multivariate gaussian using the source_catalog input as starting point
                                                           #   galfit         The sources in the field-of-view are defined based on GALFIT header parameters; if all components are        # Not enabled yet
                                                           #                  Gaussians an analytical convolution is performed. Otherwise numerical convolution is used.                   # Not enabled yet
-                                                          #   modelimg       A model image exists, e.g., obtained with Galfit, in modelimg_directory. This prevents dis-entangling of
-                                                          #                  different objects, i.e., the provided model image is assumed to represent the 1 object in the field-of-view.
+                                                          #   modelimg       A model image exists, e.g., obtained with Galfit, in modelimg_directory. To disentangle/de-blend individual
+                                                          #                  components, a model cube and parent_ids should be provided (see comments to modelimg_directory). If a model
+                                                          #                  image is provded, TDOSE assumes it to represent the 1 object in the field-of-view.
                                                           #                  If the model image is not found a gaussian model of the FoV (source_model=gauss) is performed instead.
                                                           #   aperture       A simple aperture extraction on the datacubes is performed, i.e., no modeling of sources.
 
@@ -203,11 +204,11 @@ galfit_model_extension 2                                  # Fits extension conta
 # - - - - - - - - - - - - - - - - - - - - - - - - MODEL IMAGE SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
 modelimg_directory     /path/models_cutouts/              # If source_model = modelimg provide the path to directory containing the individual source models
                                                           # TDOSE will look for model_*ref_image*.fits (incl. the cutout string if model_cutouts=True). If no model is found the object is skipped
-                                                          # If a model image named model_*ref_image*_cube.fits is foound, TDOSE assumes this file contains a cube with the individual model
+                                                          # If a model image named model_*ref_image*_cube.fits is found, TDOSE assumes this file contains a cube with the individual model
                                                           # components isolated in individual layers of the cube. TDOSE will use this model instead of one generated within TDOSE.
                                                           # Parent IDs in the source catalog can be used to define what components belong to the object of interest (i.e., to extract a spectrum for)
                                                           # GALFIT models can be converted to TDOSE-suited model-cubes with tdose_utilities.galfit_convertmodel2cube()
-
+                                                          # A TDOSE-suited model-cube can be build from individual 2D models with tdose_utilities.build_modelcube_from_modelimages()
 modelimg_extension     0                                  # Fits extension containing model
 
 # - - - - - - - - - - - - - - - - - - - - - - - - APERTURE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - -
@@ -4158,4 +4159,130 @@ def add_hdrkeys2fitsfile(tdosespectrum,hdrkeydic,newname='default',clobber=False
         outname = newname
 
     tdosehdu.writeto(outname,clobber=clobber)
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=False,sourcecat_compinfo=None,
+                                     normalizecomponents=False,includewcs=True,clobber=True,verbose=True):
+    """
+    Combine a set of 2D models to a model cube that TDOSE can use as input for source_mode='modelimg'.
+    For instance these 2D models would model the individual sources in the FoV (if not modeled
+    simultanously like with GALFIT)
+
+    --- INPUT ---
+    models2D            List of 2D source models to combine. They should all have the same dimensions
+    modelsext           Extension containing models in models2D fits files
+    # Nlayers             Number of layers to generate for the cube.
+    # PSFparam            The PSF parameters to use when generating the cube
+    basename            Name base to use for naming outputs (no extension)
+    savecubesumimg      Save image of sum over cube components (useful for comparison purposes)
+    normalizecomponents Normalize each individual components so sum(component image) = 1?
+                        TDOSE will normalize cube for extraction optimization irrespective of input
+    includewcs          Include WCS information in output cube header (from first model in list)?
+    clobber             Overwrite existing files
+    verbose             Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    import tdose_utilities as tu, glob, numpy as np
+
+    models2D    = glob.glob('data/models/*.fits')
+    modelsext   = np.ones(len(models2D))
+    basename    = './data/models/PGC065588_models2D'
+
+    tu.build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=True,normalizecomponents=False)
+
+
+    """
+    Nmodels2D = len(models2D)
+    modelsext = modelsext.astype(int)
+    if verbose: print ' - Assembling the '+str(Nmodels2D)+' 2D model images into a model cube '
+    if verbose: print '\n'
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print ' - Setting up output cube based on list of 2D models. Output to be stored in:\n   '+basename
+    mainmodel  = 0
+    primheader = pyfits.open(models2D[mainmodel])[0].header
+    baseheader = pyfits.open(models2D[mainmodel])[modelsext[mainmodel]].header
+    modelimg   = pyfits.open(models2D[mainmodel])[modelsext[mainmodel]].data
+
+    modelwcs   = wcs.WCS(tu.strip_header(baseheader.copy()))
+    cube       = np.zeros([Nmodels2D,modelimg.shape[0],modelimg.shape[1]])
+
+    for mm, m2D in enumerate(models2D):
+        compnumber   = mm+1
+        m2Ddata      = pyfits.open(m2D)[modelsext[mm]].data
+        cubelayer    = m2Ddata
+
+        if normalizecomponents:
+            cubelayer = cubelayer / np.sum(cubelayer)
+
+        cube[mm,:,:] = cubelayer
+        cubelayer    = cubelayer*0.0 # resetting cube layer
+
+    # - - - - - - - - - - - - - - - - - - Saving Model Cube - - - - - - - - - - - - - - - - - -
+    cubename = basename+'_cube.fits'
+    if verbose: print ' - Saving model cube to \n   '+cubename
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    hducube  = pyfits.PrimaryHDU(cube)       # default HDU with default minimal header
+
+    if includewcs:
+        if verbose: print ' - Including WCS information from main model header '
+        # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
+        hducube.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
+        hducube.header.append(('CD1_1  ',modelwcs.wcs.cd[0,0]  ,' Coordinate transformation matrix element'),end=True)
+        hducube.header.append(('CD1_2  ',modelwcs.wcs.cd[0,1]  ,' Coordinate transformation matrix element'),end=True)
+        hducube.header.append(('CD2_1  ',modelwcs.wcs.cd[1,0]  ,' Coordinate transformation matrix element'),end=True)
+        hducube.header.append(('CD2_2  ',modelwcs.wcs.cd[1,1]  ,' Coordinate transformation matrix element'),end=True)
+        hducube.header.append(('CTYPE1 ',modelwcs.wcs.ctype[0]  ,' Right ascension, gnomonic projection'),end=True)
+        hducube.header.append(('CTYPE2 ',modelwcs.wcs.ctype[1]  ,' Declination, gnomonic projection'),end=True)
+        hducube.header.append(('CRPIX1 ',modelwcs.wcs.crpix[0]  ,' Pixel coordinate of reference point'),end=True)
+        hducube.header.append(('CRPIX2 ',modelwcs.wcs.crpix[1]  ,' Pixel coordinate of reference point'),end=True)
+        hducube.header.append(('CRVAL1 ',modelwcs.wcs.crval[0]  ,' '),end=True)
+        hducube.header.append(('CRVAL2 ',modelwcs.wcs.crval[1] ,' '),end=True)
+
+        hducube.header.append(('CTYPE3 ','COMPONENT    '      ,' '),end=True)
+        hducube.header.append(('CUNIT3 ',''                   ,' '),end=True)
+        hducube.header.append(('CD3_3  ',                  1. ,' '),end=True)
+        hducube.header.append(('CRPIX3 ',                  1. ,' '),end=True)
+        hducube.header.append(('CRVAL3 ',                  1. ,' '),end=True)
+        hducube.header.append(('CD1_3  ',                  0. ,' '),end=True)
+        hducube.header.append(('CD2_3  ',                  0. ,' '),end=True)
+        hducube.header.append(('CD3_1  ',                  0. ,' '),end=True)
+        hducube.header.append(('CD3_2  ',                  0. ,' '),end=True)
+
+        hducube.header.append(('EXTNAME',              'MODEL',' '),end=True)
+
+    hdus = [hducube]
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    hdulist = pyfits.HDUList(hdus)             # turn header into to hdulist
+    hdulist.writeto(cubename,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+
+    # - - - - - - - - - - - - - - - - - - Saving Sum Cube Image - - - - - - - - - - - - - - - - - -
+    if savecubesumimg:
+        imgname = basename+'_cubesum.fits'
+        if verbose: print ' - Saving model cube to \n   '+imgname
+        cubesum = np.sum(cube,axis=0)
+
+        hduimg  = pyfits.PrimaryHDU(cubesum)
+        if includewcs:
+            if verbose: print ' - Including WCS information from GALFIT reference image extension   '
+            # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
+            hduimg.header.append(('BUNIT   '                       ,'(Ftot/texp)'),end=True)
+            hduimg.header.append(('CD1_1   ',modelwcs.wcs.cd[0,0]  ,' Coordinate transformation matrix element'),end=True)
+            hduimg.header.append(('CD1_2   ',modelwcs.wcs.cd[0,1]  ,' Coordinate transformation matrix element'),end=True)
+            hduimg.header.append(('CD2_1   ',modelwcs.wcs.cd[1,0]  ,' Coordinate transformation matrix element'),end=True)
+            hduimg.header.append(('CD2_2   ',modelwcs.wcs.cd[1,1]  ,' Coordinate transformation matrix element'),end=True)
+            hduimg.header.append(('CTYPE1  ',modelwcs.wcs.ctype[0] ,' Right ascension, gnomonic projection'),end=True)
+            hduimg.header.append(('CTYPE2  ',modelwcs.wcs.ctype[1] ,' Declination, gnomonic projection'),end=True)
+            hduimg.header.append(('CRPIX1  ',modelwcs.wcs.crpix[0] ,' Pixel coordinate of reference point'),end=True)
+            hduimg.header.append(('CRPIX2  ',modelwcs.wcs.crpix[1] ,' Pixel coordinate of reference point'),end=True)
+            hduimg.header.append(('CRVAL1  ',modelwcs.wcs.crval[0] ,' '),end=True)
+            hduimg.header.append(('CRVAL2  ',modelwcs.wcs.crval[1] ,' '),end=True)
+
+            hdus = [hduimg]
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        hdulist = pyfits.HDUList(hdus)            # turn header into to hdulist
+        hdulist.writeto(imgname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print '\n'
+
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
