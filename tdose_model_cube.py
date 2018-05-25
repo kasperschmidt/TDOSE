@@ -206,11 +206,15 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
                             psfedLayername = False #cubename.replace('.fits','_RefImageModelPSFconvolved_PSFparamtype_'+psfparamtype+'.fits')
 
-                            img_model_init  = tu.numerical_convolution_image(inputmodel,convkernel,saveimg=psfedLayername,
-                                                                             clobber=clobber,imgmask=comb_mask,
-                                                                             fill_value=0.0,norm_kernel=True,convolveFFT=False,
-                                                                             verbose=loopverbose)
-                            img_model  = img_model_init/np.sum(img_model_init)         # normalizing model (component)
+                            skipnumericalPSFconvolution = False
+                            if skipnumericalPSFconvolution:
+                                img_model   = inputmodel/np.sum(inputmodel)
+                            else:
+                                img_model_init  = tu.numerical_convolution_image(inputmodel,convkernel,saveimg=psfedLayername,
+                                                                                 clobber=clobber,imgmask=comb_mask,
+                                                                                 fill_value=0.0,norm_kernel=True,convolveFFT=False,
+                                                                                 verbose=loopverbose)
+                                img_model  = img_model_init/np.sum(img_model_init)         # normalizing model (component)
                         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                         img_model  = img_model/noisecube_layer
                         modelravel = img_model.ravel()
@@ -706,9 +710,13 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
                 else:
                     inputmodel = sourceparam
 
-                img_model_init  = tu.numerical_convolution_image(inputmodel,convkernel,saveimg=False,clobber=clobber,imgmask=None,
-                                                                 fill_value=0.0,norm_kernel=True,convolveFFT=False,verbose=False)
-                layer_img            = img_model_init/np.sum(img_model_init)
+                skipnumericalPSFconvolution = False
+                if skipnumericalPSFconvolution:
+                    layer_img       = inputmodel/np.sum(inputmodel)
+                else:
+                    img_model_init  = tu.numerical_convolution_image(inputmodel,convkernel,saveimg=False,clobber=clobber,imgmask=None,
+                                                                     fill_value=0.0,norm_kernel=True,convolveFFT=False,verbose=False)
+                    layer_img            = img_model_init/np.sum(img_model_init)
                 out_cube[ss,ll,:,:]  = layer_img * layer_scales[ss,ll]
         if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
     else:
