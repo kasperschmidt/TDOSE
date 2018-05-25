@@ -5,7 +5,7 @@ import astropy.io.fits as fits
 import tdose_utilities as tu
 import pdb
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def remove_object(datacube,sourcemodelcube,objects=[1],remove=True,dataext=0,sourcemodelext=0,
+def remove_object(datacube,sourcemodelcube,objects=[1,3],remove=True,dataext=1,sourcemodelext=1,
                   savecube=False,clobber=False,verbose=True):
     """
     Use source model cube to remove object(s) from data cube
@@ -25,6 +25,12 @@ def remove_object(datacube,sourcemodelcube,objects=[1],remove=True,dataext=0,sou
     verbose             Toggle verbosity
 
     --- EXAMPLE OF USE ---
+    import tdose_modify_cube
+
+    datacube        = 'datacube_spectra_are_extracted_from.fits'
+    sourcemodelcube = 'tdose_source_modelcube.fits'
+
+    modified_cube   = tdose_modify_cube.remove_object(datacube,sourcemodelcube,savecube='source1and3removed')
 
 
     """
