@@ -2,7 +2,7 @@
 #-------------------------------------------------START OF TDOSE SETUP-------------------------------------------------
 #
 # Template for Three Dimensional Optimal Spectral Extracion (TDOSE, http://github.com/kasperschmidt/TDOSE) setup file
-# Template was generated with tdose_utilities.generate_setup_template() on 2017-07-20 09:11
+# Template was generated with tdose_utilities.generate_setup_template() on 2018-06-08 10:04
 # Setup file can be run with tdose.perform_extraction() or tdose.perform_extractions_in_parallel()
 #
 # - - - - - - - - - - - - - - - - - - - - - - - - - - DATA INPUT  - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -18,17 +18,13 @@ img_extension          0                                  # Name or number of fi
 wht_image              /path/refimage_wht.fits            # Path and name of fits file containing weight map of reference image (only cut out; useful for galfit modeling)
 wht_extension          0                                  # Name or number of fits extension containing weight map
 
-ref_image_model        None                               # If a model of the reference image exists provide it here.
-                                                          # If a model is provided the PSF convolution and flux optimization is done numerically.
-model_extension        0                                  # Name or number of fits extension containing reference image model
-
 source_catalog         /path/tdose_sourcecat.fits         # Path and name of source catalog containing sources to extract spectra for
 sourcecat_IDcol        id                                 # Column containing source IDs in source_catalog
 sourcecat_xposcol      x_image                            # Column containing x pixel position in source_catalog
 sourcecat_yposcol      y_image                            # Column containing y pixel position in source_catalog
 sourcecat_racol        ra                                 # Column containing ra  position in source_catalog (used to position cutouts if model_cutouts = True)
 sourcecat_deccol       dec                                # Column containing dec position in source_catalog (used to position cutouts if model_cutouts = True)
-sourcecat_fluxcol      fluxscale                          # Column containing dec position in source_catalog (used to position cutouts if model_cutouts = True)
+sourcecat_fluxcol      fluxscale                          # Column containing a flux scale used for the modeling if no gauss_guess is provided
 sourcecat_parentIDcol  None                               # Column containing parent source IDs grouping source IDs into objects. Set to None to used id column
                                                           # corresponding to assigning each source to a single object
                                                           # if not None the parentid is used to group source models when storing 1D spectra. All models keep sources separate.
@@ -52,8 +48,9 @@ source_model           gauss                              # The source model to 
                                                           #   gauss          Each source is modeled as a multivariate gaussian using the source_catalog input as starting point
                                                           #   galfit         The sources in the field-of-view are defined based on GALFIT header parameters; if all components are        # Not enabled yet
                                                           #                  Gaussians an analytical convolution is performed. Otherwise numerical convolution is used.                   # Not enabled yet
-                                                          #   modelimg       A model image exists, e.g., obtained with Galfit, in modelimg_directory. This prevents dis-entangling of
-                                                          #                  different objects, i.e., the provided model image is assumed to represent the 1 object in the field-of-view.
+                                                          #   modelimg       A model image exists, e.g., obtained with Galfit, in modelimg_directory. To disentangle/de-blend individual
+                                                          #                  components, a model cube and parent_ids should be provided (see comments to modelimg_directory). If a model
+                                                          #                  image is provded, TDOSE assumes it to represent the 1 object in the field-of-view.
                                                           #                  If the model image is not found a gaussian model of the FoV (source_model=gauss) is performed instead.
                                                           #   aperture       A simple aperture extraction on the datacubes is performed, i.e., no modeling of sources.
 
@@ -82,7 +79,11 @@ galfit_model_extension 2                                  # Fits extension conta
 # - - - - - - - - - - - - - - - - - - - - - - - - MODEL IMAGE SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
 modelimg_directory     /path/models_cutouts/              # If source_model = modelimg provide the path to directory containing the individual source models
                                                           # TDOSE will look for model_*ref_image*.fits (incl. the cutout string if model_cutouts=True). If no model is found the object is skipped
-
+                                                          # If a model image named model_*ref_image*_cube.fits is found, TDOSE assumes this file contains a cube with the individual model
+                                                          # components isolated in individual layers of the cube. TDOSE will use this model instead of one generated within TDOSE.
+                                                          # Parent IDs in the source catalog can be used to define what components belong to the object of interest (i.e., to extract a spectrum for)
+                                                          # GALFIT models can be converted to TDOSE-suited model-cubes with tdose_utilities.galfit_convertmodel2cube()
+                                                          # A TDOSE-suited model-cube can be build from individual 2D models with tdose_utilities.build_modelcube_from_modelimages()
 modelimg_extension     0                                  # Fits extension containing model
 
 # - - - - - - - - - - - - - - - - - - - - - - - - APERTURE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - -
@@ -94,11 +95,27 @@ psf_type               gauss                              # Select PSF model to 
                                                           #   kernel_gauss   An astropy.convolution.Gaussian2DKernel() used for numerical convolution                        # Not enabled yet
                                                           #   kernel_moffat  An astropy.convolution.Moffat2DKernel()   used for numerical convolution                        # Not enabled yet
 psf_FWHM_evolve        linear                             # Evolution of the FWHM from blue to red end of data cube. Choices are:
-                                                          #   linear     FWHM wavelength dependence described as FWHM(lambda) = p0[''] + p1[''/A] * (lambda - 7000A)
+                                                          #   linear     FWHM wavelength dependence described as FWHM(lambda) = p0[''] + p1[''/A] * (lambda - p2[A])
 psf_FWHMp0             0.940                              # p0 parameter to use when determining wavelength dependence of PSF
 psf_FWHMp1             -3.182e-5                          # p1 parameter to use when determining wavelength dependence of PSF
+psf_FWHMp2             7050                               # p2 parameter to use when determining wavelength dependence of PSF
 psf_savecube           True                               # To save fits file containing the PSF cube set psf_savecube = True
                                                           # This cube is used for the "source_model = modelimg" numerical PSF convolution
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - NON_DETECTIONS  - - - - - - - - - - - - - - - - - - - - - - - -
+nondetections          None                               # List of IDs of sources in source_catalog that are not detected in the reference image or which
+                                                          # have low flux levels in which cases the Gaussian modeling is likely to be inaccurate.
+                                                          # For long list of objects provide ascii file containing ids.
+                                                          #     If source_model = gauss    then sources will be extracted by replacing models within ignore_radius
+                                                          #                                with a single point source in the reference image model, which will then
+                                                          #                                be convolved with the PSF specified when extracting, as usual.
+                                                          #     If source_model = modelimg TDOSE assumes that the input model already represents the desired extraction model
+                                                          #                                of the non-detection. I.e., if the object should be extracted as a (PSF
+                                                          #                                convolved) point source, the model image should include a point source.
+                                                          #                                Hence, for source_model = modelimg the keyword nondetections is ignored.
+ignore_radius          0.3                                # Models within a radius of ignore_radius [arcsec] of the non-detection location will be replaced with a
+                                                          # point source for extractions with source_model = gauss before convolving with the PSF and adjusting the flux
+                                                          # leves in each model cube layer.
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - CUBE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - - -
 model_cube_layers      all                                # Layers of data cube to model [both end layers included]. If 'all' the full cube will be modeled.
@@ -116,7 +133,7 @@ source_model_cube_ext  tdose_source_modelcube             # Name extension of fi
 
 # - - - - - - - - - - - - - - - - - - - - - - - - SPECTRAL EXTRACTION - - - - - - - - - - - - - - - - - - - - - - - - -
 sources_to_extract     [8685,9262,10195,29743]            # Sources in source_catalog to extract 1D spectra for.
-                                                          # If sourcecat_parentIDcol os not None all associated spectra are included in stored object spectra
+                                                          # If sourcecat_parentIDcol is not None all associated spectra are included in stored object spectra
                                                           # If set to 'all', 1D spectra for all sources in source_catalog is produced (without grouping according to parents).
                                                           # For long list of objects provide ascii file containing containing ids (here parent grouping will be performed)
 spec1D_name            tdose_spectrum                     # Name extension to use for extracted 1D spectra
