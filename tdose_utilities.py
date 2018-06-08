@@ -220,9 +220,10 @@ psf_type               gauss                              # Select PSF model to 
                                                           #   kernel_gauss   An astropy.convolution.Gaussian2DKernel() used for numerical convolution                        # Not enabled yet
                                                           #   kernel_moffat  An astropy.convolution.Moffat2DKernel()   used for numerical convolution                        # Not enabled yet
 psf_FWHM_evolve        linear                             # Evolution of the FWHM from blue to red end of data cube. Choices are:
-                                                          #   linear     FWHM wavelength dependence described as FWHM(lambda) = p0[''] + p1[''/A] * (lambda - 7000A)
+                                                          #   linear     FWHM wavelength dependence described as FWHM(lambda) = p0[''] + p1[''/A] * (lambda - p2[A])
 psf_FWHMp0             0.940                              # p0 parameter to use when determining wavelength dependence of PSF
 psf_FWHMp1             -3.182e-5                          # p1 parameter to use when determining wavelength dependence of PSF
+psf_FWHMp2             7050                               # p2 parameter to use when determining wavelength dependence of PSF
 psf_savecube           True                               # To save fits file containing the PSF cube set psf_savecube = True
                                                           # This cube is used for the "source_model = modelimg" numerical PSF convolution
 

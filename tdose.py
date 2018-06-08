@@ -1182,7 +1182,8 @@ def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobb
     if setupdic['psf_FWHM_evolve'].lower() == 'linear':
         fwhm_p0     = setupdic['psf_FWHMp0']
         fwhm_p1     = setupdic['psf_FWHMp1']
-        fwhm_vec    = fwhm_p0 + fwhm_p1 * (cube_waves - 7000.0)
+        fwhm_p2     = setupdic['psf_FWHMp2']
+        fwhm_vec    = fwhm_p0 + fwhm_p1 * (cube_waves - fwhm_p2)
         sigmas      = fwhm_vec/2.35482/cube_scales[0]
     else:
         sys.exit(' ---> '+setupdic['psf_FWHM_evolve']+' is an invalid choice for the psf_FWHM_evolve setup parameter ')
