@@ -187,12 +187,16 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
         if noise_cube is not None:
             if verbose: print ' - Estimate S/N at each wavelength for 1D spectrum (see Eq. 16 of Kamann+2013)'
             if verbose: print '   Estimating fraction of flux in each pixel wrt. total flux in each layer'
-            object_cube   = np.sum((source_model_cube[source_ent,:,:,:]),axis=0) # summing source models for all source IDs
-            #total_cube    = np.sum(np.abs(source_model_cube),axis=0) # combined model of all sources
-            #layerflux     = np.sum(np.sum(source_model_cube[source_ent,:,:],axis=2),axis=2) # i.e., spec_1D
-            fluxfrac_cube = object_cube / spec_1D[:,None,None]
+            object_cube    = np.sum((source_model_cube[source_ent,:,:,:]),axis=0) # summing source models for all source IDs
 
-            #fluxfrac_min  = -9999 # 0.1
+            fluxfrac_cube_sents = np.zeros(source_model_cube.shape[1:])
+            for sent in source_ent:
+                object_cube_sent      = np.sum((source_model_cube[[sent],:,:,:]),axis=0) # getting source model for model 'sent'
+                fluxscale1D_sent      = layer_scale_arr[sent,:]
+                fluxfrac_cube_sent    = object_cube_sent / fluxscale1D_sent[:,None,None]
+                fluxfrac_cube_sents   = fluxfrac_cube_sents + fluxfrac_cube_sent
+            fluxfrac_cube = fluxfrac_cube_sents / len(source_ent) # renormalizing flux-fraction cube
+
             if verbose: print '   Defining pixel mask (ignoring NaN pixels) ' #+\
             #                  'and pixels with <'+str(fluxfrac_min)+' of total pixel flux in model cube) '
             # pix_mask      = (fluxfrac_cube < fluxfrac_min)
