@@ -1463,9 +1463,11 @@ def strip_header(header,verbose=True):
     """
     del header['COMMENT']
     del header['HISTORY']
+    emptykeysnotremoved = True
     for key in header.keys():
-        if key == '':
-            del header[key]
+        if (key == '') & emptykeysnotremoved:
+            del header[key] # removes all keys named ''
+            emptykeysnotremoved = False
     return header
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,textlist=None,fontsize=12,
