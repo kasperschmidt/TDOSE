@@ -8,6 +8,7 @@ import glob
 import numpy as np
 import collections
 import astropy
+import shutil
 import collections
 import multiprocessing
 from astropy import wcs
@@ -709,7 +710,8 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generate
     return bundles, dict
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
-                performcutout=True,generatesourcecat=True,clobber=False,verbose=True,verbosefull=True,start_time=0.0):
+                performcutout=True,generatesourcecat=True,clobber=False,verbose=True,verbosefull=True,start_time=0.0,
+                check4modelcat=True):
     """
     Generate cutouts of reference image and data cube
 
@@ -778,33 +780,63 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
 
         # --- SUB-SOURCE CAT ---
         if generatesourcecat:
-            obj_in_cut_fov = np.where( (sourcedat_init[setupdic['sourcecat_racol']] <
-                                        (ra + cutoutsize[0]/2./3600. /
-                                         np.cos(np.deg2rad(sourcedat_init[setupdic['sourcecat_deccol']])))) &
-                                       (sourcedat_init[setupdic['sourcecat_racol']] >
-                                        (ra - cutoutsize[0]/2./3600. /
-                                         np.cos(np.deg2rad(sourcedat_init[setupdic['sourcecat_deccol']])))) &
-                                       (sourcedat_init[setupdic['sourcecat_deccol']] < (dec + cutoutsize[1]/2./3600.)) &
-                                       (sourcedat_init[setupdic['sourcecat_deccol']] > (dec - cutoutsize[1]/2./3600.)) )[0]
-            Ngoodobj      = len(obj_in_cut_fov)
-            cutout_hdr    = pyfits.open(cut_images[oo])[setupdic['img_extension']].header
-            cut_sourcedat = sourcedat_init[obj_in_cut_fov].copy()
-            storearr      = np.zeros(Ngoodobj,dtype=cut_sourcedat.columns) # define structure array to store to fits file
-            for ii in np.arange(Ngoodobj):
-                striphdr   = tu.strip_header(cutout_hdr.copy())
-                wcs_in     = wcs.WCS(striphdr)
-                skycoord   = SkyCoord(cut_sourcedat[ii][setupdic['sourcecat_racol']],
-                                      cut_sourcedat[ii][setupdic['sourcecat_deccol']], frame='fk5', unit='deg')
-                pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in,origin=1)
-                cut_sourcedat[ii][setupdic['sourcecat_xposcol']] = pixcoord[0]
-                cut_sourcedat[ii][setupdic['sourcecat_yposcol']] = pixcoord[1]
+            foundmodelcat = False
+            if check4modelcat:
+                if setupdic['modelimg_directory'] is not None:
+                    if not performcutout: # only print if info from cutting out is not printed
+                        print(' - Looking for source catalogs in the "modelimg_directory" ')
+                    checkstring = 'noModelComponent'
+                    if checkstring in cut_sourcecat:
+                        print(' - '+checkstring+' source catalog; using (ra,dec) match to "source_catalog" instead')
+                    else:
+                        model_sourcecat_str = setupdic['modelimg_directory']+'/*'+\
+                                              cut_sourcecat.split('_id')[-1].replace('.fits','_sourcecatalog.fits')
+                        model_sourcecat = glob.glob(model_sourcecat_str)
+                        if len(model_sourcecat) == 1:
+                            if not performcutout: # only print if info from cutting out is not printed
+                                print('   Found a unqie match for the objects -> using it instead of a (ra,dec) match to "source_catalog" ')
+                            shutil.copyfile(model_sourcecat[0],cut_sourcecat)
+                            foundmodelcat = True
+                        elif len(model_sourcecat) > 1:
+                            if not performcutout: # only print if info from cutting out is not printed
+                                print('   Found '+str(len(model_sourcecat))+
+                                      ' matches for the object -> using (ra,dec) match to "source_catalog" instead')
+                        else:
+                            if not performcutout: # only print if info from cutting out is not printed
+                                print('   Did not find any generating cutout source catalog from (ra,dec) match to "source_catalog" ')
 
-                storearr[ii] = np.vstack(cut_sourcedat)[ii,:]
+            if not foundmodelcat:
+                if not performcutout: # only print if info from cutting out is not printed
+                    print(' - Generating cutout source catalog from (ra,dec) match to main "source_catalog" ')
+                obj_in_cut_fov = np.where( (sourcedat_init[setupdic['sourcecat_racol']] <
+                                            (ra + cutoutsize[0]/2./3600. / np.cos(np.deg2rad(dec)))) &
+                                           (sourcedat_init[setupdic['sourcecat_racol']] >
+                                            (ra - cutoutsize[0]/2./3600. / np.cos(np.deg2rad(dec)))) &
+                                           (sourcedat_init[setupdic['sourcecat_deccol']] < (dec + cutoutsize[1]/2./3600.)) &
+                                           (sourcedat_init[setupdic['sourcecat_deccol']] > (dec - cutoutsize[1]/2./3600.)) )[0]
 
-            astropy.io.fits.writeto(cut_sourcecat,storearr,header=None,overwrite=clobber)
+                Ngoodobj      = len(obj_in_cut_fov)
+                cutout_hdr    = pyfits.open(cut_images[oo])[setupdic['img_extension']].header
+                cut_sourcedat = sourcedat_init[obj_in_cut_fov].copy()
+                storearr      = np.zeros(Ngoodobj,dtype=cut_sourcedat.columns) # define structure array to store to fits file
+                for ii in np.arange(Ngoodobj):
+                    striphdr   = tu.strip_header(cutout_hdr.copy())
+                    wcs_in     = wcs.WCS(striphdr)
+                    skycoord   = SkyCoord(cut_sourcedat[ii][setupdic['sourcecat_racol']],
+                                          cut_sourcedat[ii][setupdic['sourcecat_deccol']], frame='fk5', unit='deg')
+                    pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in,origin=1)
+                    cut_sourcedat[ii][setupdic['sourcecat_xposcol']] = pixcoord[0]
+                    cut_sourcedat[ii][setupdic['sourcecat_yposcol']] = pixcoord[1]
+
+                    storearr[ii] = np.vstack(cut_sourcedat)[ii,:]
+
+                astropy.io.fits.writeto(cut_sourcecat,storearr,header=None,overwrite=clobber)
         else:
             if verbose: print ' >>> Skipping generating the cutout source catalogs (assume they exist)'
-
+        # # v v v v v v v v v v v v KBS180823 v v v v v v v v
+        # if int(cutoutid) == 135015184:
+        #     pdb.set_trace()
+        # # ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
     if not verbosefull:
         if verbose: print '\n   done'
 
