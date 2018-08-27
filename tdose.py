@@ -833,10 +833,6 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                 astropy.io.fits.writeto(cut_sourcecat,storearr,header=None,overwrite=clobber)
         else:
             if verbose: print ' >>> Skipping generating the cutout source catalogs (assume they exist)'
-        # # v v v v v v v v v v v v KBS180823 v v v v v v v v
-        # if int(cutoutid) == 135015184:
-        #     pdb.set_trace()
-        # # ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^ ^
     if not verbosefull:
         if verbose: print '\n   done'
 
