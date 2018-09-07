@@ -30,16 +30,19 @@ import pdb
 def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
     """
     Return dictionary with the setups found in 'setupfile'
+    (both TDOSE run and modification setup files can be loaded)
 
     --- INPUT ---
     setupfile       The name of the txt file containing the TDOSE setup to load
-                    A template for this setup file can be generated with
-                    tdose_load_setup.generate_setup_template()
+                    Template for relevant setup files can be generated with
+                    tdose_load_setup.generate_setup_template() or
+                    tdose_load_setup.generate_setup_template_modify()
     verbose         Toggle verbosity
 
     --- EXAMPLE OF USE ---
     import tdose_utilities as tu
-    setup = tu.load_setup(setupfile='./tdose_setup_template.txt')
+    setup        = tu.load_setup(setupfile='./tdose_setup_template.txt')
+    setup_modify = tu.load_setup(setupfile='./tdose_setup_template_modify.txt')
 
     """
     if verbose: print ' --- tdose_utilities.load_setup() --- '
@@ -320,6 +323,7 @@ cube_extension         DATA_DCBGC                         # Name or number of fi
 source_model_cube      /path/tdose_source_modelcube.fits  # Path and name of fits file containing source model cube
 source_extension       DATA_DCBGC                         # Name or number of fits extension containing source model cube
 
+modyified_cube_dir     /path/to/output/                   # Name extension of file containing modified data cube.
 modyified_cube         tdose_modified_datacube            # Name extension of file containing modified data cube.
 
 modify_sources_list    [1,2,5]                            # List of IDs of sources to remove from data cube using source model cube.
