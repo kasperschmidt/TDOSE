@@ -3,10 +3,84 @@ import numpy as np
 import sys
 import astropy.io.fits as fits
 import tdose_utilities as tu
+import tdose_modify_cube as tmc
+import time
+import os
 import pdb
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def perform_modification(setupfile='./tdose_setup_template_modify.txt',clobber=False,verbose=True):
+    """
+    Modify a data cube using the information stored in a generated TDOSE source model cube.
+
+    --- INPUT ---
+    setupfile       TDOSE modification setup file. Template can be generated
+                    with tdose_utilities.generate_setup_template_modify()
+    clobber         Overwrite existing output?
+    verbose         Toggle verbosity
+
+    --- EXAMPLE OF USE ---
+    import tdose_modify_cube as tmc
+    setupfile = './tdose_setup_template_modify.txt'
+    tmc.perform_modification(setupfile=setupfile)
+
+    """
+
+    start_time = time.clock()
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print '=================================================================================================='
+    if verbose: print ' TDOSE: Loading setup                                       '+\
+                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+
+    setupdic        = tu.load_setup(setupfile,verbose=verbose)
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print '=================================================================================================='
+    if verbose: print ' TDOSE: Logging setup                                       '+\
+                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+
+    setuplog = setupdic['modified_cube_dir']+setupfile.split('/')[-1].replace('.txt','_logged.txt')
+    if os.path.isfile(setuplog) & (clobber == False):
+        if verbose: print ' - WARNING Logged setupfile exists and clobber = False. Not storing setup '
+    else:
+        if verbose: print ' - Writing setup and command to spec1D_directory to log extraction setup and command that was run'
+        setupinfo    = open(setupfile,'r')
+        setupcontent = setupinfo.read()
+        setupinfo.close()
+
+        cmdthatwasrun = "import tdose_modify_cube as tmc; tmc.perform_modification(setupfile='%s',clobber=%s,verbose=%s)" % \
+                        (setuplog,clobber,verbose)
+
+        loginfo = open(setuplog, 'w')
+        loginfo.write("# The setup file appended below was run with the command: \n# "+cmdthatwasrun+
+                      " \n# on "+tu.get_now_string()+'\n# ')
+
+        loginfo.write(setupcontent)
+        loginfo.close()
+
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose: print '=================================================================================================='
+    if verbose: print ' TDOSE: Modifying data cube                                 '+\
+                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+
+    savestring = 'satelitesremoved'
+
+    if setupdic['sources_action'].lower() == 'remove':
+        removing = True
+    elif setupdic['sources_action'].lower() == 'keep':
+        removing = False
+    else:
+        if verbose: print ' - WARNING "sources_action" keyword in setup ('+setupdic['sources_action']+') is invalid. Removing source.'
+        removing = True
+
+    modified_cube = tmc.remove_object(setupdic['data_cube'],setupdic['source_model_cube'],
+                                      objects=setupdic['modify_sources_list'],remove=removing,
+                                      dataext=setupdic['cube_extension'],
+                                      sourcemodelext=setupdic['source_extension'],savecube=setupdic['modified_cube'],
+                                      savedir=setupdic['modified_cube_dir'],clobber=clobber,verbose=verbose)
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def remove_object(datacube,sourcemodelcube,objects=[1,3],remove=True,dataext=1,sourcemodelext=1,
-                  savecube=False,clobber=False,verbose=True):
+                  savecube=False,savedir=None,clobber=False,verbose=True):
     """
     Use source model cube to remove object(s) from data cube
 
@@ -21,6 +95,8 @@ def remove_object(datacube,sourcemodelcube,objects=[1,3],remove=True,dataext=1,s
     sourcemodelext      Extension of source model cube containing the models
     savecube            If a string is provided the modified cube will be stored in a new fits file
                         appending the provided string to the data cube file name.
+    savedir             If a directory path is provided, the modified cube will be stored here. Otherwise
+                        it will be stored at the same location as the datacube.
     clobber             If true any existing fits file will be overwritten if modified cube is saved
     verbose             Toggle verbosity
 
@@ -64,13 +140,16 @@ def remove_object(datacube,sourcemodelcube,objects=[1,3],remove=True,dataext=1,s
         obj_keep   = objects
         obj_remove = np.setdiff1d(models,obj_keep)
 
-    remove_cube = np.sum(sourcemodel[obj_remove,:,:,:],axis=0)
+    remove_cube = np.sum(sourcemodel[obj_remove.astype(int),:,:,:],axis=0)
 
     modified_cube = dataarr - remove_cube
 
     if savecube:
         datacubehdu[dataext].data = modified_cube # Replacing original data with modified cube
-        outname = datacube.replace('.fits','_'+str(savecube)+'.fits')
+        if savedir is None:
+            outname = datacube.replace('.fits','_'+str(savecube)+'.fits')
+        else:
+            outname = savedir+datacube.split('/')[-1].replace('.fits','_'+str(savecube)+'.fits')
         if verbose: print(' - Saving modified cube to \n   '+outname)
         if verbose: print('   (Using datacube header with modification keywords appended) ')
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
