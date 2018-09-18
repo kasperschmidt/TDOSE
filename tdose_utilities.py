@@ -1456,22 +1456,19 @@ def extract_subimage(imgfile,ra,dec,cutoutsize,outname=None,clobber=False,imgext
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return cutout
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def strip_header(header,verbose=True):
+def strip_header(header,delkeys=['COMMENT','HISTORY',''],verbose=True):
     """
-    Removing all COMMENT, "TITLE" and HISTORY parameters in a fits header to avoid non-ascii characters
+    Removing all COMMENT and HISTORY parameters (or any parameters) in a fits header to avoid non-ascii characters
 
     --- INPUT ---
     header      Header to strip from COMMENT and HISTORY entries
+    delkeys     Keys to delete in header
     verbose     Toggle verbosity
 
     """
-    del header['COMMENT']
-    del header['HISTORY']
-    emptykeysnotremoved = True
-    for key in header.keys():
-        if (key == '') & emptykeysnotremoved:
-            del header[key] # removes all keys named ''
-            emptykeysnotremoved = False
+    for delkey in delkeys:
+        if delkey in header.keys():
+            del header[delkey]
     return header
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,textlist=None,fontsize=12,
