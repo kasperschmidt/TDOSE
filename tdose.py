@@ -1058,7 +1058,9 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
         if setupdic['gauss_guess'] is None:
             param_initguess = None
         else:
-            objects   = pyfits.open(sourcecat)[1].data['id'].tolist()
+            objects   = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']].tolist()
+            objxpos   = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_xposcol']].tolist()
+            objypos   = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_yposcol']].tolist()
 
             if save_init_model_output:
                 saveDS9region = True
@@ -1076,7 +1078,7 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
                 fitstablename = ' '
 
             paramlist = tu.gen_paramlist_from_SExtractorfile(setupdic['gauss_guess'],imgheader=img_hdr,clobber=clobber,
-                                                             objects=objects,
+                                                             objects=objects,objxpos=objxpos,objypos=objypos,
                                                              idcol=setupdic['gauss_guess_idcol'],
                                                              racol=setupdic['gauss_guess_racol'],
                                                              deccol=setupdic['gauss_guess_deccol'],
