@@ -215,7 +215,8 @@ modelimg_directory     /path/models_cutouts/              # If source_model = mo
 modelimg_extension     0                                  # Fits extension containing model
 
 # - - - - - - - - - - - - - - - - - - - - - - - - APERTURE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - -
-aperture_size          1.5                                # Radius of apertures to use given in arc seconds
+aperture_size          1.5                                # Radius of apertures (float or list) to use given in arc seconds. For longer list of
+                                                          # object-specific apertures provide ascii file containing ID and aperturesize[arcsec].
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - PSF MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
 psf_type               gauss                              # Select PSF model to build. Choices are:
