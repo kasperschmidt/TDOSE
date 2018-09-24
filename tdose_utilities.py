@@ -1772,7 +1772,8 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
 
         return outname
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=None,clobber=False,objects='all',
+def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=None,clobber=False,
+                                      objects='all',objxpos=None,objypos=None,
                                       idcol='ID',racol='RA',deccol='DEC',aimg='A_IMAGE',bimg='B_IMAGE',
                                       angle='THETA_IMAGE',fluxscale='FLUX_ISO_F814W',fluxfactor=100.,Nsigma=3,
                                       saveDS9region=True,ds9regionname=None,ds9color='red',ds9width=2,ds9fontsize=12,
@@ -1780,13 +1781,16 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
                                       savefitstable=False,fitstablename=None,verbose=True):
     """
     Generate parameter list for Gaussian source modeling with tdose_model_FoV.gen_fullmodel() based on SEctractor catalog
-
     --- INPUT ---
     sextractorfile      SExtractor output file to generate parameter list from
     pixscale            Pixel scale of image in arcsec/pix
     imgheader           Image header containing WCS to use for converting R.A. and Dec. values to pixel positions
     clobber             Overwrite files if they already exist
     objects             List of objects to generate parameter list for. If 'all', parameter list will contain all objects
+    objxpos             x pixel position of objects to generate parameters for, to be used in case of objects
+                        missing in sextractorfile
+    objypos             y pixel position of objects to generate parameters for, to be used in case of objects
+                        missing in sextractorfile
     idcol               Name of column containing object IDs
     racol               Name of column containing R.A.s (imgheader needed) or x-pixel positions
     deccol              Name of column containing Dec.s (imgheader needed) or y-pixel positions
@@ -1807,13 +1811,11 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
     savefitstable       Store parameter to fits table?
     fitstablename       Name of fits table to stor parameter list to
     verbose             Toggle verbosity
-
     --- EXAMPLE OF USE ---
     import tdose_utilities as tu
     sexfile   = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/catalog_photometry_candels-cdfs-02.fits'
     imgheader = pyfits.open('/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_cut_v1.0.fits')[0].header
     paramlist = tu.gen_paramlist_from_SExtractorfile(sexfile,imgheader=imgheader,Nsigma=8,savefitsimage=False,objects=[10195])
-
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print ' - Loading SExtractor catalog'
@@ -1836,32 +1838,38 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
     else:
         Nobjects_convert = len(objects)
 
-    if verbose: print ' - Assembling paramter list for '+str(Nobjects_convert)+' sources found in catalog'
+    if verbose: print ' - Assembling paramter list for '+str(Nobjects_convert)+\
+                      ' sources found in catalog (tu.gen_paramlist_from_SExtractorfile)'
     paramlist = []
-    for oo in xrange(Nobjects):
-        if objects != 'all':
-            if sourcedat[idcol][oo] not in objects: continue # skipping objects not in objects list provided
-        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if imgheader is None:
-            xpos       = sourcedat[racol][oo]
-            ypos       = sourcedat[deccol][oo]
-        else:
-            skycoord   = SkyCoord(sourcedat[racol][oo], sourcedat[deccol][oo], frame='fk5', unit='deg')
-            pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in,origin=1)
-            xpos, ypos = pixcoord[0], pixcoord[1]
-        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        xpos = xpos
-        ypos = ypos
-        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if fluxscale is not None:
-            fs = sourcedat[fluxscale][oo]*fluxfactor
-        else:
-            fs = 1.0
-        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        sigy  = sourcedat[bimg][oo]*Nsigma
-        sigx  = sourcedat[aimg][oo]*Nsigma
-        ang   = sourcedat[angle][oo]
-        # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    for oo in xrange(Nobjects_convert):
+        if objects[oo] in sourcedat[idcol]:
+            pp = np.where(sourcedat[idcol] == objects[oo])[0][0]
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if imgheader is None:
+                xpos       = sourcedat[racol][pp]
+                ypos       = sourcedat[deccol][pp]
+            else:
+                skycoord   = SkyCoord(sourcedat[racol][pp], sourcedat[deccol][pp], frame='fk5', unit='deg')
+                pixcoord   = wcs.utils.skycoord_to_pixel(skycoord,wcs_in,origin=1)
+                xpos, ypos = pixcoord[0], pixcoord[1]
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            xpos = float(xpos)
+            ypos = float(ypos)
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            if fluxscale is not None:
+                fs = sourcedat[fluxscale][pp]*fluxfactor
+            else:
+                fs = 1.0
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            sigy  = sourcedat[bimg][pp]*Nsigma
+            sigx  = sourcedat[aimg][pp]*Nsigma
+            ang   = sourcedat[angle][pp]
+            # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        else: # adding simple initial guess for objects not in photometric catalog
+            if verbose: print '   WARNING: '+str(objects[oo])+' not in photometric catalog; addind simple point source to paramter list'
+            sigx,sigy,ang,fs = 1.0,1.0,0.0,1.0
+            xpos = objxpos[oo]
+            ypos = objypos[oo]
         objlist    = [ypos,     xpos,     fs,       sigy,  sigx,  ang]
         paramlist  = paramlist + objlist
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
