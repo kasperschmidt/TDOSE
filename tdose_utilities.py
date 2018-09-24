@@ -3109,15 +3109,15 @@ def get_datinfo(cutoutid,setupdic):
         sourcecat    = setupdic['source_catalog']
     else:
         if type(setupdic['cutout_sizes']) == np.str_:
-            sizeinfo = np.genfromtxt(setupdic['cutout_sizes'],dtype=None,comments='#')
-            objent   = np.where(sizeinfo[:,0] == cutoutid)[0]
+            sizeinfo = np.genfromtxt(setupdic['cutout_sizes'],dtype=[('id', int), ('xsize', float), ('ysize', float)],comments='#')
+            objent   = np.where(sizeinfo['id'] == cutoutid)[0]
 
             if len(objent) > 1:
                 sys.exit(' ---> More than one match in '+setupdic['cutout_sizes']+' for object '+str(cutoutid))
             elif len(objent) == 0:
                 sys.exit(' ---> No match in '+setupdic['cutout_sizes']+' for object '+str(cutoutid))
             else:
-                imgsize   = sizeinfo[objent,1:][0].astype(float).tolist()
+                imgsize  = [sizeinfo['xsize'][objent[0]],sizeinfo['ysize'][objent[0]]]
         else:
             imgsize   = setupdic['cutout_sizes']
 
