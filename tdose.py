@@ -308,7 +308,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 if modelrefimage:
                     tdose.model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
                                          save_init_model_output=save_init_model_output,centralpointsource=centralpointsource,
-                                         clobber=clobber,verbose=verbose,verbosefull=verbosefull)
+                                         clobber=clobber,verbose=verbose,verbosefull=verbosefull,objid=extid)
                 else:
                     if verbose: print ' >>> Skipping modeling reference image (assume models exist)'
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1030,7 +1030,7 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
         hdulist.writeto(fullfov_cube,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
+def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,objid=None,
                    save_init_model_output=True,centralpointsource=False,clobber=True,verbose=True,verbosefull=True):
     """
     Modeling the refernce image
@@ -1046,6 +1046,8 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
     img_wcs                 WCS of image to model
     img_data                Data of image array
     names                   Names of individual objects used in DS9 region
+    objid                   ID of object being modeled. Only needed for assigning the aperture size, for
+                            aperture extractions with multiple aperture sizes provided in setup file.
     save_init_model_output  Set to true to save the initial model to files
     centralpointsource      To insert central point source set to true
     clobber                 Overwrite files if the already exist
@@ -1095,17 +1097,25 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
                                                              savefitstable=savefitstable,fitstablename=fitstablename)
             param_initguess = paramlist
     elif setupdic['source_model'].lower() == 'galfit':
-        sys.exit(' ---> source_model == galfit is not enabled yet; sorry...')
+        sys.exit(' ---> source_model == galfit is not enabled yet; sorry... \n'
+                 '      But TDOSE can be fed galfit output using tdose_utilities.galfit_* routines and \n'
+                 '      the "modelimg" extraction mode. Try that instead.')
     elif setupdic['source_model'].lower() == 'aperture':
-        sigysigxangle    = None
         param_initguess  = None
         pixscales        = wcs.utils.proj_plane_pixel_scales(img_wcs)*3600.0
         pixscaleunique   = np.unique(np.round(pixscales,8))
         if len(pixscaleunique) != 1:
             sys.exit(' ---> The pixel scale in the x and y direction of image are different (pixscales='+str(pixscales)+')')
         else:
-            sigysigxangle =  setupdic['aperture_size'] / pixscaleunique          # radius in pixels
-            fluxscale     =  pyfits.open(sourcecat)[1].data['id'].astype(float)  # pixel values
+            if type(setupdic['aperture_size']) == np.str_ or (type(setupdic['aperture_size']) == str):
+                apertureinfo = np.genfromtxt(setupdic['aperture_size'],dtype=[('id', int), ('size', float)],comments='#')
+                aperobjent   = np.where(apertureinfo['id'] == objid)[0]
+                apsize       = apertureinfo['size'][aperobjent]
+
+            else:
+                apsize       = setupdic['aperture_size']
+            sigysigxangle =  apsize / pixscaleunique          # radius in pixels
+            fluxscale     =  pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']].astype(float)  # pixel values
     else:
         sys.exit(' ---> Setting source_model == '+setupdic['source_model']+' is not a valid entry')
 
