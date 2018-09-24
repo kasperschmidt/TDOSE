@@ -81,7 +81,7 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if modeltype.lower() == 'gauss':
         if param_initguess is None:
-            if verbose: print ' - Loading source catalog info to build inital guess of paramters for model fit'
+            if verbose: print ' - Loading source catalog info to build inital guess of parameters for model fit'
             if verbose: print '   Will use x position, y position,',
             if fluxscale is not None:
                 if verbose: print ' fluxscale',
