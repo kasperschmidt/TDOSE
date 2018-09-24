@@ -336,7 +336,7 @@ def gen_paramlist(sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=No
         sys.exit(' ---> Problems loading fits source catalog for mock cube')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Nobjects   = len(sourcedat)
-    if verbose: print ' - Assembling paramter list for '+str(Nobjects)+' found in catalog'
+    if verbose: print ' - Assembling paramter list for '+str(Nobjects)+' sources found in catalog (tmf.gen_paramlist)'
     paramlist = []
     for oo in xrange(Nobjects):
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -392,7 +392,7 @@ def gen_paramlist_aperture(sourcecatalog,radius_pix,pixval=None,xpos_col='xpos',
         sys.exit(' ---> Problems loading fits source catalog for mock cube')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Nobjects   = len(sourcedat)
-    if verbose: print ' - Assembling paramter list for '+str(Nobjects)+' found in catalog'
+    if verbose: print ' - Assembling paramter list for '+str(Nobjects)+' sources found in catalog (tmf.gen_paramlist_aperture)'
     paramlist = []
     for oo in xrange(Nobjects):
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
