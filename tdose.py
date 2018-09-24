@@ -289,10 +289,20 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                     names.append(namestr)
 
                 centralpointsource = False
-                if setupdic['nondetections'] is not None:
-                    if extid in setupdic['nondetections']:
-                        if verbosefull: print ' - Object in list of non-detections. Adjusting model to contain central point source  '
+                if type(setupdic['nondetections']) == np.str_ or (type(setupdic['nondetections']) == str):
+                    if setupdic['nondetections'].lower() == 'all':
                         centralpointsource = True
+                    else:
+                        nondetids = np.genfromtxt(setupdic['nondetections'],dtype=None,comments='#')
+                        nondetids = list(nondetids.astype(float))
+                        if extid in nondetids:
+                            centralpointsource = True
+                else:
+                    if extid in setupdic['nondetections']:
+                        centralpointsource = True
+
+                if centralpointsource:
+                    if verbosefull: print ' - Object in list of non-detections. Adjusting model to contain central point source  '
 
                 if modelrefimage:
                     tdose.model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
