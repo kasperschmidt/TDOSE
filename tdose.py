@@ -365,7 +365,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 if verbose: print ' >>> Skipping converting reference image model to cube WCS frame (assume models exist)'
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if verbosefull: print '--------------------------------------------------------------------------------------------------'
-            if verbosefull: print ' TDOSE: Defining PSF as FWHM = p0 + p1(lambda-7000A)        '+\
+            if verbosefull: print ' TDOSE: Defining PSF as FWHM = p0 + p1(lambda-'+str(setupdic['psf_FWHMp2'])+'A)        '+\
                                   '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
             if definePSF or modeldatacube:
                 if setupdic['source_model'] == 'aperture':
