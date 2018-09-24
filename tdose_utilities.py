@@ -74,7 +74,7 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
 
         lists = ['modify_sources_list','nondetections','model_cube_layers','sources_to_extract','plot_1Dspec_xrange','plot_1Dspec_yrange',
                  'plot_S2Nspec_xrange','plot_S2Nspec_yrange','cutout_sizes']
-        if (setup_arr[ii,0] in lists) & (setup_arr[ii,1] != 'all') & (setup_arr[ii,1].lower() != 'none'):
+        if (setup_arr[ii,0] in lists) & (setup_arr[ii,1] != 'all') & (setup_arr[ii,1].lower() != 'none') & (setup_arr[ii,1][0] == '['):
             val = [float(vv) for vv in val.split('[')[-1].split(']')[0].split(',')]
             setup_dic[setup_arr[ii,0]] = val
             continue
