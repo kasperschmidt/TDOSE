@@ -890,7 +890,7 @@ def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False,origin=1,sp
     xshift = np.float(xposition)-xcenter_img
 
     profile_shifted = scipy.ndimage.interpolation.shift(profile, [yshift,xshift], output=None, order=splineorder,
-                                                        mode='constant', cval=0.0, prefilter=True)
+                                                        mode='nearest', cval=0.0, prefilter=True)
 
     if showprofiles:
         plt.clf()
@@ -2595,11 +2595,11 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
     savecubesumimg      Save image of of sum over cube components (useful for comparison with input GALFIT models)
     convkernels         List of numpy arrays or astropy kernels to use for convolution. This can be used to apply a PSF
                         to the model re-generated from the GALFIT parameters. This is useful as GALFIT is modeling the
-                        component paramters before PSF convolution
+                        component parameters before PSF convolution
     sourcecat_compinfo  A source catalog with parent IDs, i.e. IDs assigning individual model components to the main
                         object and to contaminants, is needed for TDOSE to succesfully disentangle and deblend sources
                         based on the model cube. To save a TDOSE-like source catalog with parent ids, provide a file
-                        containing "compoent info" to the sourcecat_compinfo keyword. A piece of compoent info is a string
+                        containing "component info" to the sourcecat_compinfo keyword. A piece of component info is a string
                         including the model name followed by an object ID and 'X:Y' strings indicating what each component
                         (X; starting from 1 corresponding to the COMP_X GALFIT keyword) corresponds to. In the latter
                         Y indicates whether a model component is
@@ -2763,7 +2763,16 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
 
                 if verbose: print ' - central coordinates are',[yc,xc]
                 sersic2Dimg = tu.gen_2Dsersic(modelarr.shape,parameters,show2Dsersic=False,normalize=False)
-                img_shift   = tu.shift_2Dprofile(sersic2Dimg,[yc,xc],padvalue=0.0,showprofiles=False,origin=1,splineorder=3)
+                img_shift   = tu.shift_2Dprofile(sersic2Dimg,[yc,xc],padvalue=0.0,showprofiles=False,origin=1,splineorder=1)
+
+                # Check images and total flux
+                # hduimg  = pyfits.PrimaryHDU(sersic2Dimg)       # default HDU with default minimal header
+                # hduimg.writeto('/Users/kschmidt/Desktop/sersic2Dimg.fits',clobber=True)
+                # hduimg  = pyfits.PrimaryHDU(img_shift)       # default HDU with default minimal header
+                # hduimg.writeto('/Users/kschmidt/Desktop/img_shift.fits',clobber=True)
+                # print(' SUM(sersic2Dimg) = '+str(np.sum(sersic2Dimg)))
+                # print(' SUM(img_shift)   = '+str(np.sum(img_shift)))
+
                 cubelayer   = img_shift
             elif headerinfo[component] == 'sky':
                 xc, xcerr   = tu.galfit_getheadervalue(compnumber,'XC',headerinfo)
