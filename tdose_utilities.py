@@ -1036,15 +1036,18 @@ def numerical_convolution_image(imgarray,kerneltype,saveimg=False,clobber=False,
     if verbose: print ' - Convolving image with a '+kernelstr+' kernel using astropy convolution routines'
 
 
-    if (np.float(kernel.shape[0]/2.0)-np.int(kernel.shape[0]/2.0) == 0) or \
-       (np.float(kernel.shape[1]/2.0)-np.int(kernel.shape[1]/2.0) == 0) or use_scipy_conv:
-        if verbose: print ' - Convolving using scipy.ndimage.filters.convolve() as at least one dimension of kernel is even; ' \
+    if (np.float(imgarray.shape[0]/2.0)-np.int(imgarray.shape[0]/2.0) == 0) or \
+            (np.float(imgarray.shape[0]/2.0)-np.int(imgarray.shape[0]/2.0) == 0) or \
+            (np.float(kernel.shape[0]/2.0)-np.int(kernel.shape[0]/2.0) == 0) or \
+            (np.float(kernel.shape[1]/2.0)-np.int(kernel.shape[1]/2.0) == 0) or \
+            use_scipy_conv:
+        if verbose: print ' - Convolving using scipy.ndimage.filters.convolve() as at least one dimension of kernel or image is even; ' \
                           'no interpolation over NaN values'
         if norm_kernel & (np.sum(kernel) != 1.0):
             kernel = kernel/np.sum(kernel)
 
         # shift to sub-pixel center for even dimensions
-        intpixcen = [kernel.shape[0]/2.0+0.5,kernel.shape[1]/2.0+0.5]
+        intpixcen = [kernel.shape[0]/2.0-0.5,kernel.shape[1]/2.0-0.5]
         kernel    = tu.shift_2Dprofile(kernel,intpixcen,showprofiles=False,origin=0)
 
         img_conv  = scipy.ndimage.filters.convolve(imgarray,kernel,cval=fill_value,origin=0)
