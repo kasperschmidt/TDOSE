@@ -3141,7 +3141,11 @@ def get_datinfo(cutoutid,setupdic):
         cut_img         = setupdic['cutout_directory']+img_init_base.replace('.fits',cutstr+'.fits')
         cut_cube        = setupdic['cutout_directory']+cube_init_base.replace('.fits',cutstr+'.fits')
         cut_variance    = setupdic['cutout_directory']+var_init_base.replace('.fits',cutstr+'.fits')
-        cut_sourcecat   = setupdic['source_catalog'].replace('.fits',cutstr+'.fits')
+
+        if cutstr not in setupdic['source_catalog']:
+            cut_sourcecat   = setupdic['source_catalog'].replace('.fits',cutstr+'.fits')
+        else:
+            cut_sourcecat   = setupdic['source_catalog']
 
         if setupdic['wht_image'] is None:
             refimg          = cut_img
