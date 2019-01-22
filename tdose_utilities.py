@@ -1323,7 +1323,7 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
     Ncubes    = len(cubeext)
     hdrs_all  = []
     for cc, cx in enumerate(cubeext):
-        if verbose: print '\n - Cutting out wavelength layes of cube in extension '+cx
+        if verbose: print '\n - Cutting out wavelength layes of cube in extension '+str(cx)
         cubedata = pyfits.open(cubefile)[cx].data
         cubehdr  = pyfits.open(cubefile)[cx].header
         Nlayers  = cubedata.shape[0]
@@ -1369,7 +1369,7 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
     hdulist = [hducube]
 
     for cc, cx in enumerate(cubeext):
-        if verbose: print '   Add clean version of cube to extension               '+cx
+        if verbose: print '   Add clean version of cube to extension               '+str(cx)
         hducutout        = pyfits.ImageHDU(cutouts[cc])
         for key in hdrs_all[cc]:
             if not key in hducutout.header.keys():
@@ -1379,7 +1379,7 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
                 else:
                     keycomment = ''
                 hducutout.header.append((key,keyvalue,keycomment),end=True)
-        hducutout.header.append(('EXTNAME ',cx            ,' '),end=True)
+        hducutout.header.append(('EXTNAME ',str(cx)         ,' '),end=True)
         hdulist.append(hducutout)
 
     hdulist = pyfits.HDUList(hdulist)       # turn header into to hdulist
