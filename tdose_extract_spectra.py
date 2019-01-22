@@ -417,7 +417,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                  xrange=None,yrange=None,showspecs=False,shownoise=True,
                  skyspecs=None,sky_colors=['red'],sky_labels=['sky'],
                  sky_wavecol='lambda',sky_fluxcol='data',sky_errcol='stat',
-                 verbose=True):
+                 verbose=True,pubversion=False):
     """
     Plots of multiple 1D spectra
 
@@ -450,15 +450,23 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     sky_fluxcol         Flux column of the spectra in skyspecs list
     sky_errcol          Flux error column of the spectra in skyspecs list
     verbose             Toggle verbosity
+    pubversion          Generate more publication friendly version of figure
 
     """
     if len(filelist) == 1:
         if verbose: print ' - Plotting data from '+filelist[0]
     else:
         if verbose: print ' - Plotting data from filelist '
-    fig = plt.figure(figsize=(10, 3))
-    fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
-    Fsize  = 10
+
+    if pubversion:
+        fig = plt.figure(figsize=(6, 3))
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.15, right=0.95, bottom=0.2, top=0.95)
+        Fsize  = 12
+    else:
+        fig = plt.figure(figsize=(10, 3))
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
+        Fsize  = 10
+
     lthick = 1
     plt.rc('text', usetex=True)
     plt.rc('font', family='serif',size=Fsize)
@@ -606,6 +614,13 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     plt.plot(xvals,[0,0],'--k',lw=lthick)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
+
+    if pubversion:
+        if plotSNcurve:
+            ylabel = 'Signal-to-Noise'
+        else:
+            ylabel = 'Flux [1e-20 erg/s/cm$^2$/\AA]'
+
     plt.ylabel(ylabel, fontsize=Fsize)
 
     if yrange is not None:
@@ -614,8 +629,14 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     if xrange is not None:
         plt.xlim(xrange)
 
-    leg = plt.legend(fancybox=True, loc='upper right',prop={'size':Fsize},ncol=1,numpoints=1,
-                     bbox_to_anchor=(1.25, 1.03))  # add the legend
+    if pubversion:
+        leg = plt.legend(fancybox=True, loc='upper left',prop={'size':Fsize},ncol=1,numpoints=1,
+                         bbox_to_anchor=(0.01, 0.99))  # add the legend
+    else:
+        leg = plt.legend(fancybox=True, loc='upper right',prop={'size':Fsize},ncol=1,numpoints=1,
+                         bbox_to_anchor=(1.25, 1.03))  # add the legend
+
+
     leg.get_frame().set_alpha(0.7)
 
     if showspecs:
