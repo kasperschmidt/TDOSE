@@ -417,6 +417,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                  xrange=None,yrange=None,showspecs=False,shownoise=True,
                  skyspecs=None,sky_colors=['red'],sky_labels=['sky'],
                  sky_wavecol='lambda',sky_fluxcol='data',sky_errcol='stat',
+                 showlinelist=None,
                  verbose=True,pubversion=False):
     """
     Plots of multiple 1D spectra
@@ -449,6 +450,8 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     sky_wavecol         Wavelength column of the spectra in skyspecs list
     sky_fluxcol         Flux column of the spectra in skyspecs list
     sky_errcol          Flux error column of the spectra in skyspecs list
+    showlinelist        To show a line list provide [waveobs,names] where waveobs is a list of observed wavelengths
+                        and names is a list of strings with the names of the lines in waveobs.
     verbose             Toggle verbosity
     pubversion          Generate more publication friendly version of figure
 
@@ -629,6 +632,15 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     if xrange is not None:
         plt.xlim(xrange)
 
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if showlinelist is not None:
+        ymin, ymax = plt.ylim()
+        xmin, xmax = plt.xlim()
+        for ww, wave in enumerate(showlinelist[0]):
+            if (wave < xmax) & (wave > xmin):
+                plt.plot([wave,wave],[ymin,ymax],linestyle='--',color='gray',lw=lthick)
+                plt.text(wave,ymax-0.1*np.abs([ymax-ymin]),showlinelist[1][ww],color='gray', fontsize=Fsize)
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if pubversion:
         leg = plt.legend(fancybox=True, loc='upper left',prop={'size':Fsize},ncol=1,numpoints=1,
                          bbox_to_anchor=(0.01, 0.99))  # add the legend
