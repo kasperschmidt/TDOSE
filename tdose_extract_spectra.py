@@ -44,10 +44,10 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='
     model_cube_hdr    = pyfits.open(model_cube_file)[model_cube_ext].header
     layer_scale_arr   = pyfits.open(model_cube_file)[layer_scale_ext].data
     if variance_cube_file is not None:
-        variance_cube     = np.sqrt(pyfits.open(variance_cube_file)[variance_cube_ext].data) # turn varinace into standard deviation
+        stddev_cube       = np.sqrt(pyfits.open(variance_cube_file)[variance_cube_ext].data) # turn varinace into standard deviation
         source_model_cube = pyfits.open(source_model_cube_file)[source_cube_ext].data
     else:
-        variance_cube     = None
+        stddev_cube       = None
         source_model_cube = None
     Nsources = layer_scale_arr.shape[0]
 
@@ -93,7 +93,7 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='
             sys.stdout.write("%s\r" % infostr)
             sys.stdout.flush()
 
-        sourceoutput = tes.extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=variance_cube,
+        sourceoutput = tes.extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=stddev_cube,
                                             source_model_cube=source_model_cube, data_cube=data_cube,
                                             specname=specname,obj_cube_hdr=obj_cube_hdr,clobber=clobber,verbose=True)
 
