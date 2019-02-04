@@ -1206,9 +1206,9 @@ def model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_varianc
     else:
         psfcube  = None
 
-    cube_noise = np.sqrt(cube_variance) # turn variance cube into standard deviation
+    cube_stddev = np.sqrt(cube_variance) # turn variance cube into standard deviation
     cube_model, layer_scales = tmc.gen_fullmodel(cube_data,paramCUBE,paramPSF,paramtype=paramtype,
-                                                 psfparamtype=psfparamtype,noisecube=cube_noise,save_modelcube=True,
+                                                 psfparamtype=psfparamtype,noisecube=cube_stddev,save_modelcube=True,
                                                  cubename=modcubename,clobber=clobber,psfcube=psfcube,
                                                  fit_source_scales=True,outputhdr=cube_hdr,verbose=verbosefull,
                                                  returnresidual=rescubename,optimize_method=optimizer,model_layers=layers)
