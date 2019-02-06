@@ -125,7 +125,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                 mu_psf    = psfparam[ll][0:2]
                 cov_psf   = tu.build_2D_cov_matrix(psfparam[ll][4],psfparam[ll][3],psfparam[ll][5],verbose=loopverbose)
             elif (psfparamtype == 'kernel_gauss') or (psfparamtype == 'kernel_moffat'):
-                pass
+                sys.exit('PSF types "kernel* are unfortunately not enabled ')
             else:
                 sys.exit(' ---> PSF parameter type "'+psfparamtype+'" not enabled')
 
