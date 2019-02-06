@@ -1246,6 +1246,14 @@ def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobb
             sigma = sigmas[layer]
             paramPSF.append([xpos,ypos,fluxscale,sigma,sigma,angle])
         paramPSF  = np.asarray(paramPSF)
+    if (setupdic['psf_type'].lower() == 'kernel_moffat'):
+        xpos,ypos,fluxscale,angle = 0.0, 0.0, 1.0, 0.0
+        powerindex                = setupdic['psf_FWHMp3']
+        paramPSF                  = []
+        for layer in np.arange(cube_data.shape[0]):
+            sigma = sigmas[layer]
+            paramPSF.append([xpos,ypos,fluxscale,sigma,sigma,angle,powerindex])
+        paramPSF  = np.asarray(paramPSF)
     else:
         sys.exit(' ---> '+setupdic['psf_type']+' is an invalid choice for the psf_type setup parameter ')
 
@@ -1272,6 +1280,12 @@ def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobb
                 elif setupdic['psf_type'].lower() == 'kernel_gauss':
                     kernel_sigma = paramPSF[ll][3]
                     kernel       = astropy.convolution.Gaussian2DKernel(kernel_sigma,x_size=cube_data.shape[2],y_size=cube_data.shape[1])
+                    psfimg       = kernel.array
+                elif setupdic['psf_type'].lower() == 'kernel_moffat':
+                    kernel_gamma = paramPSF[ll][3] # core width
+                    kernel_alpha = paramPSF[ll][3] # power index
+                    kernel       = astropy.convolution.Moffat2DKernel(kernel_gamma,kernel_alpha,
+                                                                      x_size=cube_data.shape[2],y_size=cube_data.shape[1])
                     psfimg       = kernel.array
                 else:
                     sys.exit(' ---> '+setupdic['psf_type']+' is an invalid choice for the psf_type setup parameter ')
