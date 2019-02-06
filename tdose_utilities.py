@@ -1283,6 +1283,24 @@ def WCS3DtoWCS2D(wcs3d,verbose=True):
 
     return wcs2d
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def hdr3Dtohdr2D(hdr3D,verbose=True):
+    """
+    Removing the wavelength component of a hdr, i.e., converting
+    the WCS from 3D (lambda,ra,dec) to 2D (ra,dec)
+
+    --- INPUT ---
+    hdr3D       The 3D hdr to remove wavelength components from
+    verbose     Toggle verbosity
+
+    """
+    hdr2D = hdr3D
+    for key in hdr2D.keys():
+        if '3' in key:
+            del hdr2D[key]
+
+    hdr2D['WCSAXES'] = 2
+    return hdr2D
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
                     clobber=False,imgfiles=None,imgexts=None,imgnames=None,verbose=True):
     """
