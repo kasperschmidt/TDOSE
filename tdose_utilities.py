@@ -2885,10 +2885,24 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
             wcsheader = pyfits.open(galfitmodel)[1].header
             # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
             hducube.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
-            hducube.header.append(('CD1_1  ',wcsheader['CD1_1 ']  ,' Coordinate transformation matrix element'),end=True)
-            hducube.header.append(('CD1_2  ',wcsheader['CD1_2 ']  ,' Coordinate transformation matrix element'),end=True)
-            hducube.header.append(('CD2_1  ',wcsheader['CD2_1 ']  ,' Coordinate transformation matrix element'),end=True)
-            hducube.header.append(('CD2_2  ',wcsheader['CD2_2 ']  ,' Coordinate transformation matrix element'),end=True)
+            try:
+                hdrCD1_1 = wcsheader['CD1_1 ']
+                hdrCD1_2 = wcsheader['CD1_2 ']
+                hdrCD2_1 = wcsheader['CD2_1 ']
+                hdrCD2_2 = wcsheader['CD2_2 ']
+            except:
+                # |cd11 cd12|  = |cdelt1      0| * |pc11 pc12| =   | cdelt1*pc11 + 0*pc21         cdelt1*pc12 + 0*pc22      |
+                # |cd21 cd22|    |0      cdelt2|   |pc21 pc22|     | 0*pc11      + cdelt2*p21     0*p12       + cdelt2+p22  |
+                # which implies that
+                hdrCD1_1 = wcsheader['CDELT1'] * wcsheader['PC001001'] + 0 * wcsheader['PC002001']
+                hdrCD1_2 = wcsheader['CDELT1'] * wcsheader['PC001002'] + 0 * wcsheader['PC002002']
+                hdrCD2_1 = 0 * wcsheader['PC001001'] + wcsheader['CDELT2'] * wcsheader['PC002001']
+                hdrCD2_2 = 0 * wcsheader['PC001002'] + wcsheader['CDELT2'] * wcsheader['PC002002']
+
+            hducube.header.append(('CD1_1  ',hdrCD1_1             ,' Coordinate transformation matrix element'),end=True)
+            hducube.header.append(('CD1_2  ',hdrCD1_2             ,' Coordinate transformation matrix element'),end=True)
+            hducube.header.append(('CD2_1  ',hdrCD2_1             ,' Coordinate transformation matrix element'),end=True)
+            hducube.header.append(('CD2_2  ',hdrCD2_2             ,' Coordinate transformation matrix element'),end=True)
             hducube.header.append(('CTYPE1 ',wcsheader['CTYPE1']  ,' Right ascension, gnomonic projection'),end=True)
             hducube.header.append(('CTYPE2 ',wcsheader['CTYPE2']  ,' Declination, gnomonic projection'),end=True)
 
@@ -2949,10 +2963,10 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                 wcsheader = pyfits.open(galfitmodel)[1].header
                 # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
                 hduimg.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
-                hduimg.header.append(('CD1_1  ',wcsheader['CD1_1 ']  ,' Coordinate transformation matrix element'),end=True)
-                hduimg.header.append(('CD1_2  ',wcsheader['CD1_2 ']  ,' Coordinate transformation matrix element'),end=True)
-                hduimg.header.append(('CD2_1  ',wcsheader['CD2_1 ']  ,' Coordinate transformation matrix element'),end=True)
-                hduimg.header.append(('CD2_2  ',wcsheader['CD2_2 ']  ,' Coordinate transformation matrix element'),end=True)
+                hduimg.header.append(('CD1_1  ',hdrCD1_1  ,' Coordinate transformation matrix element'),end=True)
+                hduimg.header.append(('CD1_2  ',hdrCD1_2  ,' Coordinate transformation matrix element'),end=True)
+                hduimg.header.append(('CD2_1  ',hdrCD2_1  ,' Coordinate transformation matrix element'),end=True)
+                hduimg.header.append(('CD2_2  ',hdrCD2_2  ,' Coordinate transformation matrix element'),end=True)
                 hduimg.header.append(('CTYPE1 ',wcsheader['CTYPE1']  ,' Right ascension, gnomonic projection'),end=True)
                 hduimg.header.append(('CTYPE2 ',wcsheader['CTYPE2']  ,' Declination, gnomonic projection'),end=True)
 
