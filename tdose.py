@@ -205,7 +205,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 refimg    = refimg[0]
 
             cube_data     = pyfits.open(datacube)[setupdic['cube_extension']].data
-            cube_variance = np.sqrt(pyfits.open(variancecube)[setupdic['variance_extension']].data)
+            cube_variance = pyfits.open(variancecube)[setupdic['variance_extension']].data
             cube_hdr      = pyfits.open(datacube)[setupdic['cube_extension']].header
             cube_wcs2D    = tu.WCS3DtoWCS2D(wcs.WCS(tu.strip_header(cube_hdr.copy())))
             cube_scales   = wcs.utils.proj_plane_pixel_scales(cube_wcs2D)*3600.0
