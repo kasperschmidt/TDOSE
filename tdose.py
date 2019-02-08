@@ -445,11 +445,15 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                     if setupdic['sourcecat_parentIDcol'] is not None:
                         parentids = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']]
 
-                        for ss, sid in enumerate(extractids):
-                            sourceent = np.where(sourceids_init == sid)[0]
-                            parent    = parentids[sourceent]
+                        for ee, eid in enumerate(extractids):
+                            sourceent = np.where(sourceids == eid)[0]
+                            parent    = parentids[sourceent][0]
+                            if float(parent) < 0: # ignoring parents with negative IDs. Looking for object IDs in parent list instead
+                                sourceent = np.where(parentids == eid)[0]
+                                parent    = parentids[sourceent][0]
+
                             groupent  = np.where(parentids == parent)[0]
-                            SAD       = {str("%.10d" % int(parent))+'-'+str("%.10d" % int(sid)) : groupent.tolist()}
+                            SAD       = {str("%.10d" % int(parent))+'-'+str("%.10d" % int(eid)) : groupent.tolist()}
                     else:
                         for ss, sid in enumerate(extractids):
                             SAD[str("%.10d" % int(sid))] = [ss]
@@ -1246,7 +1250,7 @@ def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobb
             sigma = sigmas[layer]
             paramPSF.append([xpos,ypos,fluxscale,sigma,sigma,angle])
         paramPSF  = np.asarray(paramPSF)
-    if (setupdic['psf_type'].lower() == 'kernel_moffat'):
+    elif (setupdic['psf_type'].lower() == 'kernel_moffat'):
         xpos,ypos,fluxscale,angle = 0.0, 0.0, 1.0, 0.0
         powerindex                = setupdic['psf_FWHMp3']
         paramPSF                  = []
