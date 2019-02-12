@@ -352,7 +352,7 @@ def gen_paramlist(sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=No
             fs = 1.0
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if sigysigxangle is not None:
-            if type(fluxscale) == np.ndarray:
+            if type(sigysigxangle) == np.ndarray:
                 sigy  = sigysigxangle[oo,0]
                 sigx  = sigysigxangle[oo,1]
                 angle = sigysigxangle[oo,2]
