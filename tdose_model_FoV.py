@@ -462,8 +462,8 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',max_centroid_
         maxfctcalls  = 30000
         Nsources     = int(len(param_init)/6.)
         #               [yposition,xposition,fluxscale,sigmay  ,sigmax  ,angle]
-        param_bounds = ([0        ,0        ,0        ,0       ,0       ,-np.inf ]*Nsources,
-                        [np.inf   , np.inf  ,np.inf   , np.inf , np.inf ,np.inf  ]*Nsources)
+        param_bounds = ([0        ,0        ,0        ,1./2.355,1./2.355,0    ]*Nsources,
+                        [np.inf   , np.inf  ,np.inf   , np.inf , np.inf ,360  ]*Nsources)
 
         Nnonfinite = len(dataimage[np.where(~np.isfinite(dataimage))])
         if Nnonfinite > 0:
