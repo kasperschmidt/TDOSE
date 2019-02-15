@@ -4325,7 +4325,7 @@ def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=
 
         hduimg  = pyfits.PrimaryHDU(cubesum)
         if includewcs:
-            if verbose: print ' - Including WCS information from GALFIT reference image extension   '
+            if verbose: print ' - Including WCS information from model image extension   '
             # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
             hduimg.header.append(('BUNIT   '                       ,'(Ftot/texp)'),end=True)
             hduimg.header.append(('CD1_1   ',modelwcs.wcs.cd[0,0]  ,' Coordinate transformation matrix element'),end=True)
