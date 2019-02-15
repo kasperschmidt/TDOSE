@@ -1378,7 +1378,7 @@ def modify_cube(modifysetupfile='./tdose_setup_template_modify.txt',verbose=True
 
     datacube        = setupdic['data_cube']
     sourcemodelcube = setupdic['source_model_cube']
-    modcubename     = datacube.replace('.fits','_'+setupdic['modyified_cube']+'.fits')
+    modcubename     = datacube.replace('.fits','_'+setupdic['modified_cube']+'.fits')
 
     if type(setupdic['modify_sources_list']) == str:
         modellist    = 'loop over ids in input file list'
