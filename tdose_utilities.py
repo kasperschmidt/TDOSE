@@ -615,7 +615,7 @@ def gen_aperture(imgsize,ypos,xpos,radius,pixval=1,showaperture=False,verbose=Tr
 
     """
     if verbose: print ' - Generating aperture in image (2D array)'
-    y , x    = np.ogrid[-ypos:imgsize[0]-ypos, -xpos:imgsize[1]-xpos]
+    y , x    = np.ogrid[-ypos+1.:imgsize[0]-ypos+1., -xpos+1.:imgsize[1]-xpos+1.] # +1s make sure pixel indication starts at pixel 1,1
     mask     = x*x + y*y <= radius**2.
     aperture = np.zeros(imgsize)
 
@@ -623,10 +623,14 @@ def gen_aperture(imgsize,ypos,xpos,radius,pixval=1,showaperture=False,verbose=Tr
     aperture[mask] = pixval
 
     if showaperture:
-        if verbose: print ' - Displaying resulting image of aperture'
-        plt.imshow(aperture,interpolation='none')
+        if verbose: print ' - Displaying resulting image of aperture (added background noise)'
+        noisimg = np.random.normal(0,pixval/5.,imgsize)
+        noisimg[mask] = pixval
+        plt.imshow(noisimg,interpolation='none')
+        plt.grid()
         plt.title('Generated aperture')
         plt.show()
+        plt.ion()
 
     return aperture
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
