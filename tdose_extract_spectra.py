@@ -7,6 +7,7 @@ import tdose_utilities as tu
 import tdose_extract_spectra as tes
 import tdose_build_mock_cube as tbmc
 import pdb
+import scipy.ndimage.filters as snf
 import matplotlib as mpl
 mpl.use('Agg') # prevent pyplot from opening window; enables closing ssh session with detached screen running TDOSE
 import matplotlib.pyplot as plt
@@ -417,7 +418,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                  xrange=None,yrange=None,showspecs=False,shownoise=True,
                  skyspecs=None,sky_colors=['red'],sky_labels=['sky'],
                  sky_wavecol='lambda',sky_fluxcol='data',sky_errcol='stat',
-                 showlinelist=None,
+                 showlinelist=None,smooth=0,
                  verbose=True,pubversion=False):
     """
     Plots of multiple 1D spectra
@@ -452,6 +453,8 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     sky_errcol          Flux error column of the spectra in skyspecs list
     showlinelist        To show a line list provide [waveobs,names] where waveobs is a list of observed wavelengths
                         and names is a list of strings with the names of the lines in waveobs.
+    smooth              To smooth the spectra, provide sigma of the 1D gaussian smoothing kernel to apply.
+                        For smooth = 0, no smoothing is performed.
     verbose             Toggle verbosity
     pubversion          Generate more publication friendly version of figure
 
@@ -505,18 +508,33 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                 s2ndat = specdat['s2n'][goodent]
             except:
                 s2ndat = specdat[tdose_fluxcol][goodent]/specdat[tdose_errcol][goodent]
+
+            if smooth > 0:
+                s2ndat = snf.gaussian_filter(s2ndat, smooth)
+
             plt.plot(specdat[tdose_wavecol][goodent],s2ndat,color=spec_color,lw=lthick, label=spec_label)
             ylabel = 'S/N'
             #plotname = plotname.replace('.pdf','_S2N.pdf')
         else:
             fillalpha = 0.30
-            #if spec_color == 'green': pdb.set_trace()
+            fluxdat   = specdat[tdose_fluxcol][goodent]
+            errlow    = specdat[tdose_fluxcol][goodent]-specdat[tdose_errcol][goodent]
+            errhigh   = specdat[tdose_fluxcol][goodent]+specdat[tdose_errcol][goodent]
+
+            if smooth > 0:
+                fluxdat = snf.gaussian_filter(fluxdat, smooth)
+                errlow      = snf.gaussian_filter(errlow,  smooth)
+                errhigh     = snf.gaussian_filter(errhigh, smooth)
+
             if shownoise:
-                plt.fill_between(specdat[tdose_wavecol][goodent],
-                                 specdat[tdose_fluxcol][goodent]-specdat[tdose_errcol][goodent],
-                                 specdat[tdose_fluxcol][goodent]+specdat[tdose_errcol][goodent],
+                plt.fill_between(specdat[tdose_wavecol][goodent],errlow,errhigh,
                                  alpha=fillalpha,color=spec_color)
-            plt.plot(specdat[tdose_wavecol][goodent],specdat[tdose_fluxcol][goodent],
+
+
+            if smooth > 0:
+                fluxdat = snf.gaussian_filter(fluxdat, smooth)
+
+            plt.plot(specdat[tdose_wavecol][goodent],fluxdat,
                      color=spec_color,lw=lthick, label=spec_label)
             ylabel = tdose_fluxcol
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -534,6 +552,8 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
 
             simspec    = np.sum( np.sum(sourcecube, axis=1), axis=1)
             sim_total  = sim_total + simspec
+            if smooth > 0:
+                simspec = snf.gaussian_filter(simspec, smooth)
 
             plt.plot(specdat[tdose_wavecol],simspec,'--',color='black',lw=lthick)
 
@@ -564,15 +584,28 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                 comp_label = comp_labels[cc]
 
             if plotSNcurve:
-                plt.plot(compdat[comp_wavecol][goodent],compdat[comp_fluxcol][goodent]/compdat[comp_errcol][goodent],
+                s2ncompdat = compdat[comp_fluxcol][goodent]/compdat[comp_errcol][goodent]
+                if smooth > 0:
+                    s2ncompdat = snf.gaussian_filter(s2ncompdat, smooth)
+
+                plt.plot(compdat[comp_wavecol][goodent],s2ncompdat,
                          color=comp_color,lw=lthick, label=comp_label)
             else:
                 fillalpha = 0.30
-                plt.fill_between(compdat[comp_wavecol][goodent],
-                                 compdat[comp_fluxcol][goodent]-compdat[comp_errcol][goodent],
-                                 compdat[comp_fluxcol][goodent]+compdat[comp_errcol][goodent],
-                                 alpha=fillalpha,color=comp_color)
-                plt.plot(compdat[comp_wavecol][goodent],compdat[comp_fluxcol][goodent],
+                fluxcompdat = compdat[comp_fluxcol][goodent]
+                errlow      = compdat[comp_fluxcol][goodent]-compdat[comp_errcol][goodent]
+                errhigh     = compdat[comp_fluxcol][goodent]+compdat[comp_errcol][goodent]
+
+                if smooth > 0:
+                    fluxcompdat = snf.gaussian_filter(fluxcompdat, smooth)
+                    errlow      = snf.gaussian_filter(errlow,  smooth)
+                    errhigh     = snf.gaussian_filter(errhigh, smooth)
+
+                if shownoise:
+                    plt.fill_between(compdat[comp_wavecol][goodent],errlow,errhigh,
+                                     alpha=fillalpha,color=comp_color)
+
+                plt.plot(compdat[comp_wavecol][goodent],fluxcompdat,
                          color=comp_color,lw=lthick, label=comp_label)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if skyspecs is not None:
@@ -598,15 +631,28 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                 sky_label = sky_labels[ss]
 
             if plotSNcurve:
-                plt.plot(skydat[sky_wavecol][goodent],skydat[sky_fluxcol][goodent]/skydat[sky_errcol][goodent],
+                s2nsky = skydat[sky_fluxcol][goodent]/skydat[sky_errcol][goodent]
+                if smooth > 0:
+                    s2nsky = snf.gaussian_filter(s2nsky, smooth)
+
+                plt.plot(skydat[sky_wavecol][goodent],s2nsky,
                          color=sky_color,lw=lthick, label=sky_label)
             else:
                 fillalpha = 0.30
-                plt.fill_between(skydat[sky_wavecol][goodent],
-                                 skydat[sky_fluxcol][goodent]-skydat[sky_errcol][goodent],
-                                 skydat[sky_fluxcol][goodent]+skydat[sky_errcol][goodent],
-                                 alpha=fillalpha,color=sky_color)
-                plt.plot(skydat[sky_wavecol][goodent],skydat[sky_fluxcol][goodent],
+                fluxsky   = skydat[sky_fluxcol][goodent]
+                errlow    = skydat[sky_fluxcol][goodent]-skydat[sky_errcol][goodent]
+                errhigh   = skydat[sky_fluxcol][goodent]+skydat[sky_errcol][goodent]
+
+                if smooth > 0:
+                    fluxsky = snf.gaussian_filter(fluxsky, smooth)
+                    errlow  = snf.gaussian_filter(errlow,  smooth)
+                    errhigh = snf.gaussian_filter(errhigh, smooth)
+
+                if shownoise:
+                    plt.fill_between(skydat[sky_wavecol][goodent],errlow,errhigh,
+                                     alpha=fillalpha,color=sky_color)
+
+                plt.plot(skydat[sky_wavecol][goodent],fluxsky,
                          color=sky_color,lw=lthick, label=sky_label)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
