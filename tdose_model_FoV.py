@@ -462,7 +462,7 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',max_centroid_
         maxfctcalls  = 30000
         Nsources     = int(len(param_init)/6.)
         #               [yposition,xposition,fluxscale,sigmay  ,sigmax  ,angle]
-        param_bounds = ([0        ,0        ,0        ,1./2.355,1./2.355,0    ]*Nsources,
+        param_bounds = ([0        ,0        ,0        ,1./2.355,1./2.355,-360 ]*Nsources,
                         [np.inf   , np.inf  ,np.inf   , np.inf , np.inf ,360  ]*Nsources)
 
         Nnonfinite = len(dataimage[np.where(~np.isfinite(dataimage))])
@@ -492,8 +492,10 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',max_centroid_
                                                        p0 = param_init, sigma=sigma,maxfev=maxfctcalls, bounds=param_bounds)
             output = param_optimized, param_cov
         except:
-            print ' WARNING: Curve_fit failed (likely using "maximum function call" of '+str(maxfctcalls)+\
-                  ') so returning param_init; i.e. the intiial guess of the parameters'
+            print(' WARNING: Curve_fit failed so returning param_init [ypos,xpos,fluxscale,sigmay,sigmax,angle]: ')
+            print('          '+str(param_init))
+            print('          i.e. the intiial guess of the parameters')
+            print('          Likely using "maximum function call" of '+str(maxfctcalls)+')')
             output = param_init, None
             #pdb.set_trace()
 
