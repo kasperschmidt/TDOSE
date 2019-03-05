@@ -3151,7 +3151,10 @@ def get_datinfo(cutoutid,setupdic):
     if cutoutid == -9999:
         cutstr       = None
         imgsize      = setupdic['cutout_sizes']
-        refimg       = setupdic['ref_image']
+        if setupdic['wht_image'] is None:
+            refimg          = setupdic['ref_image']
+        else:
+            refimg          = [setupdic['ref_image'],setupdic['wht_image']]
         datacube     = setupdic['data_cube']
         variancecube = setupdic['variance_cube']
         sourcecat    = setupdic['source_catalog']
