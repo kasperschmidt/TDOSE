@@ -328,6 +328,7 @@ modified_cube_dir      /path/to/output/                   # Path of output direc
 modified_cube          tdose_modified_datacube            # Name extension of file containing modified data cube.
 
 modify_sources_list    [1,2,5]                            # List of IDs of sources to remove from data cube using source model cube.
+                                                          # Corresponds to indices of source model cube so expects [0,Nmodelcomp-1]
                                                           # For long list of IDs provide path and name of file containing IDs (only)
 sources_action         remove                             # Indicate how to modify the data cube. Chose between:
                                                           #    'remove'     Sources in modify_sources_list are removed from data cube
