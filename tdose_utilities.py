@@ -324,7 +324,7 @@ cube_extension         DATA_DCBGC                         # Name or number of fi
 source_model_cube      /path/tdose_source_modelcube.fits  # Path and name of fits file containing source model cube
 source_extension       DATA_DCBGC                         # Name or number of fits extension containing source model cube
 
-modified_cube_dir      /path/to/output/                   # Name extension of file containing modified data cube.
+modified_cube_dir      /path/to/output/                   # Path of output directory to store modified cube in
 modified_cube          tdose_modified_datacube            # Name extension of file containing modified data cube.
 
 modify_sources_list    [1,2,5]                            # List of IDs of sources to remove from data cube using source model cube.
