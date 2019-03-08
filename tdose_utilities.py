@@ -251,7 +251,10 @@ model_cube_layers      all                                # Layers of data cube 
                                                           # To model source-specific layers provide ascii file containing ID layerlow and layerhigh.
                                                           # If layerlow=all and layerhigh=all all layers will be modeled for particular source
 model_cube_optimizer   matrix                             # The optimizer to use when matching flux levels in cube layers:
-                                                          #   matrix      Optimize fluxes analytically using matrix algebra to minimize chi squared of the equation set comparing model and data in each layer.
+                                                          #   matrix      Optimize fluxes analytically using matrix algebra to minimize chi squared of
+                                                          #               the equation set comparing model and data in each layer.
+                                                          #   nnls        Optimize fluxes using Scipy's non-negative least squares solver restricting
+                                                          #               flux scales to >= 0 (assuming source models are non-negative too).
                                                           #   curvefit    Optimize fluxes numerically using least square fitting from scipy.optimize.curve_fit().
                                                           #               Only enabled for analytic convolution of Gaussian source models.
                                                           #   lstsq       Optimize fluxes analytically using scipy.linalg.lstsq().

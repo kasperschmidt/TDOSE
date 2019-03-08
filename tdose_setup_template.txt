@@ -2,7 +2,7 @@
 #-------------------------------------------------START OF TDOSE SETUP-------------------------------------------------
 #
 # Template for Three Dimensional Optimal Spectral Extracion (TDOSE, http://github.com/kasperschmidt/TDOSE) setup file
-# Template was generated with tdose_utilities.generate_setup_template() on 2018-06-08 10:04
+# Template was generated with tdose_utilities.generate_setup_template() on 2019-03-08 10:33
 # Setup file can be run with tdose.perform_extraction() or tdose.perform_extractions_in_parallel()
 #
 # - - - - - - - - - - - - - - - - - - - - - - - - - - DATA INPUT  - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -87,7 +87,8 @@ modelimg_directory     /path/models_cutouts/              # If source_model = mo
 modelimg_extension     0                                  # Fits extension containing model
 
 # - - - - - - - - - - - - - - - - - - - - - - - - APERTURE MODEL SETUP  - - - - - - - - - - - - - - - - - - - - - - - -
-aperture_size          1.5                                # Radius of apertures to use given in arc seconds
+aperture_size          1.5                                # Radius of apertures (float or list) to use given in arc seconds. For longer list of
+                                                          # object-specific apertures provide ascii file containing ID and aperturesize[arcsec].
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - PSF MODEL SETUP - - - - - - - - - - - - - - - - - - - - - - - - - -
 psf_type               gauss                              # Select PSF model to build. Choices are:
@@ -122,7 +123,10 @@ model_cube_layers      all                                # Layers of data cube 
                                                           # To model source-specific layers provide ascii file containing ID layerlow and layerhigh.
                                                           # If layerlow=all and layerhigh=all all layers will be modeled for particular source
 model_cube_optimizer   matrix                             # The optimizer to use when matching flux levels in cube layers:
-                                                          #   matrix      Optimize fluxes analytically using matrix algebra to minimize chi squared of the equation set comparing model and data in each layer.
+                                                          #   matrix      Optimize fluxes analytically using matrix algebra to minimize chi squared of
+                                                          #               the equation set comparing model and data in each layer.
+                                                          #   nnls        Optimize fluxes using Scipy's non-negative least squares solver restricting
+                                                          #               flux scales to >= 0 (assuming source models are non-negative too).
                                                           #   curvefit    Optimize fluxes numerically using least square fitting from scipy.optimize.curve_fit().
                                                           #               Only enabled for analytic convolution of Gaussian source models.
                                                           #   lstsq       Optimize fluxes analytically using scipy.linalg.lstsq().

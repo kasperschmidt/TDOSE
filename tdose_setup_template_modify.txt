@@ -2,7 +2,7 @@
 #---------------------------------------------START OF TDOSE MODIFY SETUP---------------------------------------------
 #
 # Template for TDOSE (http://github.com/kasperschmidt/TDOSE) setup file for modifyinf data cubes
-# Generated with tdose_utilities.generate_setup_template_modify() on 2018-09-07 12:08
+# Generated with tdose_utilities.generate_setup_template_modify() on 2019-03-08 10:31
 # Cube modifications are run independent of tdose.perform_extraction() with tdose.modify_cube()
 #
 # - - - - - - - - - - - - - - - - - - - - - - - - -  MODIFYING CUBE - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -11,10 +11,11 @@ cube_extension         DATA_DCBGC                         # Name or number of fi
 source_model_cube      /path/tdose_source_modelcube.fits  # Path and name of fits file containing source model cube
 source_extension       DATA_DCBGC                         # Name or number of fits extension containing source model cube
 
-modified_cube_dir      /path/to/output/                   # Name extension of file containing modified data cube.
+modified_cube_dir      /path/to/output/                   # Path of output directory to store modified cube in
 modified_cube          tdose_modified_datacube            # Name extension of file containing modified data cube.
 
 modify_sources_list    [1,2,5]                            # List of IDs of sources to remove from data cube using source model cube.
+                                                          # Corresponds to indices of source model cube so expects [0,Nmodelcomp-1]
                                                           # For long list of IDs provide path and name of file containing IDs (only)
 sources_action         remove                             # Indicate how to modify the data cube. Chose between:
                                                           #    'remove'     Sources in modify_sources_list are removed from data cube
