@@ -106,9 +106,10 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
             layerlist = np.asarray(model_layers).astype(int)
 
         if optimize_method =='all':
-            optimize_method_list = ['curvefit','matrix','lstsq']
+            optimize_method_list = ['curvefit','matrix','lstsq','nnls']
         else:
             optimize_method_list = [optimize_method]
+        if verbose: print ' - Optimizing flux scales useing the optimizer "'+str(optimize_method)+'"'
 
         if paramtype == 'gauss':
             analytic_conv = True
@@ -179,7 +180,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                     output_layer   = output_layerCFIT
                     output_scales  = scalesCFIT
                 #-------------------------------------------------------------------------------------------------------
-                if ('matrix' in optimize_method_list) or ('lstsq' in optimize_method_list):
+                if ('matrix' in optimize_method_list) or ('lstsq' in optimize_method_list) or ('nnls' in optimize_method_list):
                     if loopverbose: print ' - Optimize flux scaling of each source in full image analytically '
                     if analytic_conv:
                         if loopverbose: print '   Generating PSFed model convolving model Gaussians analytically '
@@ -250,6 +251,26 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
                         output_layer   = output_layerMTX
                         output_scales  = scalesMTX
+
+                    #---------------------------------------------------------------------------------------------------
+                    if 'nnls' in optimize_method_list:
+                        if loopverbose: print '   Using scipy nnls (non-negative least squares) for optimization'
+                        scalesNNLS, residualNNLS = scipy.optimize.nnls(A,dataravel)
+
+                        if analytic_conv:
+                            output_layerNNLS   = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
+                                                              sourcescale=scalesNNLS,verbose=loopverbose)
+                        else:
+                            if Nsource == 1:
+                                output_layerNNLS   = img_model_init/np.sum(img_model_init) * scalesNNLS
+                            else:
+                                output_layerNNLS = np.zeros(datacube.shape[1:])
+                                for component in xrange(len(scalesNNLS)):
+                                    output_layerNNLS = output_layerNNLS + sourceparam[component,:,:] * scalesNNLS[component]
+
+                        output_layer   = output_layerNNLS
+                        output_scales  = scalesNNLS
+
                     #---------------------------------------------------------------------------------------------------
                     if 'lstsq' in optimize_method_list:
                         if loopverbose: print '   Using scipy.linalg.lstsq() for optimization'
@@ -269,14 +290,17 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                     resCFIT    = (datacube_layer-output_layerCFIT).ravel()
                     resMTX     = (datacube_layer-output_layerMTX).ravel()
                     resLSQ     = (datacube_layer-output_layerLSQ).ravel()
+                    resNNLS    = (datacube_layer-output_layerNNLS).ravel()
 
                     medianCFIT = np.median(resCFIT)
                     medianMTX  = np.median(resMTX)
                     medianLSQ  = np.median(resLSQ)
+                    medianNNLS = np.median(resNNLS)
 
                     meanCFIT   = np.mean(resCFIT)
                     meanMTX    = np.mean(resMTX)
                     meanLSQ    = np.mean(resLSQ)
+                    meanNNLS   = np.mean(resNNLS)
 
                     import pylab as plt
                     plt.hist(resCFIT,label='dat-CFITmodel (med='+str("%.2f" % medianCFIT)+', mea='+str("%.2f" % meanCFIT)+')',
@@ -284,6 +308,8 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                     plt.hist(resMTX,label='dat-MTXmodel (med='+str("%.2f" % medianMTX)+', mea='+str("%.2f" % meanMTX)+')',
                              bins=50,alpha=0.3)
                     plt.hist(resLSQ,label='dat-LSQmodel (med='+str("%.2f" % medianLSQ)+', mea='+str("%.2f" % meanLSQ)+')',
+                             bins=50,alpha=0.3)
+                    plt.hist(resNNLS,label='dat-NNLSmodel (med='+str("%.2f" % medianNNLS)+', mea='+str("%.2f" % meanNNLS)+')',
                              bins=50,alpha=0.3)
                     plt.legend()
                     plt.show()
