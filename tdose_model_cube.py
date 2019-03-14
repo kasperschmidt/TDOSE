@@ -157,10 +157,13 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                     datacube_layer  = np.ma.array(datacube[ll,:,:],mask=comb_mask)
                     noisecube_layer = np.ma.array(noisecube[ll,:,:],mask=comb_mask)
 
-                    # filling masked arrays; curve_fit can't handle masked arrays as the np.asarray_chkfinite(datacube_layer)
-                    # used to chekc for NaNs in curve_fit still returns an error even though the array is masked
-                    datacube_layer  = datacube_layer.filled(fill_value=0.0)
-                    noisecube_layer = noisecube_layer.filled(fill_value=1.0)
+                    if ('curvefit' in optimize_method_list) or ('nnls' in optimize_method_list) or ('lstsq' in optimize_method_list):
+                        # filling masked arrays with 0s and 1s as curve_fit and nnls can't handle masked arrays
+                        # The np.asarray_chkfinite(datacube_layer) used to check for NaNs returns an error despite the array being masked.
+                        if verbose & (ll==0): print ' - WARNING: NaNs and Infs replaced with 0s (1s) in data (noise) cube, respectively'
+                        if verbose & (ll==0): print '            as masked arrays are not supported by the optimizer "'+str(optimize_method)+'"'
+                        datacube_layer  = datacube_layer.filled(fill_value=0.0)
+                        noisecube_layer = noisecube_layer.filled(fill_value=1.0)
                 else:
                     comb_mask       = None
                     datacube_layer  = datacube[ll,:,:]
