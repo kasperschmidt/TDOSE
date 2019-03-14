@@ -150,6 +150,11 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             tdose.gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                               performcutout=performcutout,generatesourcecat=generatesourcecat,clobber=clobber,
                               verbose=verbose,verbosefull=verbosefull,start_time=start_time)
+        else:
+            if verbose: print('==================================================================================================')
+            if verbose: print(' TDOSE: Model full FoV, i.e. no cutouts and incl. full source cat.'+
+                              '( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
+
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbose: print '=================================================================================================='
         if verbose: print ' TDOSE: Defining and loading data for extractions           '+\
