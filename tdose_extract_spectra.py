@@ -451,8 +451,9 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     sky_wavecol         Wavelength column of the spectra in skyspecs list
     sky_fluxcol         Flux column of the spectra in skyspecs list
     sky_errcol          Flux error column of the spectra in skyspecs list
-    showlinelist        To show a line list provide [waveobs,names] where waveobs is a list of observed wavelengths
-                        and names is a list of strings with the names of the lines in waveobs.
+    showlinelist        To show a line list provide an array of dimension (Nlines,2) where each row contains
+                        [waveobs, name], where waveobs is the observed wavelengths and name is a string with
+                        the name of each of the Nlines postions to mark on the spectrum.
     smooth              To smooth the spectra, provide sigma of the 1D gaussian smoothing kernel to apply.
                         For smooth = 0, no smoothing is performed.
     verbose             Toggle verbosity
@@ -466,7 +467,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
 
     if pubversion:
         fig = plt.figure(figsize=(6, 3))
-        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.15, right=0.95, bottom=0.2, top=0.95)
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.15, right=0.95, bottom=0.2, top=0.93)
         Fsize  = 12
     else:
         fig = plt.figure(figsize=(10, 3))
@@ -682,10 +683,11 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     if showlinelist is not None:
         ymin, ymax = plt.ylim()
         xmin, xmax = plt.xlim()
-        for ww, wave in enumerate(showlinelist[0]):
+        for ww, wave in enumerate(showlinelist[:,0]):
+            wave = float(wave)
             if (wave < xmax) & (wave > xmin):
                 plt.plot([wave,wave],[ymin,ymax],linestyle='--',color='gray',lw=lthick)
-                plt.text(wave,ymax-0.1*np.abs([ymax-ymin]),showlinelist[1][ww],color='gray', fontsize=Fsize)
+                plt.text(wave,ymin+1.03*np.abs([ymax-ymin]),showlinelist[:,1][ww],color='gray', fontsize=Fsize-2., ha='center')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if pubversion:
         leg = plt.legend(fancybox=True, loc='upper left',prop={'size':Fsize},ncol=1,numpoints=1,
