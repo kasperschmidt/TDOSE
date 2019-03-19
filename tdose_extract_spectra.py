@@ -468,7 +468,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
 
     if pubversion:
         fig = plt.figure(figsize=(6, 3))
-        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.15, right=0.95, bottom=0.2, top=0.93)
+        fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.15, right=0.95, bottom=0.18, top=0.83)
         Fsize  = 12
     else:
         fig = plt.figure(figsize=(10, 3))
@@ -692,8 +692,8 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                     plt.text(wave,ymin+1.03*np.abs([ymax-ymin]),showlinelist[:,1][ww],color=linelistcolors[sl], fontsize=Fsize-2., ha='center')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if pubversion:
-        leg = plt.legend(fancybox=True, loc='upper left',prop={'size':Fsize},ncol=1,numpoints=1,
-                         bbox_to_anchor=(0.01, 0.99))  # add the legend
+        leg = plt.legend(fancybox=True, loc='upper center',prop={'size':Fsize-2},ncol=4,numpoints=1,
+                         bbox_to_anchor=(0.44, 1.27))  # add the legend
     else:
         leg = plt.legend(fancybox=True, loc='upper right',prop={'size':Fsize},ncol=1,numpoints=1,
                          bbox_to_anchor=(1.25, 1.03))  # add the legend
