@@ -317,9 +317,9 @@ def generate_setup_template_modify(outputfile='./tdose_setup_template_modify.txt
         setuptemplate = """
 #---------------------------------------------START OF TDOSE MODIFY SETUP---------------------------------------------
 #
-# Template for TDOSE (http://github.com/kasperschmidt/TDOSE) setup file for modifyinf data cubes
+# Template for TDOSE (http://github.com/kasperschmidt/TDOSE) setup file for modifying data cubes.
 # Generated with tdose_utilities.generate_setup_template_modify() on %s
-# Cube modifications are run independent of tdose.perform_extraction() with tdose.modify_cube()
+# Cube modifications are performed with tdose_modify_cube.perform_modification(setupfile=setup_file_modify)
 #
 # - - - - - - - - - - - - - - - - - - - - - - - - -  MODIFYING CUBE - - - - - - - - - - - - - - - - - - - - - - - - - -
 data_cube              /path/datacube.fits                # Path and name of fits file containing data cube to modify
