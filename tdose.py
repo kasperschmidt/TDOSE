@@ -20,7 +20,6 @@ from reproject import reproject_interp
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 import tdose
 import tdose_utilities as tu
-import tdose_modify_cube as tmoc
 import tdose_model_FoV as tmf
 import tdose_model_cube as tmc
 import tdose_extract_spectra as tes
@@ -1361,43 +1360,4 @@ def plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=True,plotS2Nspectra=Tr
                              comp_wavecol='dummy',comp_fluxcol='dummy',comp_errcol='dummy')
         else:
             if verbose: print ' >>> Skipping plotting S/N spectra '
-
-# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def modify_cube(modifysetupfile='./tdose_setup_template_modify.txt',verbose=True):
-    """
-    Wrapper for modyfying data cube based on sourcemodelcube
-
-    --- INPUT ---
-    modifysetupfile    Setup file for modifying the data cubes based on the source model cubes
-    verbose            Toggle verbosity
-
-    --- EXAMPLE OF USE ---
-    import tdose
-    tdose.modify_cube(modifysetupfile='./tdose_setup_template_modify.txt',verbose=True)
-
-    tdose.modify_cube(modifysetupfile='/Users/kschmidt/work/TDOSE/tdose_setup_candels-cdfs-02_modify.txt',verbose=True)
-
-    """
-    if verbose: print '====================== TDOSE: Modifying data cube by removing objects ======================'
-    setupdic        = tu.load_setup(modifysetupfile,verbose=verbose)
-
-    datacube        = setupdic['data_cube']
-    sourcemodelcube = setupdic['source_model_cube']
-    modcubename     = datacube.replace('.fits','_'+setupdic['modified_cube']+'.fits')
-
-    if type(setupdic['modify_sources_list']) == str:
-        modellist    = 'loop over ids in input file list'
-        sys.exit(' ---> input sources to modify via list in file not enabled ')
-    else:
-        modellist    = [int(sourcenumber) for sourcenumber in setupdic['modify_sources_list']]
-
-    if setupdic['sources_action'].lower() == 'keep':
-        remkey = False
-    else:
-        remkey = True
-
-    modified_cube   = tmoc.remove_object(datacube,sourcemodelcube,objects=modellist,remove=remkey,
-                                         dataext=setupdic['cube_extension'],sourcemodelext=setupdic['source_extension'],
-                                         savecube=modcubename,verbose=verbose)
-
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
