@@ -418,7 +418,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                  xrange=None,yrange=None,showspecs=False,shownoise=True,
                  skyspecs=None,sky_colors=['red'],sky_labels=['sky'],
                  sky_wavecol='lambda',sky_fluxcol='data',sky_errcol='stat',
-                 showlinelists=None,linelistcolors=['gray'],smooth=0,
+                 showlinelists=None,linelistcolors=['gray'],smooth=0,ylog=False,
                  verbose=True,pubversion=False):
     """
     Plots of multiple 1D spectra
@@ -457,6 +457,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     linelistcolors      List of colors for line lists provided in showlinelists
     smooth              To smooth the spectra, provide sigma of the 1D gaussian smoothing kernel to apply.
                         For smooth = 0, no smoothing is performed.
+    ylog                To plot y-axis in log scale set to true
     verbose             Toggle verbosity
     pubversion          Generate more publication friendly version of figure
 
@@ -673,6 +674,9 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
             ylabel = 'Flux [1e-20 erg/s/cm$^2$/\AA]'
 
     plt.ylabel(ylabel, fontsize=Fsize)
+
+    if ylog:
+        plt.yscale('log')
 
     if yrange is not None:
         plt.ylim(yrange)
