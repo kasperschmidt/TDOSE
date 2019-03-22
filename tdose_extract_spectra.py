@@ -419,6 +419,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                  skyspecs=None,sky_colors=['red'],sky_labels=['sky'],
                  sky_wavecol='lambda',sky_fluxcol='data',sky_errcol='stat',
                  showlinelists=None,linelistcolors=['gray'],smooth=0,ylog=False,
+                 plotratio=False,
                  verbose=True,pubversion=False):
     """
     Plots of multiple 1D spectra
@@ -458,6 +459,8 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     smooth              To smooth the spectra, provide sigma of the 1D gaussian smoothing kernel to apply.
                         For smooth = 0, no smoothing is performed.
     ylog                To plot y-axis in log scale set to true
+    plotratio           To plot the ratio between the main spectrum and the comparison spectra instead of the actual
+                        spectra, set this keyword to true.
     verbose             Toggle verbosity
     pubversion          Generate more publication friendly version of figure
 
@@ -515,8 +518,12 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
             if smooth > 0:
                 s2ndat = snf.gaussian_filter(s2ndat, smooth)
 
-            plt.plot(specdat[tdose_wavecol][goodent],s2ndat,color=spec_color,lw=lthick, label=spec_label)
-            ylabel = 'S/N'
+            if not plotratio:
+                plt.plot(specdat[tdose_wavecol][goodent],s2ndat,color=spec_color,lw=lthick, label=spec_label)
+                ylabel = 'S/N'
+            else:
+                plt.plot(specdat[tdose_wavecol][goodent],s2ndat/s2ndat,color=spec_color,lw=lthick, label=None)
+                ylabel = 'S/N ratio'
             #plotname = plotname.replace('.pdf','_S2N.pdf')
         else:
             fillalpha = 0.30
@@ -529,17 +536,21 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                 errlow      = snf.gaussian_filter(errlow,  smooth)
                 errhigh     = snf.gaussian_filter(errhigh, smooth)
 
-            if shownoise:
-                plt.fill_between(specdat[tdose_wavecol][goodent],errlow,errhigh,
-                                 alpha=fillalpha,color=spec_color)
-
-
             if smooth > 0:
                 fluxdat = snf.gaussian_filter(fluxdat, smooth)
 
-            plt.plot(specdat[tdose_wavecol][goodent],fluxdat,
-                     color=spec_color,lw=lthick, label=spec_label)
-            ylabel = tdose_fluxcol
+            if not plotratio:
+                if shownoise:
+                    plt.fill_between(specdat[tdose_wavecol][goodent],errlow,errhigh,
+                                     alpha=fillalpha,color=spec_color)
+
+                plt.plot(specdat[tdose_wavecol][goodent],fluxdat,
+                         color=spec_color,lw=lthick, label=spec_label)
+                ylabel = tdose_fluxcol
+            else:
+                plt.plot(specdat[tdose_wavecol][goodent],fluxdat/fluxdat,
+                         color=spec_color,lw=lthick, label=None)
+                ylabel = tdose_fluxcol+' ratio '
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if simsources is not None:
         sim_total = np.zeros(len(specdat[tdose_wavecol]))
@@ -591,8 +602,13 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                 if smooth > 0:
                     s2ncompdat = snf.gaussian_filter(s2ncompdat, smooth)
 
-                plt.plot(compdat[comp_wavecol][goodent],s2ncompdat,
-                         color=comp_color,lw=lthick, label=comp_label)
+                if not plotratio:
+                    plt.plot(compdat[comp_wavecol][goodent],s2ncompdat,
+                             color=comp_color,lw=lthick, label=comp_label)
+                else:
+                    plt.plot(compdat[comp_wavecol][goodent],s2ndat/s2ncompdat,
+                             color=comp_color,lw=lthick, label=comp_label)
+
             else:
                 fillalpha = 0.30
                 fluxcompdat = compdat[comp_fluxcol][goodent]
@@ -604,12 +620,18 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
                     errlow      = snf.gaussian_filter(errlow,  smooth)
                     errhigh     = snf.gaussian_filter(errhigh, smooth)
 
-                if shownoise:
-                    plt.fill_between(compdat[comp_wavecol][goodent],errlow,errhigh,
-                                     alpha=fillalpha,color=comp_color)
 
-                plt.plot(compdat[comp_wavecol][goodent],fluxcompdat,
-                         color=comp_color,lw=lthick, label=comp_label)
+                if not plotratio:
+                    if shownoise:
+                        plt.fill_between(compdat[comp_wavecol][goodent],errlow,errhigh,
+                                         alpha=fillalpha,color=comp_color)
+
+                    plt.plot(compdat[comp_wavecol][goodent],fluxcompdat,
+                             color=comp_color,lw=lthick, label=comp_label)
+                else:
+                    plt.plot(compdat[comp_wavecol][goodent],fluxdat/fluxcompdat,
+                             color=comp_color,lw=lthick, label=comp_label)
+
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if skyspecs is not None:
         for ss, skyspec in enumerate(skyspecs):
@@ -672,6 +694,9 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
             ylabel = 'Signal-to-Noise'
         else:
             ylabel = 'Flux [1e-20 erg/s/cm$^2$/\AA]'
+
+        if plotratio:
+            ylabel = ylabel+' ratio'
 
     plt.ylabel(ylabel, fontsize=Fsize)
 
