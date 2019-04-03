@@ -23,6 +23,7 @@ import tdose_utilities as tu
 import tdose_model_FoV as tmf
 from scipy.stats import multivariate_normal
 import matplotlib as mpl
+from matplotlib.colors import LogNorm
 mpl.use('Agg') # prevent pyplot from opening window; enables closing ssh session with detached screen running TDOSE
 import matplotlib.pylab as plt
 import pdb
@@ -3286,9 +3287,24 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
 
         imagebase    = setupdic['ref_image'].split('/')[-1]
         refimg       = setupdic['cutout_directory']+imagebase.replace('.fits',cutstr+'.fits')
-        modelimg     = setupdic['models_directory']+imagebase.replace('.fits',cutstr+'_'+setupdic['model_image_ext']+
-                                                                      '_'+sourcemodel+'.fits')
-        residualimg  = modelimg.replace('.fits','_residual.fits')
+
+        if setupdic['source_model'].lower() == 'modelimg':
+            modelimg     = setupdic['modelimg_directory']+'model_'+refimg.split('/')[-1]
+            modelhdu     = pyfits.open(modelimg)
+            if len(modelhdu) == 4:
+                print(' - Found 4 extensions in fits model so assuming it is on the GALFIT format (priamry, ref img, model, residual)')
+                residualimg  = modelimg
+                modelext     = 2
+                residualext  = 3
+            else:
+                modelext     = 0
+                residualext  = 0
+        else:
+            modelimg     = setupdic['models_directory']+imagebase.replace('.fits',cutstr+'_'+setupdic['model_image_ext']+
+                                                                          '_'+sourcemodel+'.fits')
+            residualimg  = modelimg.replace('.fits','_residual.fits')
+            modelext     = 0
+            residualext  = 0
 
         cubebase     = setupdic['data_cube'].split('/')[-1]
         datacube     = setupdic['cutout_directory']+cubebase.replace('.fits',cutstr+'.fits')
@@ -3340,7 +3356,7 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
 
         ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan, rowspan=rowspan)
 
-        tu.gen_overview_plot_image(ax,refimg,fontsize=Fsize,lthick=lthick,alpha=0.5,title='Reerence Image')
+        tu.gen_overview_plot_image(ax,refimg,fontsize=Fsize,imgext=0,lthick=lthick,alpha=0.5,title='Reference Image')
 
         #---------------------------- REF IMG MOD  ----------------------------
         rowval  = 0
@@ -3349,7 +3365,7 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
         colspan = 2
         ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan, rowspan=rowspan)
 
-        tu.gen_overview_plot_image(ax,modelimg,fontsize=Fsize,lthick=lthick,alpha=0.5,title='Reerence Image Model')
+        tu.gen_overview_plot_image(ax,modelimg,fontsize=Fsize,imgext=modelext,lthick=lthick,alpha=0.5,title='Reference Image Model')
 
         #---------------------------- REF IMG RES  ----------------------------
         rowval  = 0
@@ -3358,7 +3374,7 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
         colspan = 2
         ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan, rowspan=rowspan)
 
-        tu.gen_overview_plot_image(ax,residualimg,fontsize=Fsize,lthick=lthick,alpha=0.5,title='Imag - Model Residual')
+        tu.gen_overview_plot_image(ax,residualimg,fontsize=Fsize,imgext=residualext,lthick=lthick,alpha=0.5,title='(Image - Model) Residual')
 
         #---------------------------- REF IMG HIST ----------------------------
         rowval  = 2
@@ -3504,7 +3520,7 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_overview_plot_image(ax,imagefile,imgext=0,cubelayer=1,title='Img Title?',fontsize=6,lthick=2,alpha=0.5,
-                            cmap='coolwarm'):
+                            cmap='viridis'):
     """
     Plotting commands for image (cube layer) overview plotting
 
@@ -3522,7 +3538,7 @@ def gen_overview_plot_image(ax,imagefile,imgext=0,cubelayer=1,title='Img Title?'
         if len(imgdata.shape) == 3: # it is a cube
             imgdata = imgdata[cubelayer,:,:]
 
-        ax.imshow(imgdata, interpolation='None',cmap=cmap,aspect='equal', origin='lower')
+        ax.imshow(imgdata, interpolation='None',cmap=cmap,aspect='equal', origin='lower', norm=LogNorm())
 
         ax.set_xlabel('x-pixel')
         ax.set_ylabel('y-pixel ')
