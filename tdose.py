@@ -495,6 +495,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             if setupdic['plot_generate']:
                 tdose.plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=plot1Dspectra,plotS2Nspectra=plotS2Nspectra,
                                    verbose=verbosefull)
+
+                objids    = SAD.keys()
+                tu.gen_overview_plot(objids,setupfile,verbose=verbosefull)
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if verbose:
                 print '=================================================================================================='
@@ -1345,7 +1348,7 @@ def plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=True,plotS2Nspectra=Tr
                              plotname=spec.replace('.fits','_'+setupdic['plot_1Dspec_ext']+'.pdf'),showspecs=showspec,
                              shownoise=setupdic['plot_1Dspec_shownoise'],xrange=xrange,yrange=yrange,
                              comparisonspecs=None,comp_colors=['dummy'],comp_labels=['dummy'],
-                             comp_wavecol='dummy',comp_fluxcol='dummy',comp_errcol='dummy')
+                             comp_wavecol='dummy',comp_fluxcol='dummy',comp_errcol='dummy', pubversion=True)
         else:
             if verbose: print ' >>> Skipping plotting 1D spectra '
 
@@ -1357,7 +1360,7 @@ def plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=True,plotS2Nspectra=Tr
                              plotname=spec.replace('.fits','_'+setupdic['plot_S2Nspec_ext']+'.pdf'),showspecs=showspec,
                              shownoise='dummy',xrange=xrange,yrange=yrange,
                              comparisonspecs=None,comp_colors=['dummy'],comp_labels=['dummy'],
-                             comp_wavecol='dummy',comp_fluxcol='dummy',comp_errcol='dummy')
+                             comp_wavecol='dummy',comp_fluxcol='dummy',comp_errcol='dummy', pubversion=True)
         else:
             if verbose: print ' >>> Skipping plotting S/N spectra '
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
