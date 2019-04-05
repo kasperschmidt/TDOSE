@@ -4249,7 +4249,7 @@ def add_hdrkeys2fitsfile(tdosespectrum,hdrkeydic,newname='default',clobber=False
     tdosehdu.writeto(outname,clobber=clobber)
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=False,sourcecat_compinfo=None,
+def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=False,
                                      normalizecomponents=False,includewcs=True,clobber=True,verbose=True):
     """
     Combine a set of 2D models to a model cube that TDOSE can use as input for source_mode='modelimg'.
@@ -4259,8 +4259,6 @@ def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=
     --- INPUT ---
     models2D            List of 2D source models to combine. They should all have the same dimensions
     modelsext           Extension containing models in models2D fits files
-    # Nlayers             Number of layers to generate for the cube.
-    # PSFparam            The PSF parameters to use when generating the cube
     basename            Name base to use for naming outputs (no extension)
     savecubesumimg      Save image of sum over cube components (useful for comparison purposes)
     normalizecomponents Normalize each individual components so sum(component image) = 1?
