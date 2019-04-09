@@ -1482,8 +1482,15 @@ def extract_subimage(imgfile,ra,dec,cutoutsize,outname=None,clobber=False,imgext
             if key in imghdrkeys:
                 imghdr[key] = cuthdr[key]
 
-        hdulist = pyfits.PrimaryHDU(data=cutout.data,header=imghdr)
-        hdulist.writeto(outname,clobber=clobber)
+        if imgext == 0:
+            hdulist = pyfits.PrimaryHDU(data=cutout.data,header=imghdr)
+            hdulist.writeto(outname,clobber=clobber)
+        else:
+            hduprim           = pyfits.PrimaryHDU()  # default HDU with default minimal header
+            imghdr['EXTNAME'] = str(imgext)
+            hducube           = pyfits.ImageHDU(cutout.data,header=imghdr)
+            hdulist           = pyfits.HDUList([hduprim,hducube])
+            hdulist.writeto(outname, clobber=clobber)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return cutout
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
