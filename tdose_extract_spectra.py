@@ -2,6 +2,7 @@
 import numpy as np
 import sys
 import pyfits
+import astropy.io.fits as afits
 import collections
 import tdose_utilities as tu
 import tdose_extract_spectra as tes
@@ -243,6 +244,12 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
             if not hdrkey in objHDU.header.keys():
                 objHDU.header.append((hdrkey,obj_cube_hdr[hdrkey],obj_cube_hdr.comments[hdrkey]),end=True)
 
+        try:
+            objHDU.header.append(('EXTNAMEC',objHDU.header['EXTNAME'] ,'EXTNAME of original source cube'),end=True)
+            del objHDU.header['EXTNAME']
+        except:
+            pass
+
         objHDU.header.append(('EXTNAME ','SOURCECUBE'            ,'cube containing source'),end=True)
 
         hdulist = pyfits.HDUList([mainHDU,tbHDU,objHDU])
@@ -479,6 +486,29 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
         fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
         Fsize  = 10
 
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    # Looking for flux units in spectra
+    bunit = 'BUNIT FLUX' # Default BUNIT
+    for unitspec in filelist:
+
+        if bunit == 'BUNIT FLUX':
+            try:
+                sourcecubehdr = afits.open(unitspec)['SOURCECUBE'].header
+                bunit         = sourcecubehdr['BUNIT']
+            except:
+                try: # Backwards compatibility to TDOSE v2.0 extractions
+                    sourcecubehdr = afits.open(unitspec)[2].header
+                    bunit         = sourcecubehdr['BUNIT']
+                except:
+                    pass
+    if bunit == 'BUNIT FLUX':
+        if verbose: print(' - Did not find BUNIT in SOURCECUBE header for any spectra in filelist - are they not from TDOSE?')
+
+    if bunit == '10**(-20)*erg/s/cm**2/Angstrom': # Making bunit LaTeXy for MUSE-Wide BUNIT format
+        bunit = '1e-20 erg/s/cm$^2$/\AA'
+    else:
+        bunit = '$'+bunit+'$' # minimizing pronlems with LaTeXing plot axes
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     lthick = 1
     plt.rc('text', usetex=True)
     plt.rc('font', family='serif',size=Fsize)
@@ -693,7 +723,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
         if plotSNcurve:
             ylabel = 'Signal-to-Noise'
         else:
-            ylabel = 'Flux [1e-20 erg/s/cm$^2$/\AA]'
+            ylabel = 'Flux ['+str(bunit)+']'
 
         if plotratio:
             ylabel = ylabel+' ratio'
