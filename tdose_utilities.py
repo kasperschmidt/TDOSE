@@ -3294,6 +3294,7 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
 
         imagebase    = setupdic['ref_image'].split('/')[-1]
         refimg       = setupdic['cutout_directory']+imagebase.replace('.fits',cutstr+'.fits')
+        refimgext    = setupdic['img_extension']
 
         if setupdic['source_model'].lower() == 'modelimg':
             modelimg     = setupdic['modelimg_directory']+'model_'+refimg.split('/')[-1]
@@ -3363,7 +3364,7 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
 
         ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan, rowspan=rowspan)
 
-        tu.gen_overview_plot_image(ax,refimg,fontsize=Fsize,imgext=0,lthick=lthick,alpha=0.5,title='Reference Image')
+        tu.gen_overview_plot_image(ax,refimg,fontsize=Fsize,imgext=refimgext,lthick=lthick,alpha=0.5,title='Reference Image')
 
         #---------------------------- REF IMG MOD  ----------------------------
         rowval  = 0
@@ -3389,7 +3390,7 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
         colspan = 6
         ax = plt.subplot2grid((Nrow,Ncol), (rowval, colval), colspan=colspan)
 
-        tu.gen_overview_plot_hist(ax,refimg,modelimg,dataext=0,modelext=0,layer=None,
+        tu.gen_overview_plot_hist(ax,refimg,modelimg,dataext=refimgext,modelext=0,layer=None,
                                   histbins=[-0.01,0.01,0.0001],lthick=lthick,alpha=0.5,title='Reference image',fontsize=Fsize)
 
         #---------------------------- REF IMG HIST 2 ----------------------------
@@ -3545,7 +3546,7 @@ def gen_overview_plot_image(ax,imagefile,imgext=0,cubelayer=1,title='Img Title?'
         if len(imgdata.shape) == 3: # it is a cube
             imgdata = imgdata[cubelayer,:,:]
 
-        ax.imshow(imgdata, interpolation='None',cmap=cmap,aspect='equal', origin='lower', norm=LogNorm())
+        ax.imshow(imgdata,cmap=cmap,aspect='equal', origin='lower', norm=LogNorm())
 
         ax.set_xlabel('x-pixel')
         ax.set_ylabel('y-pixel ')
