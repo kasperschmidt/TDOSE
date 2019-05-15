@@ -3582,6 +3582,19 @@ def gen_overview_plot_hist(ax,data,model,dataext=0,modelext=0,layer=None,normali
             datavec   = pyfits.open(data)[dataext].data[layer,:,:].ravel()
             modelvec  = pyfits.open(model)[modelext].data[layer,:,:].ravel()
 
+        if len(datavec) != len(modelvec):
+            print(' - Warning: Data ['+str(pyfits.open(data)[dataext].data.shape)+'] and Model ['+str(pyfits.open(model)[modelext].data.shape)+'] do not have the same dimensions ')
+            print('   Generating histogram by limiting smalles FoV')
+
+            y_data, x_data   = pyfits.open(data)[dataext].data.shape
+            y_model, x_model = pyfits.open(model)[modelext].data.shape
+            if layer is None:
+                datavec   = pyfits.open(data)[dataext].data[0:np.min([y_data,y_model]),0:np.min([x_data,x_model])].ravel()
+                modelvec  = pyfits.open(model)[modelext].data[0:np.min([y_data,y_model]),0:np.min([x_data,x_model])].ravel()
+            else:
+                datavec   = pyfits.open(data)[dataext].data[layer,0:np.min([y_data,y_model]),0:np.min([x_data,x_model])].ravel()
+                modelvec  = pyfits.open(model)[modelext].data[layer,0:np.min([y_data,y_model]),0:np.min([x_data,x_model])].ravel()
+
         residualvec  = datavec-modelvec
 
         datavec      = datavec[np.isfinite(datavec)]
