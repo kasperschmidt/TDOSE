@@ -3,6 +3,7 @@ import numpy as np
 import os
 import datetime
 import sys
+import astropy
 from astropy import wcs
 from astropy import units
 from astropy import convolution
@@ -1364,7 +1365,11 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbose: print ' - Extracting sub-cube based on cutout bounding box of first layer'
         firstlayer    = 0
-        cutout_layer  = Cutout2D(cubedata[firstlayer,:,:], skyc, size, wcs=cubewcs_2D, mode='partial')
+        try:
+            cutout_layer  = Cutout2D(cubedata[firstlayer,:,:], skyc, size, wcs=cubewcs_2D, mode='partial')
+        except astropy.nddata.utils.NoOverlapError:
+            print('   Cutout error: The coordinates ('+str(skyc)+') do not overlap with the datacube ') #sys.exc_info()[0]
+            return None
 
         for key in cutout_layer.wcs.to_header().keys():
             striphdr[key] = cutout_layer.wcs.to_header()[key]

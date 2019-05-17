@@ -179,7 +179,12 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             start_time_obj = time.clock()
             imgstr, imgsize, refimg, datacube, variancecube, sourcecat = tu.get_datinfo(extid,setupdic)
 
-            skipthisobj = False
+            if not os.path.isfile(datacube):
+                infostr = infostr+'  -> skipping as datacube to extract from not found '
+                skipthisobj = True
+            else:
+                skipthisobj = False
+
             if skipextractedobjects or (int(extid) in skipidlist):
                 if int(extid) in skipidlist:
                     skipthisobj = True
@@ -799,9 +804,10 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                                                imgfiles=None,imgexts=None,imgnames=None,verbose=verbosefull)
         else:
             if verbose: print ' >>> Skipping cutting out images and cubes (assuming they exist)                                 '
+            cutouts = 'dummy'
 
         # --- SUB-SOURCE CAT ---
-        if generatesourcecat:
+        if generatesourcecat & (cutouts is not None):
             foundmodelcat = False
             if check4modelcat:
                 if setupdic['modelimg_directory'] is not None:
@@ -854,7 +860,7 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
 
                 astropy.io.fits.writeto(cut_sourcecat,storearr,header=None,overwrite=clobber)
         else:
-            if verbose: print ' >>> Skipping generating the cutout source catalogs (assume they exist)'
+            if verbose: print ' >>> Skipping generating the cutout source catalog for '+str(cutoutid)+' '
     if not verbosefull:
         if verbose: print '\n   done'
 
