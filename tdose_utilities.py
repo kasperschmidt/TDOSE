@@ -3338,12 +3338,17 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
 
         if os.path.isfile(spec1D):
             specdat = pyfits.open(spec1D)[1].data
-            maxs2n  = np.max(specdat['s2n'][ np.isfinite(specdat['s2n']) ])
-            maxent  = np.where(specdat['s2n'] == maxs2n)[0][0]
-            maxwave = specdat['wave'][maxent]
-            maxflux = specdat['flux'][maxent]
-            diff    = np.abs(specdat['wave']-wavefix)
-            entfix  = np.where(diff == np.min(diff))[0][0]
+            try: # handle spectra with all nans or infs
+                maxs2n  = np.max(specdat['s2n'][ np.isfinite(specdat['s2n']) ])
+                maxent  = np.where(specdat['s2n'] == maxs2n)[0][0]
+                maxwave = specdat['wave'][maxent]
+                maxflux = specdat['flux'][maxent]
+                diff    = np.abs(specdat['wave']-wavefix)
+                entfix  = np.where(diff == np.min(diff))[0][0]
+            except:
+                maxent  = 1
+                maxwave = 6000.0
+                entfix  = 100
         else:
             maxent  = 1
             maxwave = 6000.0
