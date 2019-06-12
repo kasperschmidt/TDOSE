@@ -18,10 +18,8 @@ TDOSE (version 3.0) is presented in [Schmidt et al. (2019, submitted to A&A)](#r
   - [Standard Packages](#standard-packages)
   - [Special Packages](#special-packages)
 - [Script Overview](#script-overview)
-- [Running TDOSE](#running-tdose)
-  - [Default Run](#default-run-of-tdose)
-  - [Individual TDOSE Function Runs](#individual-tdose-function-runs)
 - [TDOSE Output Overview](#tdose-output-overview) 
+- [Running TDOSE](#running-tdose)
 - [References](#references)
 - [Flowchart of TDOSE](#flowchart-of-tdose)
 
