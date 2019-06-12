@@ -1,6 +1,8 @@
 
 # Three Dimensional Optimal Spectral Extraction (TDOSE)
 
+[![DOI](https://zenodo.org/badge/93055275.svg)](https://zenodo.org/badge/latestdoi/93055275)
+
 [//]: # "![TDOSE logo](TDOSElogo.png =250x)"
 
 README for the optimal spectral extraction software TDOSE.
