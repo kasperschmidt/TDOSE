@@ -101,6 +101,6 @@ Appendix B of [Schmidt et al. (2019, submitted to A&A)](#references) provides a 
 ## Flowchart of TDOSE
 `TDOSEflowchart.png` (displayed below) presents a schemative overview of the different elements making up TDOSE and the workflow for the available extractions. The figure is taken from [Schmidt et al. (2019, submitted to A&A)](#references) whihc also describes the indivudal steps and outputs in detail.
 
-<a href="TDOSEflowchart.png"><img src="TDOSEflowchart.png" align="center" height="1200" ></a>
+<a href="TDOSEflowchart.png"><img src="TDOSEflowchart.png" align="center" height="800" ></a>
 
 
