@@ -3,13 +3,9 @@
 
 [![DOI](https://zenodo.org/badge/93055275.svg)](https://zenodo.org/badge/latestdoi/93055275)
 
-[//]: # "![TDOSE logo](TDOSElogo.png =250x)"
-
 README for the optimal spectral extraction software TDOSE.
 
-[//]: # "presented by Schmidt et al. (some day)"
-
-TDOSE (version 3.0) is presented in [Schmidt et al. (2019, submitted to A&A)](#references). Please cite this publication if you find TDOSE useful. 
+TDOSE (version 3.0) is presented in [Schmidt et al. (2019)](#references). Please cite this publication if you find TDOSE useful. 
 
 ## Table of Content
 <a href="TDOSElogo.png"><img src="TDOSElogo.png" align="right" height="300" ></a>
@@ -35,7 +31,7 @@ As sources in the field-of-view are modeled and their fluxes optimized simultane
 
 Below is a quick run-through of TDOSE and how to use it. Comments and/or suggestions for improvement, new features etc. are more than welcome. Please send these to Kasper B. Schmidt (kbschmidt at aip.de) or add an 'issue' via GitHub.
 
-For further details on TDOSE (version 3.0) please see [Schmidt et al. (2019, submitted to A&A)](#references).
+For further details on TDOSE (version 3.0) please see [Schmidt et al. (2019)](#references).
 
 ## Installing TDOSE
 
@@ -83,25 +79,25 @@ The follwoing 'special packages' also needs to be accessible to Python to run TD
 
 ## Script Overview
 
-Appendix A of [Schmidt et al. (2019, submitted to A&A)](#references) provides a detailed description of the individual scripts of TDOSE. For detailed information please refer to the headers of the scripts and subroutines themselves. 
+Appendix A of [Schmidt et al. (2019)](#references)provides a detailed description of the individual scripts of TDOSE. For detailed information please refer to the headers of the scripts and subroutines themselves. 
 A schematic overview is provided in the [Flowchart of TDOSE](#flowchart-of-tdose) below.
 
 ## TDOSE Output Overview
 
-Appendix A of [Schmidt et al. (2019, submitted to A&A)](#references) 
+Appendix A of [Schmidt et al. (2019)](#references) 
 also presents an overview and description of the main outputs generated with TDOSE. 
 
 ## Running TDOSE
 
-Appendix B of [Schmidt et al. (2019, submitted to A&A)](#references) provides a range of useful examples of how to produce outputs with TDOSE. For examples of how to run individual pieces of code, please refer to the individual code headers.
+Appendix B of [Schmidt et al. (2019)](#references) provides a range of useful examples of how to produce outputs with TDOSE. For examples of how to run individual pieces of code, please refer to the individual code headers.
 
 ## References 
 
-- [Kamann, Wisotzki and Roth (2013)](http://adsabs.harvard.edu/abs/2013A%26A...549A..71K)
-- Schmidt et al. 2019, Submitted to A&A
+- [Kamann, Wisotzki and Roth (2013)](http://ui.adsabs.harvard.edu/abs/2013A%26A...549A..71K)
+- [Schmidt et al. (2019)](http://ui.adsabs.harvard.edu/abs/2019arXiv190605891S)
 
 ## Flowchart of TDOSE
-`TDOSEflowchart.png` (displayed below) presents a schemative overview of the different elements making up TDOSE and the workflow for the available extractions. The figure is taken from [Schmidt et al. (2019, submitted to A&A)](#references) whihc also describes the indivudal steps and outputs in detail.
+`TDOSEflowchart.png` (displayed below) presents a schemative overview of the different elements making up TDOSE and the workflow for the available extractions. The figure is taken from [Schmidt et al. (2019)](#references) whihc also describes the indivudal steps and outputs in detail.
 
 <a href="TDOSEflowchart.png"><img src="TDOSEflowchart.png" align="center" height="800" ></a>
 
