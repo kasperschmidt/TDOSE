@@ -23,7 +23,7 @@ TDOSE (version 3.0) is presented in [Schmidt et al. (2019)](#references). Please
 
 ## Description
 
-The software for Three Dimensional Optimal Spectra Extraction (TDOSE) is build in Python to extract spectra of both point sources and extended sources from integral field data cubes, i.e., three dimensional data with spatial (x,y) and wavelength dimensions (λ). TDOSE was build for spectral extraction from MUSE data cubes. However, TDOSE was also build to be as broadly appliable as possible and has been succesfully applied to both CALIFA and MaNGA data cubes and should be able to extract 1D spectra from essentially any 3D FITS data cube.
+The software for Three Dimensional Optimal Spectra Extraction (TDOSE) is build in Python to extract spectra of both point sources and extended sources from integral field data cubes, i.e., three dimensional data with spatial (x,y) and wavelength dimensions (λ). TDOSE was build for spectral extraction from MUSE data cubes. However, TDOSE was also build to be as broadly applicable as possible and has been successfully applied to both CALIFA and MaNGA data cubes and should be able to extract 1D spectra from essentially any 3D FITS data cube.
 
 TDOSE broadly follows the point source extraction software described by [Kamann, Wisotzki and Roth (2013)](#references) adding the capability of modeling sources as non-point sources, e.g., via (multiple) multivariate gaussian modeling or GALFIT modeling (in which case the GALFIT FITS model of the reference image is passed directly to TDOSE), and using these source models to guide the three dimensional extractions to approach optimal spectral extraction of extended objects.
 
@@ -35,7 +35,7 @@ For further details on TDOSE (version 3.0) please see [Schmidt et al. (2019)](#r
 
 ## Installing TDOSE
 
-TDOSE does not require any installation. Simply cloning the TDOSE GitHub repository (or downloading one of the releses from https://github.com/kasperschmidt/TDOSE/releases) and importing the scripts should be enough.
+TDOSE does not require any installation. Simply cloning the TDOSE GitHub repository (or downloading one of the releases from https://github.com/kasperschmidt/TDOSE/releases) and importing the scripts should be enough.
 Hence, TDOSE is "installed" by doing:
 ```
 git clone https://github.com/kasperschmidt/TDOSE.git
@@ -49,7 +49,7 @@ Note that TDOSE does not run on Python 3 yet (sorry).
 
 ## Dependencies and Requirements
 
-TDOSE is written in Python and uses a range of default packages included in standard installations of Python. As TDOSE was developed using STScI's [`ureka`](http://ssb.stsci.edu/ureka/) Python instalation, "standard" here referes to packages available from a `ureka` STScI Python installation (or [`AstroConda`](#http://astroconda.readthedocs.io/en/latest/) after `ureka` is no longer supported). A list of 'special packages' that needs to be installed on top of that to get TDOSE running are also given below.
+TDOSE is written in Python and uses a range of default packages included in standard installations of Python. As TDOSE was developed using STScI's [`ureka`](http://ssb.stsci.edu/ureka/) Python installation, "standard" here refers to packages available from a `ureka` STScI Python installation (or [`AstroConda`](#http://astroconda.readthedocs.io/en/latest/) after `ureka` is no longer supported). A list of 'special packages' that needs to be installed on top of that to get TDOSE running are also given below.
 
 ### Standard Packages
 
@@ -71,7 +71,7 @@ The following standard Python packages are imported in one or more of the TDOSE 
 
 ### Special Packages
 
-The follwoing 'special packages' also needs to be accessible to Python to run TDOSE:
+The following 'special packages' also needs to be accessible to Python to run TDOSE:
 
 `astropy`: http://www.astropy.org. Can be installed with pip. Used extensively throughout TDOSE. 
 
@@ -79,7 +79,7 @@ The follwoing 'special packages' also needs to be accessible to Python to run TD
 
 ## Script Overview
 
-Appendix A of [Schmidt et al. (2019)](#references)provides a detailed description of the individual scripts of TDOSE. For detailed information please refer to the headers of the scripts and subroutines themselves. 
+Appendix A of [Schmidt et al. (2019)](#references) provides a detailed description of the individual scripts of TDOSE. For detailed information please refer to the headers of the scripts and subroutines themselves. 
 A schematic overview is provided in the [Flowchart of TDOSE](#flowchart-of-tdose) below.
 
 ## TDOSE Output Overview
@@ -97,7 +97,7 @@ Appendix B of [Schmidt et al. (2019)](#references) provides a range of useful ex
 - [Schmidt et al. (2019)](http://ui.adsabs.harvard.edu/abs/2019arXiv190605891S)
 
 ## Flowchart of TDOSE
-`TDOSEflowchart.png` (displayed below) presents a schemative overview of the different elements making up TDOSE and the workflow for the available extractions. The figure is taken from [Schmidt et al. (2019)](#references) whihc also describes the indivudal steps and outputs in detail.
+`TDOSEflowchart.png` (displayed below) presents a schematic overview of the different elements making up TDOSE and the workflow for the available extractions. The figure is taken from [Schmidt et al. (2019)](#references) which also describes the individual steps and outputs in detail.
 
 <a href="TDOSEflowchart.png"><img src="TDOSEflowchart.png" align="center" height="800" ></a>
 
