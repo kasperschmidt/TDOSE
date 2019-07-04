@@ -183,7 +183,12 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 infostr = infostr+'  -> skipping as datacube to extract from not found '
                 skipthisobj = True
             else:
-                skipthisobj = False
+                pdb.set_trace()
+                if np.isfinite(pyfits.open(datacube)[setupdic['cube_extension']].data).any():
+                    skipthisobj = False
+                else:
+                    infostr = infostr+'  -> skipping as no pixels in datacube are finite (all NaNs or Infs) '
+                    skipthisobj = True
 
             if skipextractedobjects or (int(extid) in skipidlist):
                 if int(extid) in skipidlist:
