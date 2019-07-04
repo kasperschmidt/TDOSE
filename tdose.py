@@ -183,7 +183,6 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 infostr = infostr+'  -> skipping as datacube to extract from not found '
                 skipthisobj = True
             else:
-                pdb.set_trace()
                 if np.isfinite(pyfits.open(datacube)[setupdic['cube_extension']].data).any():
                     skipthisobj = False
                 else:
