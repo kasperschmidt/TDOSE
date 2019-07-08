@@ -238,8 +238,13 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                         if loopverbose: print '   Using matrix algebra for optimization'
                         ATA        = Atrans.dot(A)
                         ATd        = Atrans.dot(dataravel)
-                        ATAinv     = np.linalg.inv(ATA)
+
+                        try:
+                            ATAinv     = np.linalg.inv(ATA)
+                        except:
+                            ATAinv     = np.zeros(ATA.shape)
                         scalesMTX  = ATAinv.dot(ATd)
+                        scalesMTX.filled(fill_value=0.0) # If individual scales are masked (not finite) set them to 0.0
 
                         if analytic_conv:
                             output_layerMTX   = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
