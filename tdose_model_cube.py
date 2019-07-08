@@ -244,7 +244,9 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                         except:
                             ATAinv     = np.zeros(ATA.shape)
                         scalesMTX  = ATAinv.dot(ATd)
-                        scalesMTX.filled(fill_value=0.0) # If individual scales are masked (not finite) set them to 0.0
+
+                        if comb_mask is not None:
+                            scalesMTX.filled(fill_value=0.0) # If individual scales are masked (not finite) set them to 0.0
 
                         if analytic_conv:
                             output_layerMTX   = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
