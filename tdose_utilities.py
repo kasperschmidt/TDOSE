@@ -1383,11 +1383,15 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
                     infostr = '   cutting out from layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % Nlayers)
                     sys.stdout.write("%s\r" % infostr)
                     sys.stdout.flush()
-                cutout_layer        = Cutout2D(cubedata[ll,:,:], skyc, size, wcs=cubewcs_2D)
+                cutout_layer        = Cutout2D(cubedata[ll,:,:], skyc, size, wcs=cubewcs_2D, mode='partial')
                 cutout_cube[ll,:,:] = cutout_layer.data
             if verbose: print '\n   done'
         else:
-            cutout_cube = cubedata[:,cutout_layer.bbox_original[0][0]:cutout_layer.bbox_original[0][1]+1,
+            cutout_cube         = np.zeros([Nlayers,cutout_layer.data.shape[0],cutout_layer.data.shape[1]])*np.nan
+
+            cutout_cube[:,cutout_layer.bbox_cutout[0][0]:cutout_layer.bbox_cutout[0][1]+1,
+                          cutout_layer.bbox_cutout[1][0]:cutout_layer.bbox_cutout[1][1]+1] = \
+               cubedata[:,cutout_layer.bbox_original[0][0]:cutout_layer.bbox_original[0][1]+1,
                           cutout_layer.bbox_original[1][0]:cutout_layer.bbox_original[1][1]+1]
 
         if cc == 0:
