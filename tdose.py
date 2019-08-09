@@ -301,9 +301,8 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                         namestr  = str(sid)
                     names.append(namestr)
 
-                if setupdic['nondetections'] is None:
-                    centralpointsource = False
-                elif type(setupdic['nondetections']) == np.str_ or (type(setupdic['nondetections']) == str):
+                centralpointsource = False # default value of centralpointsource
+                if type(setupdic['nondetections']) == np.str_ or (type(setupdic['nondetections']) == str):
                     if setupdic['nondetections'].lower() == 'all':
                         centralpointsource = True
                     else:
