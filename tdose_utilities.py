@@ -8,6 +8,7 @@ from astropy import wcs
 from astropy import units
 from astropy import convolution
 import astropy.convolution as ac # convolve, convolve_fft, Moffat2DKernel, Gaussian2DKernel
+import astropy.io.fits as afits
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 from astropy.modeling.models import Sersic1D
@@ -4410,5 +4411,43 @@ def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=
         hdulist.writeto(imgname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print '\n'
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def strip_extension_from_fitsfile(fitsfile,outputdir,removeextension='SOURCECUBE',overwrite=False,verbose=True):
+    """
+    Function removing fits extension from fits file.
+    Can for instance be used to remove the source cube extention
+    from a TDOSE spectrum output file to limit its file size.
+
+    --- INPUT ---
+    fitsfile           The fits file to remove extension from.
+    outputdir          Directory to store the stripped fits files to.
+    removeextension    The extension to remove from the fits file
+    overwrite          Overwrite output if it already exists.
+    verbose            Toggle verbosity
+
+    --- EXAMPLE OF RUN ---
+    import tdose_utilities as tu, glob
+
+    outputdir = '/Path/to/stripped/output/'
+    spectra   = glob.glob(outputdir+'original/tdose_spectrum_*.fits')
+    for spectrum in spectra:
+        tu.strip_extension_from_fitsfile(spectrum,outputdir,removeextension='SOURCECUBE',overwrite=False,verbose=True)
+
+    """
+    if verbose: print(' - Removing fits extension '+removeextension+' from fits file '+fitsfile)
+    fitshdu  = afits.open(fitsfile)
+    extnames = ['Primary'] + [hdu.header['EXTNAME'] for hdu in fitshdu[1:]]
+    try:
+        cubeext  = np.where(np.asarray(extnames) == removeextension)[0][0]
+    except:
+        sys.exit(' Could not find the exension '+removeextension+' in fits file '+fitsfile+'; only found '+str(extnames))
+    fitshdu.pop(cubeext)
+    outname  = outputdir+fitsfile.split('/')[-1]
+    if os.path.isfile(outname) & (not overwrite):
+        sys.exit(' The output '+outname+' already exists and overwrite=False ')
+    else:
+        if verbose: print(' - Saving output to '+outname)
+        fitshdu.writeto(outname,overwrite=overwrite)
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
