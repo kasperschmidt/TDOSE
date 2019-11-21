@@ -4451,21 +4451,25 @@ def strip_extension_from_fitsfile(fitsfile,outputdir,removeextension='SOURCECUBE
         fitshdu.writeto(outname,overwrite=overwrite)
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def vet_tdose_extractions(spectra,outputfile,refimg_key='acs_814w',datacube_key='DATACUBE',
-                          overwrite=False,verbose=True):
+                          pdfopencmd='open -n -F ',overwrite=False,verbose=True):
     """
     Function enabling visual vetting of a list of spectra extracted with TDOSE
 
     The vetting runs in steps.
      1) First the existing plots are openend
-     2) If a decision cannot be made based on these and interactive plottin window of the spectrum is generated
-     3) If still no decision is made the reference images are opened (optionally with the model cubes) in DS9
-    The level of inspection is captured in the output in the "vet level" column
+     2) If a decision cannot be made (0) based on these and interactive plotting window of the 1D spectrum is generated
+     3) If still no decision is (0) made the reference images are opened in DS9
+     4) If still no decision is (0) made the data cube and cube models are opened in DS9
+    The level of inspection is captured in the output in the "vetlevel" column. See header of output file for details.
+
     --- INPUT ---
     spectra            List of spectra to vet.
                        Will search for models and cutouts matching spectrum at "../*/*" for vetting.
     outputfile         Output catalog summarizing vetting
     refimg_key         Key to use when searching for reference image and it's models
     datacube_key       Key to use when searching for the data cube and it's models
+    pdfopencmd         The command to use for opening the PDF figures.
+                       Default is opening new windows on mac with 'open'.
     overwrite          Overwrite output if it already exists
     verbose            Toggle verbosity
 
@@ -4534,9 +4538,7 @@ def vet_tdose_extractions(spectra,outputfile,refimg_key='acs_814w',datacube_key=
         basequestion = ' -> What do you rate the spectrum quality to on a scale 0-4 (use e to exit)\n'
         if specpdfs != '':
             vetlevel    = vetlevel + 1000
-
-            opencommand = 'open -n -F '
-            pipe_info = subprocess.Popen(opencommand+specpdfs,shell=True,executable=os.environ["SHELL"])
+            pipe_info = subprocess.Popen(pdfopencmd+' '+specpdfs+' &',shell=True,executable=os.environ["SHELL"])
 
             vetquestion = basequestion+'    based on the PDFs?                                            '
             answer = tu.vet_tdose_extractions_parsequestion2cmdline(vetquestion)
@@ -4604,10 +4606,11 @@ def vet_tdose_extractions(spectra,outputfile,refimg_key='acs_814w',datacube_key=
         if vetcubes:
             vetlevel = vetlevel + 1
             searchbase   = specdir+'../*/'+datacube_key+'*'+objidstr
+            datacube     = glob.glob(searchbase+'*arcsec.fits')
             mdlcube      = glob.glob(searchbase+'*tdose_modelcube_'+source_model+'.fits')
             mdlcube_res  = glob.glob(searchbase+'*tdose_modelcube_residual_'+source_model+'.fits')
             mdlcube_src  = glob.glob(searchbase+'*tdose_source_modelcube_'+source_model+'.fits')
-            fitsfilelist = mdlcube + mdlcube_res + mdlcube_src
+            fitsfilelist = datacube + mdlcube + mdlcube_res + mdlcube_src
 
             vet_tdose_extractions_launchDS9(fitsfilelist,regionfiles=None,verbose=True)
 
