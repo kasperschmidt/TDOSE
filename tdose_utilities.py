@@ -4449,5 +4449,230 @@ def strip_extension_from_fitsfile(fitsfile,outputdir,removeextension='SOURCECUBE
     else:
         if verbose: print(' - Saving output to '+outname)
         fitshdu.writeto(outname,overwrite=overwrite)
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def vet_tdose_extractions(spectra,outputfile,refimg_key='acs_814w',datacube_key='DATACUBE',
+                          overwrite=False,verbose=True):
+    """
+    Function enabling visual vetting of a list of spectra extracted with TDOSE
 
+    The vetting runs in steps.
+     1) First the existing plots are openend
+     2) If a decision cannot be made based on these and interactive plottin window of the spectrum is generated
+     3) If still no decision is made the reference images are opened (optionally with the model cubes) in DS9
+    The level of inspection is captured in the output in the "vet level" column
+    --- INPUT ---
+    spectra            List of spectra to vet.
+                       Will search for models and cutouts matching spectrum at "../*/*" for vetting.
+    outputfile         Output catalog summarizing vetting
+    refimg_key         Key to use when searching for reference image and it's models
+    datacube_key       Key to use when searching for the data cube and it's models
+    overwrite          Overwrite output if it already exists
+    verbose            Toggle verbosity
+
+    --- EXAMPLE OF RUN ---
+    import tdose_utilities as tu, glob
+
+    specdir    = '/Path/to/spectra/tdose_spectra/'
+    spectra    = glob.glob(specdir+'tdose_spectrum_*.fits')
+    outputfile = specdir+'vet_tdose_extractions_output.txt'
+    tu.vet_tdose_extractions(spectra,outputfile,overwrite=False,verbose=True)
+
+    """
+    vettingscheme= '#\n' \
+                   '# The vetting scheme is: \n' \
+                   '#        0 : No decision made (revisit) \n' \
+                   '#        1 : Spectral exraction looks good \n' \
+                   '#        2 : Spectrum looks believable; reference image model less so \n' \
+                   '#        3 : Reference image model is bad, hence spectral extraction untrustworthy \n' \
+                   '#        4 : Reference image model is good but source model scaling problematic so spectral extraction untrustworthy \n' \
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    Nspec = len(spectra)
+    if verbose: print(' - '+str(Nspec)+' spectra provided for vetting')
+    if verbose: print(' - Preparing output file:\n   '+outputfile)
+    if os.path.isfile(outputfile) & (not overwrite):
+        sys.exit('The outputfile already exists and overwrite=False so exiting.')
+    else:
+        fout = open(outputfile,'w')
+        fout.write('# Result from vetting the '+str(Nspec)+' spectra provided to tdose_utilities.vet_tdose_extractions() \n'+
+                   vettingscheme+
+                   '# \n'
+                   '# The vetlevel column indiactes whether \n'
+                   '#        PDFs (1000)\n'
+                   '#        PDFs + interactive spectral plot (100) \n'
+                   '#        PDFs + interactive spectral plot + refimgs (10) \n'
+                   '#        PDFs + interactive spectral plot + reference image models + model cubes (1) \n'
+                   '# were loaded during vetting. If files do not exist 1 is replace by 9. \n'
+                   '# Hence "vetlevel=9110" indicates that:\n'
+                   '# No PDFs were found but the decision was made based on interactive spectral plot and reference image models. The model cubes were not loaded \n'
+                   '# \n'
+                   '# Each row is followed by notes on each object if provided in the vetting process \n'
+                   '# \n'
+                   '# Columns are:\n'
+                   '# '+str("%12s" % 'id')+' '+str("%14s" % 'source_model')+' '+
+                   str("%11s" % 'vetresult')+' '+str("%9s" % 'vetlevel')+'     spectrum  \n')
+    # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+    if verbose:
+        print(' - Vetting tdose spectra and the corresponding output from tdose (if found and needed):')
+        print(vettingscheme)
+
+    for ss, spec in enumerate(spectra):
+        vetspec      = False
+        vetimages    = False
+        vetcubes     = False
+        specdir      = spec.split('tdose_spectrum_')[0]
+        objid        = int(spec.split('.fits')[0].split('_')[-1].split('-')[-1])
+        objidstr     = str(objid)
+        source_model = spec.split('.fits')[0].split('_')[-2]
+
+        infostring   = '--------- object  '+str("%12s" % objid)+' '+str("%12s" % source_model)+\
+                       '          ('+str("%5s" % (ss+1))+'/'+str("%5s" % Nspec)+')  --------- '
+        if verbose: print(infostring)
+        vetlevel  = 0 # reset output
+        #---------------------------------------------------------------------------
+        specpdfs = ' '.join(glob.glob(specdir+'tdose_spectrum*'+source_model+'*'+objidstr+'*.pdf'))
+
+        basequestion = ' -> What do you rate the spectrum quality to on a scale 0-4 (use e to exit)\n'
+        if specpdfs != '':
+            vetlevel    = vetlevel + 1000
+
+            opencommand = 'open -n -F '
+            pipe_info = subprocess.Popen(opencommand+specpdfs,shell=True,executable=os.environ["SHELL"])
+
+            vetquestion = basequestion+'    based on the PDFs?                                            '
+            answer = tu.vet_tdose_extractions_parsequestion2cmdline(vetquestion)
+            if answer == 'e':
+                fout.close()
+                sys.exit('   Exiting as answer provided was "e". Vetting summarized in\n   '+outputfile)
+        else:
+            if verbose: print('   WARNING: Found no pdfs found. Will plot spectrum instead ')
+            vetlevel = vetlevel + 9000
+            vetspec  = True
+
+        #---------------------------------------------------------------------------
+        if str(answer).lower() == '0':
+            if verbose: print('    as no decision was made, spectrum is plotted')
+            vetspec = True
+
+        if vetspec:
+            vetlevel = vetlevel + 100
+            specdat = afits.open(spec)[1].data
+
+            plt.switch_backend('TkAgg')
+            fig = plt.figure(figsize=(10, 3))
+            fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.1, right=0.95, bottom=0.15, top=0.9)
+            plt.clf()
+            plt.title(infostring)
+            plt.step(specdat['wave'],specdat['flux'],'r',where='mid')
+            plt.fill_between(specdat['wave'],specdat['flux']-specdat['fluxerror'],specdat['flux']+specdat['fluxerror'],
+                             step='mid',color='red',alpha=0.5)
+            plt.xlabel('Wavelength')
+            plt.ylabel('Flux')
+            plt.show(block=False)
+
+            vetquestion = basequestion+'    based on the PDFs and spectrum plot?                          '
+            answer = tu.vet_tdose_extractions_parsequestion2cmdline(vetquestion)
+            if answer == 'e':
+                fout.close()
+                sys.exit('   Exiting as answer provided was "e". Vetting summarized in\n   '+outputfile)
+        #---------------------------------------------------------------------------
+        if str(answer).lower() == '0':
+            if verbose: print('    as no decision was made the reference image models will be loaded in ds9')
+            vetimages = True
+
+        if vetimages:
+            vetlevel     = vetlevel + 10
+            searchbase   = specdir+'../*/'+refimg_key+'*'+objidstr
+            refimg       = glob.glob(searchbase+'*arcsec.fits')
+            mdlimg       = glob.glob(searchbase+'*tdose_modelimage_'+source_model+'.fits')
+            mdlimg_res   = glob.glob(searchbase+'*tdose_modelimage_'+source_model+'_residual.fits')
+            mdlimg_init  = glob.glob(searchbase+'*tdose_modelimage_'+source_model+'_initial.fits')
+            mdlimg_reg   = glob.glob(searchbase+'*tdose_modelimage_ds9_'+source_model+'.reg')
+            fitsfilelist = refimg + mdlimg + mdlimg_res + mdlimg_init
+
+            vet_tdose_extractions_launchDS9(fitsfilelist,regionfiles=mdlimg_reg,verbose=True)
+
+            vetquestion = basequestion+'    based on the PDFs, spec plot and reference image models?      '
+            answer = tu.vet_tdose_extractions_parsequestion2cmdline(vetquestion)
+            if answer == 'e':
+                fout.close()
+                sys.exit('   Exiting as answer provided was "e". Vetting summarized in\n   '+outputfile)
+        #---------------------------------------------------------------------------
+        if str(answer).lower() == '0':
+            if verbose: print('    as no decision was made the model cubes will be loaded in ds9')
+            vetcubes = True
+
+        if vetcubes:
+            vetlevel = vetlevel + 1
+            searchbase   = specdir+'../*/'+datacube_key+'*'+objidstr
+            mdlcube      = glob.glob(searchbase+'*tdose_modelcube_'+source_model+'.fits')
+            mdlcube_res  = glob.glob(searchbase+'*tdose_modelcube_residual_'+source_model+'.fits')
+            mdlcube_src  = glob.glob(searchbase+'*tdose_source_modelcube_'+source_model+'.fits')
+            fitsfilelist = mdlcube + mdlcube_res + mdlcube_src
+
+            vet_tdose_extractions_launchDS9(fitsfilelist,regionfiles=None,verbose=True)
+
+            vetquestion = basequestion+'    based on the PDFs, spec plot, ref img and data cube models?   '
+            answer = tu.vet_tdose_extractions_parsequestion2cmdline(vetquestion)
+            if answer == 'e':
+                fout.close()
+                sys.exit('   Exiting as answer provided was "e". Vetting summarized in\n   '+outputfile)
+        #---------------------------------------------------------------------------
+        if str(answer).lower() == '0':
+            if verbose: print('    Still no decision... moving on to next object but first...')
+        outstr = str("%14s" % objid)+' '+str("%14s" % source_model)+' '+str("%11s" % answer)+' '+str("%9s" % vetlevel)+'     '+spec
+        #---------------------------------------------------------------------------
+        pversion = sys.version_info[0]
+        if pversion == 2:
+            notes  = raw_input(' -> Anything to add for this object?\n') # raw_input for python 2.X
+        elif pversion == 3:
+            notes  =     input(' -> Anything to add for this object?\n') # raw_input for python 3.X
+        else:
+            sys.exit(' Unknown version of python: version = '+str(pversion))
+        if notes == 'e':
+            fout.close()
+            sys.exit('   Exiting as input for notes was "e". Vetting summarized in\n   '+outputfile)
+        else:
+            outstr = outstr+'  #Notes: '+notes+' \n'
+
+        fout.write(outstr)
+        fout.close()
+        fout = open(outputfile,'a')
+    if verbose: print(' - Done vetting the '+str(Nspec)+' spectra!')
+    plt.close()
+    plt.switch_backend('Agg')
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def vet_tdose_extractions_parsequestion2cmdline(vetquestion):
+    pversion = sys.version_info[0]
+    answer   = 'none'
+    while str(answer).lower() not in ['0','1','2','3','4','e','exit']:
+        if pversion == 2:
+            answer = raw_input(vetquestion) # raw_input for python 2.X
+        elif pversion == 3:
+            answer =     input(vetquestion) # input for python 3.X
+        else:
+            sys.exit(' Unknown version of python: version = '+str(pversion))
+
+    return answer
+
+# = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+def vet_tdose_extractions_launchDS9(filelist,regionfiles=None,verbose=True):
+    if filelist == []:
+        if verbose: print(' WARNING: No files provided to tdose_utilities.vet_tdose_extractions_launchDS9()')
+        pipe_info = None
+    else:
+        ds9cmd  = ' ds9  -geometry 1200x600 -scale zscale  '
+        Nframes = 0
+        for fitsfile in filelist:
+            ds9cmd  = ds9cmd+fitsfile+' '
+            Nframes = Nframes + 1
+
+            if regionfiles is not None:
+                for regionfile in regionfiles:
+                    ds9cmd = ds9cmd+' -region '+regionfile+' '
+
+        ds9cmd = ds9cmd+'-lock frame wcs -tile grid layout '+str(Nframes)+' 1 -zoom to fit &'
+
+        pipe_info = subprocess.Popen(ds9cmd,shell=True,executable=os.environ["SHELL"])
+
+    return pipe_info
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
