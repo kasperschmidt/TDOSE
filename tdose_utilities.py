@@ -48,9 +48,9 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
     setup_modify = tu.load_setup(setupfile='./tdose_setup_template_modify.txt')
 
     """
-    if verbose: print ' --- tdose_utilities.load_setup() --- '
+    if verbose: print(' --- tdose_utilities.load_setup() --- ')
     #------------------------------------------------------------------------------------------------------
-    if verbose: print ' - Loading setup for TDOSE in '+setupfile
+    if verbose: print(' - Loading setup for TDOSE in '+setupfile)
     setup_arr = np.genfromtxt(setupfile,dtype=None,names=None)
     setup_dic = {}
     for ii in xrange(setup_arr.shape[0]):
@@ -94,13 +94,13 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
 
         setup_dic[setup_arr[ii,0]] = val
 
-    if verbose: print ' - Checking main keys are available; if not, adding them with None values'
+    if verbose: print(' - Checking main keys are available; if not, adding them with None values')
     checkkeys = ['nondetections','gauss_guess']
     for ck in checkkeys:
         if ck not in setup_dic.keys():
             setup_dic[ck] = None
 
-    if verbose: print ' - Returning dictionary containing setup parameters'
+    if verbose: print(' - Returning dictionary containing setup parameters')
     return setup_dic
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=False,verbose=True):
@@ -120,14 +120,14 @@ def generate_setup_template(outputfile='./tdose_setup_template.txt',clobber=Fals
     setup    = tu.load_setup(setupfile=filename)
 
     """
-    if verbose: print ' --- tdose_utilities.generate_setup_template() --- '
+    if verbose: print(' --- tdose_utilities.generate_setup_template() --- ')
     #------------------------------------------------------------------------------------------------------
     if os.path.isfile(outputfile) & (clobber == False):
         sys.exit(' ---> Outputfile already exists and clobber=False ')
     else:
-        if verbose: print ' - Will store setup template in '+outputfile
+        if verbose: print(' - Will store setup template in '+outputfile)
         if os.path.isfile(outputfile) & (clobber == True):
-            if verbose: print ' - Output already exists but clobber=True so overwriting it '
+            if verbose: print(' - Output already exists but clobber=True so overwriting it ')
 
         setuptemplate = """
 #-------------------------------------------------START OF TDOSE SETUP-------------------------------------------------
@@ -308,14 +308,14 @@ def generate_setup_template_modify(outputfile='./tdose_setup_template_modify.txt
     setup    = tu.load_setup(setupfile=filename)
 
     """
-    if verbose: print ' --- tdose_utilities.generate_setup_template_modify() --- '
+    if verbose: print(' --- tdose_utilities.generate_setup_template_modify() --- ')
     #------------------------------------------------------------------------------------------------------
     if os.path.isfile(outputfile) & (clobber == False):
         sys.exit(' ---> Outputfile already exists and clobber=False ')
     else:
-        if verbose: print ' - Will store setup template in '+outputfile
+        if verbose: print(' - Will store setup template in '+outputfile)
         if os.path.isfile(outputfile) & (clobber == True):
-            if verbose: print ' - Output already exists but clobber=True so overwriting it '
+            if verbose: print(' - Output already exists but clobber=True so overwriting it ')
 
         setuptemplate = """
 #---------------------------------------------START OF TDOSE MODIFY SETUP---------------------------------------------
@@ -376,7 +376,7 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,infofmt="S250",
     tu.duplicate_setup_template(outputdir,infofile,namebase='MUSEWide_tdose_setup',clobber=False,loopcols=['setupname','data_cube','cube_extension'])
 
     """
-    if verbose: print ' --- tdose_utilities.duplicate_setup_template_MUSEWide() --- '
+    if verbose: print(' --- tdose_utilities.duplicate_setup_template_MUSEWide() --- ')
 
     filename = outputdirectory+namebase+'.txt'
     tu.generate_setup_template(outputfile=filename,clobber=clobber)
@@ -389,18 +389,18 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,infofmt="S250",
     copen     = np.genfromtxt(infofile,skip_header=infohdr,names=True,dtype=infofmt)
 
     if loopcols == 'all':
-        if verbose: print ' - loopcals="all" so will attempt replacement of all columns in infofile'
+        if verbose: print(' - loopcals="all" so will attempt replacement of all columns in infofile')
         loopcols = np.asarray(copen.dtype.names).tolist()
 
     Nfiles    = len(copen[loopcols[0]])
-    if verbose: print ' - Performing replacements and generating the '+str(Nfiles)+' TDOSE setup templates ' \
-                                                                                   'described in \n   '+infofile
+    if verbose: print(' - Performing replacements and generating the '+str(Nfiles)+' TDOSE setup templates ' \
+                                                                                   'described in \n   '+infofile)
 
     for setupnumber in xrange(Nfiles):
         replacements = copen[setupnumber]
         newsetup     = outputdirectory+namebase+'_'+replacements['setupname']+'.txt'
         if os.path.isfile(newsetup) & (clobber == False):
-            if verbose: print ' - File '+newsetup+' already exists and clobber = False so moving on to next duplication '
+            if verbose: print(' - File '+newsetup+' already exists and clobber = False so moving on to next duplication ')
             continue
         else:
             fout = open(newsetup,'w')
@@ -442,8 +442,8 @@ def build_2D_cov_matrix(sigmax,sigmay,angle,verbose=True):
     covmatrix = tu.build_2D_cov_matrix(3,1,35)
 
     """
-    if verbose: print ' - Build 2D covariance matrix with varinaces (x,y)=('+str(sigmax)+','+str(sigmay)+\
-                      ') and then rotated '+str(angle)+' degrees'
+    if verbose: print(' - Build 2D covariance matrix with varinaces (x,y)=('+str(sigmax)+','+str(sigmay)+\
+                      ') and then rotated '+str(angle)+' degrees')
     cov_orig      = np.zeros([2,2])
     cov_orig[0,0] = sigmay**2.0
     cov_orig[1,1] = sigmax**2.0
@@ -489,7 +489,7 @@ def gen_noisy_cube(cube,type='poisson',gauss_std=0.5,verbose=True):
     cube_with_noise = tu.gen_noisy_cube(datacube,type='gauss',gauss_std='0.5')
 
     """
-    if verbose: print ' - Generating "'+type+'" noise on data cube'
+    if verbose: print(' - Generating "'+str(type)+'" noise on data cube')
     if type == 'poisson':
         cube_with_noise = np.random.poisson(lam=cube, size=None)
     elif type == 'gauss':
@@ -525,18 +525,18 @@ def gen_psfed_cube(cube,type='gauss',type_param=[0.5,1.0],use_fftconvolution=Fal
     --- EXAMPLE OF USE ---
 
     """
-    if verbose: print ' - Applying a '+type+' PSF to data cube'
+    if verbose: print(' - Applying a '+type+' PSF to data cube')
     Nparam  = len(type_param)
     Nlayers = cube.shape[0]
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if type == 'gauss':
         if Nparam == 1:
-            if verbose: print '   No wavelength dependence; duplicating kernel for all layers'
+            if verbose: print('   No wavelength dependence; duplicating kernel for all layers')
             kernel  = ac.Gaussian2DKernel(type_param[0])
             kernels = [kernel]*Nlayers
         elif Nparam == 2:
-            if verbose: print '   Wavelength dependence; looping over layers to generate kernels'
+            if verbose: print('   Wavelength dependence; looping over layers to generate kernels')
             if Nlayers != len(type_param[1]):
                 sys.exit(' ---> The number of wavelength scalings provided ('+str(len(type_param[1]))+
                          ') is different from the number of layers in cube ('+str(Nlayers)+')')
@@ -549,11 +549,11 @@ def gen_psfed_cube(cube,type='gauss',type_param=[0.5,1.0],use_fftconvolution=Fal
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     elif type == 'moffat':
         if Nparam == 2:
-            if verbose: print '   No wavelength dependence; duplicating kernel for all layers'
+            if verbose: print('   No wavelength dependence; duplicating kernel for all layers')
             kernel  = ac.Moffat2DKernel(type_param[0],type_param[1])
             kernels = [kernel]*Nlayers
         elif Nparam == 4:
-            if verbose: print '   Wavelength dependence; looping over layers to generate kernels'
+            if verbose: print('   Wavelength dependence; looping over layers to generate kernels')
             if (Nlayers != len(type_param[2])) or (Nlayers != len(type_param[3])):
                 sys.exit(' ---> The number of wavelength scalings provided ('+str(len(type_param[2]))+
                          ' and '+str(len(type_param[3]))+
@@ -569,7 +569,7 @@ def gen_psfed_cube(cube,type='gauss',type_param=[0.5,1.0],use_fftconvolution=Fal
         sys.exit(' ---> type="'+type+'" is not valid in call to mock_cube_sources.gen_smoothed_cube() ')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    if verbose: print ' - Applying convolution kernel ('+type+') to each wavelength layer '
+    if verbose: print(' - Applying convolution kernel ('+type+') to each wavelength layer ')
     cube_psfed = tu.perform_2Dconvolution(cube,kernels,use_fftconvolution=use_fftconvolution,verbose=True)
 
     return cube_psfed
@@ -621,16 +621,16 @@ def gen_aperture(imgsize,ypos,xpos,radius,pixval=1,showaperture=False,verbose=Tr
     apertureimg  = tu.gen_aperture([2000,4000],900,1700,150,showaperture=True)
 
     """
-    if verbose: print ' - Generating aperture in image (2D array)'
+    if verbose: print(' - Generating aperture in image (2D array)')
     y , x    = np.ogrid[-ypos+1.:imgsize[0]-ypos+1., -xpos+1.:imgsize[1]-xpos+1.] # +1s make sure pixel indication starts at pixel 1,1
     mask     = x*x + y*y <= radius**2.
     aperture = np.zeros(imgsize)
 
-    if verbose: print ' - Assigning pixel value '+str(pixval)+' to aperture'
+    if verbose: print(' - Assigning pixel value '+str(pixval)+' to aperture')
     aperture[mask] = pixval
 
     if showaperture:
-        if verbose: print ' - Displaying resulting image of aperture (added background noise)'
+        if verbose: print(' - Displaying resulting image of aperture (added background noise)')
         noisimg = np.random.normal(0,pixval/5.,imgsize)
         noisimg[mask] = pixval
         plt.imshow(noisimg,interpolation='none')
@@ -677,12 +677,12 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,savefits=False,v
     gauss2DimgNorm  = tu.gen_2Dgauss([33,33],covmatrix,scale,show2Dgauss=True,savefits=True)
 
     """
-    if verbose: print ' - Generating multivariate_normal object for generating 2D gauss using ',
+    if verbose: print(' - Generating multivariate_normal object for generating 2D gauss using ')
     if method == 'scipy':
-        if verbose: print ' scipy.stats.multivariate_normal.pdf() '
+        if verbose: print(' scipy.stats.multivariate_normal.pdf() ')
         mvn     = multivariate_normal([0, 0], cov)
 
-        if verbose: print ' - Setting up grid to populate with 2D gauss PDF'
+        if verbose: print(' - Setting up grid to populate with 2D gauss PDF')
         #x, y = np.mgrid[-np.ceil(size[0]/2.):np.floor(size[0]/2.):1.0, -np.ceil(size[1]/2.):np.floor(size[1]/2.):1.0] #LT170707
         x, y = np.mgrid[-np.floor(size[0]/2.):np.ceil(size[0]/2.):1.0, -np.floor(size[1]/2.):np.ceil(size[1]/2.):1.0]
         pos = np.zeros(x.shape + (2,))
@@ -690,7 +690,7 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,savefits=False,v
 
         gauss2D = mvn.pdf(pos)
     elif method == 'matrix':
-        if verbose: print ' loop over matrix expression '
+        if verbose: print(' loop over matrix expression ')
         gauss2D = np.zeros([np.int(np.ceil(size[0])),np.int(np.ceil(size[1]))])
         mean    = np.array([np.floor(size[0]/2.),np.floor(size[1]/2.)])
         norm    = 1/np.linalg.det(np.sqrt(cov))/2.0/np.pi
@@ -712,18 +712,18 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,savefits=False,v
 
     gauss2D = tu.shift_2Dprofile(gauss2D,[ypos,xpos],showprofiles=False,origin=0)
 
-    if verbose: print ' - Scaling 2D gaussian by a factor '+str(scale)
+    if verbose: print(' - Scaling 2D gaussian by a factor '+str(scale))
     gauss2D = gauss2D*scale
 
     if show2Dgauss:
         savename = './Generated2Dgauss.pdf'
-        if verbose: print ' - Saving resulting image of 2D gaussian to '+savename
+        if verbose: print(' - Saving resulting image of 2D gaussian to '+savename)
         plt.clf()
         centerdot = gauss2D*0.0
         center    = [int(gauss2D.shape[0]/2.),int(gauss2D.shape[1]/2.)]
         centerdot[center[1],center[0]] = 2.0*np.max(gauss2D)
-        print ' - Center of gaussian (pixelized - marked in plot):',center
-        print ' - Center of gaussian (subpixel)                  :',[ypos,xpos]
+        print(' - Center of gaussian (pixelized - marked in plot):'+str(center))
+        print(' - Center of gaussian (subpixel)                  :'+str([ypos,xpos]))
         plt.imshow(gauss2D-centerdot,interpolation=None,origin='lower')
         plt.colorbar()
         plt.title('Generated 2D Gauss')
@@ -736,7 +736,7 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,savefits=False,v
         hdus     = [hduimg]
         hdulist  = pyfits.HDUList(hdus)           # turn header into to hdulist
         hdulist.writeto(fitsname,clobber=True)    # write fits file (clobber=True overwrites excisting file)
-        if verbose: print ' - Saved image of shifted profile to '+fitsname
+        if verbose: print(' - Saved image of shifted profile to '+fitsname)
     return gauss2D
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_2Dsersic(size,parameters,normalize=False,show2Dsersic=False,savefits=False,verbose=True):
@@ -790,11 +790,11 @@ def gen_2Dsersic(size,parameters,normalize=False,show2Dsersic=False,savefits=Fal
     if show2Dsersic:
         plt.clf()
         savename = './Generated2Dsersic.pdf'
-        if verbose: print ' - Displaying resulting image of 2D sersic in '+savename
+        if verbose: print(' - Displaying resulting image of 2D sersic in '+savename)
         centerdot = sersic2D*0.0
         center    = [int(sersic2D.shape[0]/2.),int(sersic2D.shape[1]/2.)]
         # centerdot[center[1],center[0]] = 2.0*np.max(sersic2D)
-        print ' - Center of Sersic (pixelized - marked in plot):',center
+        print(' - Center of Sersic (pixelized - marked in plot): '+str(center))
         plt.imshow(sersic2D,interpolation=None,origin='lower')
         plt.colorbar()
         plt.title('Generated 2D Sersic')
@@ -807,7 +807,7 @@ def gen_2Dsersic(size,parameters,normalize=False,show2Dsersic=False,savefits=Fal
         hdus     = [hduimg]
         hdulist  = pyfits.HDUList(hdus)           # turn header into to hdulist
         hdulist.writeto(fitsname,clobber=True)    # write fits file (clobber=True overwrites excisting file)
-        if verbose: print ' - Saved image of shifted profile to '+fitsname
+        if verbose: print(' - Saved image of shifted profile to '+fitsname)
 
     return sersic2D
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -912,7 +912,7 @@ def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False,origin=1,sp
         plt.title('Positioned Source')
         plt.savefig(savename)
         plt.clf()
-        if verbose: print ' - Saved image of shifted profile to '+savename
+        if verbose: print(' - Saved image of shifted profile to '+savename)
 
     if savefits:
         fitsname = './Shifted2Dprofile.fits'
@@ -920,7 +920,7 @@ def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False,origin=1,sp
         hdus     = [hduimg]
         hdulist  = pyfits.HDUList(hdus)           # turn header into to hdulist
         hdulist.writeto(fitsname,clobber=True)    # write fits file (clobber=True overwrites excisting file)
-        if verbose: print ' - Saved image of shifted profile to '+fitsname
+        if verbose: print(' - Saved image of shifted profile to '+fitsname)
 
     return profile_shifted
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -1044,7 +1044,7 @@ def numerical_convolution_image(imgarray,kerneltype,saveimg=False,clobber=False,
         kernel    = kerneltype
         kernelstr = 'astropy Guass/Moffat'
 
-    if verbose: print ' - Convolving image with a '+kernelstr+' kernel using astropy convolution routines'
+    if verbose: print(' - Convolving image with a '+kernelstr+' kernel using astropy convolution routines')
 
 
     if (np.float(imgarray.shape[0]/2.0)-np.int(imgarray.shape[0]/2.0) == 0) or \
@@ -1052,8 +1052,8 @@ def numerical_convolution_image(imgarray,kerneltype,saveimg=False,clobber=False,
             (np.float(kernel.shape[0]/2.0)-np.int(kernel.shape[0]/2.0) == 0) or \
             (np.float(kernel.shape[1]/2.0)-np.int(kernel.shape[1]/2.0) == 0) or \
             use_scipy_conv:
-        if verbose: print ' - Convolving using scipy.ndimage.filters.convolve() as at least one dimension of kernel or image is even; ' \
-                          'no interpolation over NaN values'
+        if verbose: print(' - Convolving using scipy.ndimage.filters.convolve() as at least one dimension of kernel or image is even; ' \
+                          'no interpolation over NaN values')
         if norm_kernel & (np.sum(kernel) != 1.0):
             kernel = kernel/np.sum(kernel)
 
@@ -1067,21 +1067,21 @@ def numerical_convolution_image(imgarray,kerneltype,saveimg=False,clobber=False,
             sys.exit(' ---> Astropy convolution requires kernel to have same size as image (but at least one size is smaller)')
 
         if (kernel.shape[0] > imgarray.shape[0]) or (kernel.shape[1] > imgarray.shape[1]):
-            if verbose: print ' - Astropy convolution requires kernel to have same size as image (but it is larger); '
-            if verbose: print '   Extracting center of kernel to use for convolution'
+            if verbose: print(' - Astropy convolution requires kernel to have same size as image (but it is larger); ')
+            if verbose: print('   Extracting center of kernel to use for convolution')
             kernel_use = tu.get_kernelcenter(imgarray.shape,kernel,useMaxAsCenter=True,verbose=False)
         else:
             kernel_use = kernel
 
         if convolveFFT:
-            if verbose: print ' - Convolving using astropy.convolution.convolve_fft(); interpolation over NaN values'
+            if verbose: print(' - Convolving using astropy.convolution.convolve_fft(); interpolation over NaN values')
             img_conv = convolution.convolve_fft(imgarray, kernel_use, boundary='fill',
                                                 fill_value=fill_value,normalize_kernel=norm_kernel, mask=imgmask,
                                                 crop=True, return_fft=False, fft_pad=None,
                                                 psf_pad=None, interpolate_nan=False, quiet=False,
                                                 ignore_edge_zeros=False, min_wt=0.0)
         else:
-            if verbose: print ' - Convolving using astropy.convolution.convolve(); interpolation over NaN values'
+            if verbose: print(' - Convolving using astropy.convolution.convolve(); interpolation over NaN values')
             img_conv = convolution.convolve(imgarray, kernel_use, boundary='fill',
                                             fill_value=fill_value, normalize_kernel=norm_kernel, mask=imgmask)
 
@@ -1123,7 +1123,7 @@ def get_kernelcenter(shape,kernel,useMaxAsCenter=False,verbose=True):
     if useMaxAsCenter:
         cenpix = np.where(kernel == np.max(kernel))
         if len(cenpix[0]) > 1:
-            print ' WARNING: '+str(len(cenpix[0]))+' pixels with value max(Kernel). Using the first as center'
+            print(' WARNING: '+str(len(cenpix[0]))+' pixels with value max(Kernel). Using the first as center')
         xcen   = cenpix[1][0]
         ycen   = cenpix[0][0]
     else:
@@ -1144,14 +1144,14 @@ def get_kernelcenter(shape,kernel,useMaxAsCenter=False,verbose=True):
     else:
         kernelcen = None
 
-    if verbose: print ' - Input kernel shape:                     ',kernel.shape
-    if verbose: print ' - Returned kernel center shape:           ',kernelcen.shape
+    if verbose: print(' - Input kernel shape:                     '+str(kernel.shape))
+    if verbose: print(' - Returned kernel center shape:           '+str(kernelcen.shape))
 
-    if verbose: print ' - Max value of input kernel:              ',np.max(kernel)
-    if verbose: print ' - Max value of returned kernel center:    ',np.max(kernelcen)
+    if verbose: print(' - Max value of input kernel:              '+str(np.max(kernel)))
+    if verbose: print(' - Max value of returned kernel center:    '+str(np.max(kernelcen)))
 
-    if verbose: print ' - Location of max value in input kernel:  ',np.where(kernel == np.max(kernel))
-    if verbose: print ' - Location of max value in kernel center: ',np.where(kernelcen == np.max(kernelcen))
+    if verbose: print(' - Location of max value in input kernel:  '+str(np.where(kernel == np.max(kernel))))
+    if verbose: print(' - Location of max value in kernel center: '+str(np.where(kernelcen == np.max(kernelcen))))
 
     return kernelcen
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -1340,8 +1340,8 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
     cutouts     = tu.extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],clobber=True,imgfiles=[imgfile],imgexts=[0])
 
     """
-    if verbose: print ' --- tdose_utilities.extract_subcube() --- '
-    if verbose: print ' - Extracting sub data cube from :\n   '+cubefile
+    if verbose: print(' --- tdose_utilities.extract_subcube() --- ')
+    if verbose: print(' - Extracting sub data cube from :\n   '+cubefile)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if os.path.isfile(outname) & (clobber == False):
         sys.exit(outname+' already exists and clobber=False ')
@@ -1352,19 +1352,19 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
     Ncubes    = len(cubeext)
     hdrs_all  = []
     for cc, cx in enumerate(cubeext):
-        if verbose: print '\n - Cutting out wavelength layes of cube in extension '+str(cx)
+        if verbose: print('\n - Cutting out wavelength layes of cube in extension '+str(cx))
         cubedata = pyfits.open(cubefile)[cx].data
         cubehdr  = pyfits.open(cubefile)[cx].header
         Nlayers  = cubedata.shape[0]
 
-        if verbose: print ' - Removing comments and history as well as "section title entries" ' \
-                          'from fits header as "newline" is non-ascii character'
+        if verbose: print(' - Removing comments and history as well as "section title entries" ' \
+                          'from fits header as "newline" is non-ascii character')
         striphdr   = tu.strip_header(cubehdr.copy())
         cubewcs    = wcs.WCS(striphdr)
         cubewcs_2D = tu.WCS3DtoWCS2D(cubewcs.copy())
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbose: print ' - Extracting sub-cube based on cutout bounding box of first layer'
+        if verbose: print(' - Extracting sub-cube based on cutout bounding box of first layer')
         firstlayer    = 0
         try:
             cutout_layer  = Cutout2D(cubedata[firstlayer,:,:], skyc, size, wcs=cubewcs_2D, mode='partial')
@@ -1386,7 +1386,7 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
                     sys.stdout.flush()
                 cutout_layer        = Cutout2D(cubedata[ll,:,:], skyc, size, wcs=cubewcs_2D, mode='partial')
                 cutout_cube[ll,:,:] = cutout_layer.data
-            if verbose: print '\n   done'
+            if verbose: print('\n   done')
         else:
             cutout_cube         = np.zeros([Nlayers,cutout_layer.data.shape[0],cutout_layer.data.shape[1]])*np.nan
 
@@ -1401,12 +1401,12 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
             cutouts.append(cutout_cube)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Saving sub-cubes to '+outname
+    if verbose: print(' - Saving sub-cubes to '+outname)
     hducube = pyfits.PrimaryHDU()  # creating default fits header
     hdulist = [hducube]
 
     for cc, cx in enumerate(cubeext):
-        if verbose: print '   Add clean version of cube to extension               '+str(cx)
+        if verbose: print('   Add clean version of cube to extension               '+str(cx))
         hducutout        = pyfits.ImageHDU(cutouts[cc])
         for key in hdrs_all[cc]:
             if not key in hducutout.header.keys():
@@ -1424,7 +1424,7 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if imgfiles is not None:
         Nimg = len(imgfiles)
-        if verbose: print ' - Extracting images corresponding to cube from '+str(Nimg)+' images in imgfiles provided:\n'
+        if verbose: print(' - Extracting images corresponding to cube from '+str(Nimg)+' images in imgfiles provided:\n')
         if imgexts is None:
             imgexts = [0]*Nimg
 
@@ -1465,28 +1465,28 @@ def extract_subimage(imgfile,ra,dec,cutoutsize,outname=None,clobber=False,imgext
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Will extract '+str(cutoutsize[0])+'X'+str(cutoutsize[1])+\
-                      ' arcsec subimage centered on ra,dec='+str(ra)+','+str(dec)+' from:\n   '+imgfile
+    if verbose: print(' - Will extract '+str(cutoutsize[0])+'X'+str(cutoutsize[1])+\
+                      ' arcsec subimage centered on ra,dec='+str(ra)+','+str(dec)+' from:\n   '+imgfile)
 
     imgdata  = pyfits.open(imgfile)[imgext].data
     imghdr   = pyfits.open(imgfile)[imgext].header
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Removing comments and history as well as "section title entries" ' \
-                      'from fits header as "newline" is non-ascii character'
+    if verbose: print(' - Removing comments and history as well as "section title entries" ' \
+                      'from fits header as "newline" is non-ascii character')
     striphdr = tu.strip_header(imghdr.copy())
     imgwcs   = wcs.WCS(striphdr)
     skyc     = SkyCoord(ra, dec, frame='fk5', unit=(units.deg,units.deg))
     size     = units.Quantity((  cutoutsize[1], cutoutsize[0]), units.arcsec)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Cutting out data and updating WCS info'
+    if verbose: print(' - Cutting out data and updating WCS info')
     cutout  = Cutout2D(imgdata, skyc, size, wcs=imgwcs)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if outname is not None:
         cuthdr  = cutout.wcs.to_header()
-        if verbose: print ' - Update fits header and save file to \n   '+outname
+        if verbose: print(' - Update fits header and save file to \n   '+outname)
         imghdrkeys = imghdr.keys()
         for key in cuthdr.keys():
             if key in imghdrkeys:
@@ -1545,7 +1545,7 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
         if verbose: ' Did not find the keyword "MODTYPE" in the fits header; assuming the parameters are from gaussian models'
         paramtype = 'gauss'
 
-    if verbose: print ' - Generating DS9 region file from model paramter file'
+    if verbose: print(' - Generating DS9 region file from model paramter file')
     paramarray = tu.build_paramarray(fitstable,verbose=True)
     scale      = wcs.utils.proj_plane_pixel_scales(wcsinfo)*3600.0   # pix scale in arcsec
 
@@ -1571,7 +1571,7 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
         sys.exit(' ---> Invalid MODEL type keyword provide to tu.model_ds9region()')
 
     Nobj       = len(paramarray)/Nparam
-    if verbose: print ' - Converting to wcs coordinates'
+    if verbose: print(' - Converting to wcs coordinates')
     for oo in xrange(Nobj):
         ypix      = paramarray[oo*Nparam+0]
         xpix      = paramarray[oo*Nparam+1]
@@ -1596,7 +1596,7 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
 
         fout.write(string+' \n')
     fout.close()
-    if verbose: print ' - Saved region file to '+outputfile
+    if verbose: print(' - Saved region file to '+outputfile)
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,sourcecatradius,imgheader,
                                outname='./tdose_sourcecat_from_fitscat.txt',newsources=None,
@@ -1641,7 +1641,7 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
 
 
     """
-    if verbose: print ' - Generating TDOSE source catalog for FoV modeling'
+    if verbose: print(' - Generating TDOSE source catalog for FoV modeling')
     catdat      = pyfits.open(fitscatalog)[1].data
     ids_all     = catdat[idcol]
     ras_all     = catdat[racol]
@@ -1660,7 +1660,7 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
     else:
         fluxes_all  = catdat[fluxcol]*fluxf
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Finding objects within r = '+str(sourcecatradius)+' of [ra,dec]_center = '+str(sourcecatcenter)
+    if verbose: print(' - Finding objects within r = '+str(sourcecatradius)+' of [ra,dec]_center = '+str(sourcecatcenter))
     coordcenter     = SkyCoord(np.asarray([sourcecatcenter[0]]), np.asarray([sourcecatcenter[1]]), frame='fk5', unit=(units.deg,units.deg))
     fitscatSkyCoord = SkyCoord(ra=ras_all*u.degree, dec=decs_all*u.degree)
 
@@ -1674,7 +1674,7 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
     if fluxfactor == 'separation':
         fluxes                     = separations
     if newsources is not None:
-        if verbose: print ' - Appending additional "newsources" to source list from fits catalog'
+        if verbose: print(' - Appending additional "newsources" to source list from fits catalog')
         for newsource in newsources:
             parentids   = np.append(parentids,newsource[0])
             ids         = np.append(ids,newsource[1])
@@ -1692,7 +1692,7 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
     if imgheader is None:
         sys.exit(' ---> Image header not provided so cannot calculate pixel positions; please provide one')
     else:
-        if verbose: print ' - Converting ra and dec values using wcs info from header to pixel positions'
+        if verbose: print(' - Converting ra and dec values using wcs info from header to pixel positions')
         striphdr   = tu.strip_header(imgheader.copy(),verbose=verbose)
         wcs_in     = wcs.WCS(striphdr)
         skycoord   = SkyCoord(ras, decs, frame='fk5', unit='deg')
@@ -1702,10 +1702,10 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if (clobber == False) & os.path.isfile(outname):
-        if verbose: print ' - WARNING: Output ('+outname+') already exists and clobber=False, hence returning None'
+        if verbose: print(' - WARNING: Output ('+outname+') already exists and clobber=False, hence returning None')
         return None
     else:
-        if verbose: print ' - Will save source catalog to '+outname+' (overwriting any existing file)'
+        if verbose: print(' - Will save source catalog to '+outname+' (overwriting any existing file)')
         fout = open(outname,'w')
         if fluxfactor == 'separation':
             sepstring = '(NB: "fluxscale" contains separations to central coordinate frp, running with fluxfactor="separations")'
@@ -1725,13 +1725,13 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if generateDS9reg:
             regionfile = outname.replace('.txt','.reg')
-            if verbose: print ' - Storing DS9 region file to '+regionfile
+            if verbose: print(' - Storing DS9 region file to '+regionfile)
             idsstr     = [str(id) for id in ids]
             tu.create_simpleDS9region(regionfile,ras,decs,color='red',circlesize=0.5,textlist=idsstr,clobber=clobber)
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
         outnamefits = outname.replace('.txt','.fits')
-        if verbose: print ' - Save fits version of source catalog to '+outnamefits
+        if verbose: print(' - Save fits version of source catalog to '+outnamefits)
         fitsfmt       = ['D','D','D','D','D','D','D']
         sourcecatfits = tu.ascii2fits(outname,asciinames=True,skip_header=2,fitsformat=fitsfmt,verbose=verbose)
 
@@ -1759,7 +1759,7 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
     verbose             Toggle verbosity
 
     """
-    if verbose: print ' - Generating TDOSE source catalog for FoV modeling'
+    if verbose: print(' - Generating TDOSE source catalog for FoV modeling')
     if sextractorfile.endswith('.fits'):
         sexdat  = pyfits.open(sextractorfile)[1].data
         ids     = sexdat[idcol]
@@ -1775,9 +1775,9 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if imgheader is None:
-        if verbose: print ' - Image header not provided; assuming ra and dec col are in pixel units'
+        if verbose: print(' - Image header not provided; assuming ra and dec col are in pixel units')
     else:
-        if verbose: print ' - Image header provided; converting ra and dec values using wcs info from header'
+        if verbose: print(' - Image header provided; converting ra and dec values using wcs info from header')
         striphdr   = tu.strip_header(imgheader.copy(),verbose=verbose)
         wcs_in     = wcs.WCS(striphdr)
         skycoord   = SkyCoord(ras, decs, frame='fk5', unit='deg')
@@ -1786,10 +1786,10 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
         ypos       = pixcoord[1]
 
     if (clobber == False) & os.path.isfile(outname):
-        if verbose: print ' - WARNING: Output ('+outname+') already exists and clobber=False, hence returning None'
+        if verbose: print(' - WARNING: Output ('+outname+') already exists and clobber=False, hence returning None')
         return None
     else:
-        if verbose: print ' - Will save source catalog to '+outname+' (overwriting any existing file)'
+        if verbose: print(' - Will save source catalog to '+outname+' (overwriting any existing file)')
         fout = open(outname,'w')
         fout.write('# TDOSE Source catalog generated with tdose_utilities.gen_sourcecat_from_SExtractorfile() from:\n')
         fout.write('# '+sextractorfile+'\n')
@@ -1808,13 +1808,13 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if generateDS9reg:
             regionfile = outname.replace('.txt','.reg')
-            if verbose: print ' - Storing DS9 region file to '+regionfile
+            if verbose: print(' - Storing DS9 region file to '+regionfile)
             idsstr     = [str(id) for id in ids]
             tu.create_simpleDS9region(regionfile,ras,decs,color='red',circlesize=0.5,textlist=idsstr,clobber=clobber)
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
         outnamefits = outname.replace('.txt','.fits')
-        if verbose: print ' - Save fits version of source catalog to '+outnamefits
+        if verbose: print(' - Save fits version of source catalog to '+outnamefits)
         fitsfmt       = ['D','D','D','D','D','D']
         sourcecatfits = tu.ascii2fits(outname,asciinames=True,skip_header=2,fitsformat=fitsfmt,verbose=verbose)
 
@@ -1866,16 +1866,16 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
     paramlist = tu.gen_paramlist_from_SExtractorfile(sexfile,imgheader=imgheader,Nsigma=8,savefitsimage=False,objects=[10195])
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Loading SExtractor catalog'
+    if verbose: print(' - Loading SExtractor catalog')
     try:
         sourcedat = pyfits.open(sextractorfile)[1].data
     except:
         sys.exit(' ---> Problems loading fits catalog')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if imgheader is None:
-        if verbose: print ' - Image header not provided; assuming ra and dec col are in pixel units'
+        if verbose: print(' - Image header not provided; assuming ra and dec col are in pixel units')
     else:
-        if verbose: print ' - Image header provided; converting ra and dec values using wcs info from header'
+        if verbose: print(' - Image header provided; converting ra and dec values using wcs info from header')
         striphdr = tu.strip_header(imgheader.copy())
         wcs_in   = wcs.WCS(striphdr)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1886,8 +1886,8 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
     else:
         Nobjects_convert = len(objects)
 
-    if verbose: print ' - Assembling paramter list for '+str(Nobjects_convert)+\
-                      ' sources found in catalog (tu.gen_paramlist_from_SExtractorfile)'
+    if verbose: print(' - Assembling paramter list for '+str(Nobjects_convert)+\
+                      ' sources found in catalog (tu.gen_paramlist_from_SExtractorfile)')
     paramlist = []
     for oo in xrange(Nobjects_convert):
         if objects[oo] in sourcedat[idcol]:
@@ -1914,7 +1914,7 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
             ang   = sourcedat[angle][pp]
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         else: # adding simple initial guess for objects not in photometric catalog
-            if verbose: print '   WARNING: '+str(objects[oo])+' not in photometric catalog; addind simple point source to paramter list'
+            if verbose: print('   WARNING: '+str(objects[oo])+' not in photometric catalog; addind simple point source to paramter list')
             sigx,sigy,ang,fs = 1.0,1.0,0.0,1.0
             xpos = objxpos[oo]
             ypos = objypos[oo]
@@ -1925,14 +1925,14 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if saveDS9region:
-        if verbose: print ' - Generating DS9 region file with object parameters'
+        if verbose: print(' - Generating DS9 region file with object parameters')
         if ds9regionname is None:
             ds9region_file = sextractorfile.replace('.fits','_tdose.reg')
         else:
             ds9region_file = ds9regionname
 
         if os.path.isfile(ds9region_file) & (clobber == False):
-            if verbose: print ' - ds9 region file '+ds9region_file+' already exists and clobber=False so skipping'
+            if verbose: print(' - ds9 region file '+ds9region_file+' already exists and clobber=False so skipping')
         else:
             fout = open(ds9region_file,'w')
             fout.write("# Region file format: DS9 version 4.1 \nimage\n")
@@ -1953,15 +1953,15 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
             fout.close()
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if savefitsimage:
-        if verbose: print ' - Generating image with object models from object parameters'
+        if verbose: print(' - Generating image with object models from object parameters')
         if fitsimagename is None:
             fitsimage = sextractorfile.replace('.fits','_tdose_modelimage.fits')
         else:
             fitsimage = fitsimagename
 
         if imgheader is None:
-            if verbose: print ' - No image header provided for fits file ' \
-                              '(to get wcs and image model image dimensions) so skipping'
+            if verbose: print(' - No image header provided for fits file ' \
+                              '(to get wcs and image model image dimensions) so skipping')
         else:
             imgsize   = np.array([striphdr['NAXIS2'],striphdr['NAXIS1']])
             tmf.save_modelimage(fitsimage,paramlist_arr,imgsize,param_init=False,clobber=clobber,
@@ -1975,7 +1975,7 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
 
         objparam = np.resize(paramlist_arr,(Nobj,6))
 
-        if verbose: print ' - Storing fitted source paramters as fits table and returning output'
+        if verbose: print(' - Storing fitted source paramters as fits table and returning output')
         if fitstablename is None:
             tablename = sextractorfile.replace('.fits','_tdose_paramlist.fits')
         else:
@@ -2021,11 +2021,11 @@ def ascii2fits(asciifile,asciinames=True,skip_header=0,outpath=None,fitsformat='
 
     """
     #-------------------------------------------------------------------------------------------------------------
-    if verbose: print ' - Reading ascii file ',asciifile
+    if verbose: print(' - Reading ascii file '+str(asciifile))
     data    = np.genfromtxt(asciifile,names=asciinames,skip_header=skip_header,comments='#',dtype=None)
     keys    = data.dtype.names
     #-------------------------------------------------------------------------------------------------------------
-    if verbose: print ' - Initialize and fill dictionary with data'
+    if verbose: print(' - Initialize and fill dictionary with data')
     datadic = {}
     for kk in keys:
         datadic[kk] = []
@@ -2035,7 +2035,7 @@ def ascii2fits(asciifile,asciinames=True,skip_header=0,outpath=None,fitsformat='
         except: # if only one row of data is to be written
             datadic[kk] = np.asarray([data[kk]])
 
-    if verbose: print ' - found the columns '+','.join(keys)
+    if verbose: print(' - found the columns '+','.join(keys))
 
     if len(fitsformat) != len(keys):
         fitsformat = np.asarray([fitsformat]*len(keys))
@@ -2059,7 +2059,7 @@ def ascii2fits(asciifile,asciinames=True,skip_header=0,outpath=None,fitsformat='
     thdulist = pyfits.HDUList([hdu, tbhdu])    # combine primary and table header to hdulist
     thdulist.writeto(outputfile,clobber=True)  # write fits file (clobber=True overwrites excisting file)
     #-------------------------------------------------------------------------------------------------------------
-    if verbose: print ' - Wrote the data to: ',outputfile
+    if verbose: print(' - Wrote the data to: '+str(outputfile))
     return outputfile
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def SExtractorCat2fits(sextractorfiles,stringcols=[1],header=73,verbose=True):
@@ -2164,17 +2164,17 @@ def extract_fitsextension(fitsfile,extension,outputname='default',conversion='No
         outputname = fitsfile.replace('.fits','_extension'+str(extension)+'.fits')
 
     if conversion == 'ivar2sigma':
-        if verbose: print ' - Converting extension from units of inverse variance to sigma (standard deviation)'
+        if verbose: print(' - Converting extension from units of inverse variance to sigma (standard deviation)')
         dataarr    = np.sqrt(1.0/dataarr)
         outputname = outputname.replace('.fits','_ivar2sigma.fits')
 
     if useheader4output:
-        if verbose: print ' - Using header of input image for output'
+        if verbose: print(' - Using header of input image for output')
         hdr = pyfits.open(fitsfile)[extension].header
     else:
         hdr = None
 
-    if verbose: print ' - Saving extracted extension to '+outputname
+    if verbose: print(' - Saving extracted extension to '+outputname)
     if os.path.isfile(outputname) & (clobber == False):
         sys.exit(' ----> Output file '+outputname+' already exists and clobber=False')
     else:
@@ -2371,7 +2371,7 @@ P) %s               # Choose: 0=optimize, 1=model, 2=imgblock, 3=subcomps
             elif objecttype == 'sersic':
                 sys.exit(' ---> Sersic galfit model setups not enabled ')
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbose: print '\n   done; closing output file'
+        if verbose: print('\n   done; closing output file')
         fout.close()
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def galfit_buildinput_multiGaussTemplate(filename,dataimg,Ngauss=4,gaussspacing=3,sigmays=[2],sigmaxs=[2],fluxscales=[22],angles=[0.0],
@@ -2489,24 +2489,24 @@ def galfit_run(galfitinputfile,verbose=True,galfitverbose=False,noskyest=False):
 
     """
     currentdir = os.getcwd()
-    if verbose: print ' - Spawning GALFIT command to shell using the input file:\n   '+galfitinputfile
+    if verbose: print(' - Spawning GALFIT command to shell using the input file:\n   '+galfitinputfile)
     datapath = '/'.join(os.path.abspath(galfitinputfile).split('/')[0:-1])+'/'
-    if verbose: print '   (moving to '+datapath+' and working from there)'
+    if verbose: print('   (moving to '+datapath+' and working from there)')
     os.chdir(datapath)
 
     runcmd = 'galfit  '
     if noskyest:
         runcmd = runcmd+' -noskyest '
     runcmd = runcmd + galfitinputfile
-    if verbose: print ' - Will run the GALFIT command:\n   '+runcmd
+    if verbose: print(' - Will run the GALFIT command:\n   '+runcmd)
 
     outputfile = galfitinputfile.replace('.txt','_cmdlineoutput.txt')
-    if verbose: print ' - Will save command line output from GALFIT to \n   '+outputfile
+    if verbose: print(' - Will save command line output from GALFIT to \n   '+outputfile)
     fout = open(outputfile,'w')
     fout.write('####### output from GALFIT run with tdose_utilities.galfit_run() on '+tu.get_now_string()+' #######\n')
     fout.close()
 
-    if verbose: print '   ----------- GALFIT run started on '+tu.get_now_string()+' ----------- '
+    if verbose: print('   ----------- GALFIT run started on '+tu.get_now_string()+' ----------- ')
     process = subprocess.Popen(runcmd, stdout=subprocess.PIPE, shell=True, bufsize=1, universal_newlines=True)
     crashed = False
     Niter   = 'None' # resetting counter
@@ -2542,21 +2542,21 @@ def galfit_run(galfitinputfile,verbose=True,galfitverbose=False,noskyest=False):
             break
 
     if crashed:
-        if verbose: print '\n WARNING - looks like galfit crashed with a mushroom cloud...'
-    if verbose: print '\n   ----------- GALFIT run finished on '+tu.get_now_string()+' ----------- '
+        if verbose: print('\n WARNING - looks like galfit crashed with a mushroom cloud...')
+    if verbose: print('\n   ----------- GALFIT run finished on '+tu.get_now_string()+' ----------- ')
 
-    if verbose: print ' - Renaming and moving output files to image directory :'
+    if verbose: print(' - Renaming and moving output files to image directory :')
     if os.path.isfile('./fit.log'):
-        if verbose: print '   moving  ./fit.log'
+        if verbose: print('   moving  ./fit.log')
         shutil.move('./fit.log',galfitinputfile.replace('.txt','_galfit.log'))
 
     fitoutfiles = glob.glob('./galfit.*')
     if len(fitoutfiles) > 0:
         for ff in fitoutfiles:
-            if verbose: print '   moving  '+ff
+            if verbose: print('   moving  '+str(ff))
             shutil.move(ff,galfitinputfile.replace('.txt','_'+ff.split('/')[-1].replace('.',''))+'result.txt')
 
-    if verbose: print ' - Moving back to '+currentdir
+    if verbose: print(' - Moving back to '+currentdir)
     os.chdir(currentdir)
 
     return outputfile
@@ -2587,7 +2587,7 @@ def galfit_results2paramlist(galfitresults,verbose=True):
 
         if line.startswith('# Component number'):
             objno      = int(line.split('number: ')[-1])
-            if verbose: print ' - extracting infor for object number '+str(objno)
+            if verbose: print(' - extracting infor for object number '+str(objno))
 
         if line.startswith(' 0) '):
             modeltype = line.split(' 0) ')[-1].split('#')[0].strip()
@@ -2625,7 +2625,7 @@ def galfit_results2paramlist(galfitresults,verbose=True):
                 objno     = ''
 
         elif (objno != '') & (modeltype != ''):
-            if verbose: print ' - WARNING modeltype='+modeltype+' for object '+str(objno)+' is unknonw; not added to paramlist'
+            if verbose: print(' - WARNING modeltype='+modeltype+' for object '+str(objno)+' is unknonw; not added to paramlist')
     fin.close()
     return paramlist
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -2691,8 +2691,8 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
     tu.test_sersicprofiles(Ieff=0.0184304803665,reff=1.72,sersicindex=1.0,axisratio=0.3,size=67,angle=-177.98)
 
     """
-    if verbose: print ' - Will convert the '+str(len(galfitmodelfiles))+' GALFIT models into cubes '
-    if verbose: print '\n'
+    if verbose: print(' - Will convert the '+str(len(galfitmodelfiles))+' GALFIT models into cubes ')
+    if verbose: print('\n')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if sourcecat_compinfo is not None:
         compinfo = {}
@@ -2712,7 +2712,7 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     for gg, galfitmodel in enumerate(galfitmodelfiles):
-        if verbose: print ' - Extracting number of components from model extenstion (ext=2) of GALFIT model:\n   '+galfitmodel
+        if verbose: print(' - Extracting number of components from model extenstion (ext=2) of GALFIT model:\n   '+galfitmodel)
         headerinfo = pyfits.open(galfitmodel)[2].header
         modelarr   = pyfits.open(galfitmodel)[2].data
         refimg_hdr = pyfits.open(galfitmodel)[1].header
@@ -2720,7 +2720,7 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
 
         if sourcecat_compinfo is not None:
             sourcecat = galfitmodel.replace('.fits','_sourcecatalog')+'.txt'
-            if verbose: print ' - Component info provided so opening source catalog file:\n   '+sourcecat
+            if verbose: print(' - Component info provided so opening source catalog file:\n   '+sourcecat)
             scat = open(sourcecat,'w')
             scat.write('# Source catalog for '+galfitmodel+'\n')
             scat.write('# Based on component info in '+sourcecat_compinfo+'\n')
@@ -2750,11 +2750,11 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
         Ncomp = len(compkeys)
 
         if Ncomp == 1:
-            if verbose: print ' - Only found one component in header so not turning GALFIT model into cube'
+            if verbose: print(' - Only found one component in header so not turning GALFIT model into cube')
         elif Ncomp == 0:
             sys.exit(' ---> Did not find _any_ components in the GALFIT model header')
         else:
-            if verbose: print ' - Found '+str(Ncomp)+' components in GALFIT model header to populate cube with'
+            if verbose: print(' - Found '+str(Ncomp)+' components in GALFIT model header to populate cube with')
 
         if pointsources is not None:
             pointsourceadded  = False # Reset keyword to keep track of whether point source has been added when needed
@@ -2806,14 +2806,14 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                 nsersic, nsersicerr = tu.galfit_getheadervalue(compnumber,'N',headerinfo)
 
                 Ieff        = tu.get_2DsersicIeff(fluxtot,Re,nsersic,ar,boxiness=0.0,returnFtot=False)
-                if verbose: print ' -',component,': Ieff=',Ieff,' calculated using Ftot = ',fluxtot,'Reff=',Re,'pix','n=',nsersic,\
-                    'axisratio=',ar
+                if verbose: print(' -'+str(component)+': Ieff='+str(Ieff)+' calculated using Ftot = '+str(fluxtot)+
+                                  'Reff='+str(Re)+'pix'+' n='+str(nsersic)+'axisratio='+str(ar))
 
                 ellipticity = 1.0-ar
                 parameters  = [Ieff,Re,nsersic,ellipticity,pa-90]
-                if verbose: print ' -',component,': 2D sersic parameters [Ieff,Reff,Sersic index,ellipticity,angle] =',parameters
+                if verbose: print(' - '+str(component)+': 2D sersic parameters [Ieff,Reff,Sersic index,ellipticity,angle] ='+str(parameters))
 
-                if verbose: print ' - central coordinates are',[yc,xc]
+                if verbose: print(' - central coordinates are'+str([yc,xc]))
                 sersic2Dimg = tu.gen_2Dsersic(modelarr.shape,parameters,show2Dsersic=False,normalize=False)
                 img_shift   = tu.shift_2Dprofile(sersic2Dimg,[yc,xc],padvalue=0.0,showprofiles=False,origin=1,splineorder=1)
 
@@ -2860,9 +2860,9 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
             if convkernels is not None:
                 convkernel = convkernels[gg]
                 if convkernel is None:
-                    if verbose: print ' - Not convoling model with kernel as kernel in "convkernels" list for model '+str(gg)+' was None'
+                    if verbose: print(' - Not convoling model with kernel as kernel in "convkernels" list for model '+str(gg)+' was None')
                 else:
-                    if verbose: print ' - Convoling model with kernel provided'
+                    if verbose: print(' - Convoling model with kernel provided')
                     cubelayer = tu.numerical_convolution_image(cubelayer,convkernel,saveimg=False,clobber=clobber,imgmask=None,
                                                                fill_value=0.0,norm_kernel=True,convolveFFT=False,
                                                                use_scipy_conv=False,verbose=verbose)
@@ -2900,19 +2900,19 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                                        #      extracting 1D spectra with TDOSE.
             scat.close()
             fitscat = sourcecat.replace('.txt','.fits')
-            if verbose: print ' - Save fits version of source catalog to '+fitscat
+            if verbose: print(' - Save fits version of source catalog to '+fitscat)
             fitsfmt       = ['D','D','D','D','D','D','D']
             sourcecatfits = tu.ascii2fits(sourcecat,asciinames=True,skip_header=4,fitsformat=fitsfmt,verbose=verbose)
 
 
         # - - - - - - - - - - - - - - - - - - Saving Model Cube - - - - - - - - - - - - - - - - - -
         cubename = galfitmodel.replace('.fits','_cube')+'.fits'
-        if verbose: print ' - Saving model cube to \n   '+cubename
+        if verbose: print(' - Saving model cube to \n   '+cubename)
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         hducube  = pyfits.PrimaryHDU(cube)       # default HDU with default minimal header
 
         if includewcs:
-            if verbose: print ' - Including WCS information from GALFIT reference image extension   '
+            if verbose: print(' - Including WCS information from GALFIT reference image extension   ')
             wcsheader = pyfits.open(galfitmodel)[1].header
             # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
             hducube.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
@@ -2937,7 +2937,7 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
             hducube.header.append(('CTYPE1 ',wcsheader['CTYPE1']  ,' Right ascension, gnomonic projection'),end=True)
             hducube.header.append(('CTYPE2 ',wcsheader['CTYPE2']  ,' Declination, gnomonic projection'),end=True)
 
-            if verbose: print '   Accounting for GALFIT model offset in WCS reference pixel '
+            if verbose: print('   Accounting for GALFIT model offset in WCS reference pixel ')
             modecenter_xpix, modecenter_ypix,ra_model,dec_model = tu.galfit_getcentralcoordinate(galfitmodel)
             fit_region     = wcsheader['OBJECT']
             cutrange_low_x = int(float(fit_region.split(':')[0].split('[')[-1]))
@@ -2973,7 +2973,7 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
         # - - - - - - - - - - - - - - - - - - Saving Sum Cube Image - - - - - - - - - - - - - - - - - -
         if savecubesumimg:
             imgname = galfitmodel.replace('.fits','_cubesum.fits')
-            if verbose: print ' - Saving model cube to \n   '+imgname
+            if verbose: print(' - Saving model cube to \n   '+imgname)
             cubesum = np.sum(cube,axis=0)
 
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -2981,16 +2981,16 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
             scaletomaxmodelpix = False
             if scaletomaxmodelpix:
                 scalfactor = np.max(modelarr)/np.max(cubesum)
-                print ' -------> Scaled cubesum output by a factor ',scalfactor,' [ max(model)/max(cubesum) ]'
-                print '          max(model)   = ',np.max(modelarr)
-                print '          max(cubesum) = ',np.max(cubesum)
+                print(' -------> Scaled cubesum output by a factor '+str(scalfactor)+' [ max(model)/max(cubesum) ]')
+                print('          max(model)   = '+str(np.max(modelarr)))
+                print('          max(cubesum) = '+str(np.max(cubesum)))
                 cubesum    = cubesum * scalfactor
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
             hduimg  = pyfits.PrimaryHDU(cubesum)
 
             if includewcs:
-                if verbose: print ' - Including WCS information from GALFIT reference image extension   '
+                if verbose: print(' - Including WCS information from GALFIT reference image extension   ')
                 wcsheader = pyfits.open(galfitmodel)[1].header
                 # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
                 hduimg.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
@@ -3001,7 +3001,7 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                 hduimg.header.append(('CTYPE1 ',wcsheader['CTYPE1']  ,' Right ascension, gnomonic projection'),end=True)
                 hduimg.header.append(('CTYPE2 ',wcsheader['CTYPE2']  ,' Declination, gnomonic projection'),end=True)
 
-                if verbose: print '   Accounting for GALFIT model offset in WCS reference pixel '
+                if verbose: print('   Accounting for GALFIT model offset in WCS reference pixel ')
                 modecenter_xpix, modecenter_ypix,ra_model,dec_model = tu.galfit_getcentralcoordinate(galfitmodel)
                 fit_region     = wcsheader['OBJECT']
                 cutrange_low_x = int(float(fit_region.split(':')[0].split('[')[-1]))
@@ -3024,7 +3024,7 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
             hdulist = pyfits.HDUList(hdus)            # turn header into to hdulist
             hdulist.writeto(imgname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbose: print '\n'
+        if verbose: print('\n')
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def galfit_model_ds9region(models,regionfileextension='ds9region',regcolor='red',clobber=False,verbose=True):
     """
@@ -3044,7 +3044,7 @@ def galfit_model_ds9region(models,regionfileextension='ds9region',regcolor='red'
 
     """
     Nmodels = len(models)
-    if verbose: print ' - Generating DS9 region files for '+str(Nmodels)+' GALFIT models provided '
+    if verbose: print(' - Generating DS9 region files for '+str(Nmodels)+' GALFIT models provided ')
     for model in models:
         modelhdr   = pyfits.open(model)[2].header
         comkeys    = []
@@ -3069,7 +3069,7 @@ def galfit_model_ds9region(models,regionfileextension='ds9region',regcolor='red'
                 fout.write(regstr)
 
         fout.close()
-        if verbose: print ' - Saved region file to \n   '+regionfile
+        if verbose: print(' - Saved region file to \n   '+regionfile)
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def galfit_getheadervalue(compnumber,key,headerinfo):
@@ -3121,7 +3121,7 @@ def galfit_getcentralcoordinate(modelfile,coordorigin=1,verbose=True):
     xpix, ypix, ra_model, dec_model = tu.galfit_getcentralcoordinate(fileG,coordorigin=1)
 
     """
-    if verbose: print ' - Will extract central coordinates from '+modelfile
+    if verbose: print(' - Will extract central coordinates from '+modelfile)
     refimg_hdr     = pyfits.open(modelfile)[1].header
     model_hdr      = pyfits.open(modelfile)[2].header
     imgwcs         = wcs.WCS(tu.strip_header(refimg_hdr.copy()))
@@ -3135,7 +3135,7 @@ def galfit_getcentralcoordinate(modelfile,coordorigin=1,verbose=True):
     xpix           = cutrange_low_x + int(xsize/2.)
     ypix           = cutrange_low_y + int(ysize/2.)
 
-    if verbose: print ' - Converting pixel position to coordinates using a pixel origin='+str(coordorigin)
+    if verbose: print(' - Converting pixel position to coordinates using a pixel origin='+str(coordorigin))
     skycoord    = wcs.utils.pixel_to_skycoord(xpix,ypix,imgwcs,origin=coordorigin)
 
     ra_model    = skycoord.ra.value
@@ -3248,7 +3248,7 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Loading setup file to get info on directories to search for TDOSE products'
+    if verbose: print(' - Loading setup file to get info on directories to search for TDOSE products')
     setupdic  =  tu.load_setup(setupfile,verbose=verbose)
 
     if outputdir == 'spec1D_directory':
@@ -3256,12 +3256,12 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
     else:
         outdir = outputdir
 
-    if verbose: print ' - Get main source id for cases where multiple sources were combined using parent ID (ids contain "-")'
+    if verbose: print(' - Get main source id for cases where multiple sources were combined using parent ID (ids contain "-")')
     baseids = []
 
     if objids == 'all':
 
-        if verbose: print ' - Objid = "all" so grabbing IDs from file names in spec1D_directory from setupfile'
+        if verbose: print(' - Objid = "all" so grabbing IDs from file names in spec1D_directory from setupfile')
         specdir  = setupdic['spec1D_directory']
 
         spectra = glob.glob(specdir+setupdic['spec1D_name']+'_'+setupdic['psf_type']+'*.fits')
@@ -3275,10 +3275,10 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
         baseids.append(objid.split('-')[-1])
 
     Nobj = len(objids)
-    if verbose: print ' - Will generate summary plot for the '+str(Nobj)+' objects provided IDs for'
+    if verbose: print(' - Will generate summary plot for the '+str(Nobj)+' objects provided IDs for')
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Looping over objects and generating plots'
+    if verbose: print(' - Looping over objects and generating plots')
     for ii, objid in enumerate(objids):
         if '-' in objid:
             objidstr    = objid
@@ -3539,12 +3539,11 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
                                   plotSNcurve=True,shownoise=True,lthick=lthick,fillalpha=0.30)
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        #if verbose: print ' - Saving plot to',plotname
         plt.savefig(plotname)
         plt.clf()
         plt.close('all')
 
-    if verbose: print '\n ... done '
+    if verbose: print('\n ... done ')
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_overview_plot_image(ax,imagefile,imgext=0,cubelayer=1,title='Img Title?',fontsize=6,lthick=2,alpha=0.5,
@@ -3669,7 +3668,7 @@ def gen_overview_plot_spec(ax,spec1Dfile,title='Spec Title?',xrange=[4800,9300],
             diff    = np.abs(np.asarray(wave)-markwave)
             markent = np.where(diff == np.min(diff))[0]
             if len(markent) == 0:
-                print ' WARNING the "markwave" is outside provided plotting xrange '
+                print(' WARNING the "markwave" is outside provided plotting xrange ')
                 markwave = False
 
         if plotSNcurve:
@@ -3787,7 +3786,7 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         plotname = outputdir+'spec1D'+rangestr+'_'+idstr+'.pdf'
-        if verbose: print ' - Generating '+plotname
+        if verbose: print(' - Generating '+plotname)
         fig = plt.figure(figsize=(10, 3))
         fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
         Fsize  = 10
@@ -3823,7 +3822,7 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         plotname = outputdir+'s2n1D'+rangestr+'_'+idstr+'.pdf'
-        if verbose: print ' - Generating '+plotname
+        if verbose: print(' - Generating '+plotname)
         fig = plt.figure(figsize=(10, 3))
         fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
         Fsize  = 10
@@ -3859,7 +3858,7 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         plotname = outputdir+'spec_gaussOVERmodelimg'+rangestr+'_'+idstr+'.pdf'
-        if verbose: print ' - Generating '+plotname
+        if verbose: print(' - Generating '+plotname)
         fig = plt.figure(figsize=(10, 3))
         fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
         Fsize  = 10
@@ -3878,9 +3877,9 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
         plt.plot([tg_spec['wave'][plotcubelayer],tg_spec['wave'][plotcubelayer]],yrange,'--k',alpha=0.5,
                  label='Layer '+str(plotcubelayer))
 
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   mean(gauss/modelimg)   = ',np.mean(ratio)
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss/modelimg) = ',np.median(ratio)
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   std(gauss/modelimg)    = ',np.std(ratio)
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   mean(gauss/modelimg)   = '+str(np.mean(ratio)))
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss/modelimg) = '+str(np.median(ratio)))
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   std(gauss/modelimg)    = '+str(np.std(ratio)))
 
         plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
         plt.ylabel('1D Flux: "gauss" / "modelimg"', fontsize=Fsize)
@@ -3898,7 +3897,7 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         plotname = outputdir+'wavescl_gaussOVERmodelimg'+rangestr+'_'+idstr+'.pdf'
-        if verbose: print ' - Generating '+plotname
+        if verbose: print(' - Generating '+plotname)
         fig = plt.figure(figsize=(10, 3))
         fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
         Fsize  = 10
@@ -3917,9 +3916,9 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
         plt.plot([tg_spec['wave'][plotcubelayer],tg_spec['wave'][plotcubelayer]],yrange,'--k',alpha=0.5,
                  label='Layer '+str(plotcubelayer))
 
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   mean(gauss/modelimg)   = ',np.mean(ratio)
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss/modelimg) = ',np.median(ratio)
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   std(gauss/modelimg)    = ',np.std(ratio)
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   mean(gauss/modelimg)   = '+str(np.mean(ratio)))
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss/modelimg) = '+str(np.median(ratio)))
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   std(gauss/modelimg)    = '+str(np.std(ratio)))
 
         plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
         plt.ylabel('Wavescale: "gauss" / "modelimg"', fontsize=Fsize)
@@ -3937,7 +3936,7 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         plotname = outputdir+'sumSMC_gaussOVERmodelimg'+rangestr+'_'+idstr+'.pdf'
-        if verbose: print ' - Generating '+plotname
+        if verbose: print(' - Generating '+plotname)
         fig = plt.figure(figsize=(10, 3))
         fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
         Fsize  = 10
@@ -3956,9 +3955,9 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
         plt.plot([tg_spec['wave'][plotcubelayer],tg_spec['wave'][plotcubelayer]],yrange,'--k',alpha=0.5,
                  label='Layer '+str(plotcubelayer))
 
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   mean(gauss/modelimg)   = ',np.mean(ratio)
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss/modelimg) = ',np.median(ratio)
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   std(gauss/modelimg)    = ',np.std(ratio)
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   mean(gauss/modelimg)   = '+str(np.mean(ratio)))
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss/modelimg) = '+str(np.median(ratio)))
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   std(gauss/modelimg)    = '+str(np.std(ratio)))
 
         plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
         plt.ylabel('sum(SMC): "gauss" / "modelimg"', fontsize=Fsize)
@@ -3976,7 +3975,7 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         plotname = outputdir+'acsmodel_gaussMINUSmodelimg_'+idstr+'.pdf'
-        if verbose: print ' - Generating '+plotname
+        if verbose: print(' - Generating '+plotname)
         fig = plt.figure(figsize=(3, 3))
         fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.15, right=0.9, bottom=0.1, top=0.9)
         Fsize  = 10
@@ -3991,8 +3990,8 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
         plt.imshow(tg_acsmod-sc_acsmod,interpolation=None,origin='lower',vmin=vmin,vmax=vmax)
         plt.colorbar()
 
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   sum(gauss-modelimg)     = ',np.sum(tg_acsmod-sc_acsmod)
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss-modelimg)  = ',np.median(tg_acsmod-sc_acsmod)
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   sum(gauss-modelimg)     = '+str(np.sum(tg_acsmod-sc_acsmod)))
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss-modelimg)  = '+str(np.median(tg_acsmod-sc_acsmod)))
 
         plt.savefig(plotname)
         plt.clf()
@@ -4000,7 +3999,7 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         plotname = outputdir+'acsmodelWCS_gaussMINUSmodelimg_'+idstr+'.pdf'
-        if verbose: print ' - Generating '+plotname
+        if verbose: print(' - Generating '+plotname)
         fig = plt.figure(figsize=(3, 3))
         fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.15, right=0.9, bottom=0.1, top=0.9)
         Fsize  = 10
@@ -4015,8 +4014,8 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
         plt.imshow(tg_cubWCS-sc_cubWCS,interpolation=None,origin='lower',vmin=vmin,vmax=vmax)
         plt.colorbar()
 
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   sum(gauss-modelimg)   = ',np.sum(tg_cubWCS-sc_cubWCS)
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss-modelimg)= ',np.median(tg_cubWCS-sc_cubWCS)
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   sum(gauss-modelimg)   = '+str(np.sum(tg_cubWCS-sc_cubWCS)))
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss-modelimg)= '+str(np.median(tg_cubWCS-sc_cubWCS)))
 
         plt.savefig(plotname)
         plt.clf()
@@ -4024,7 +4023,7 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         plotname = outputdir+'modelcubeSum1D_gaussOVERmodelimg_'+idstr+'.pdf'
-        if verbose: print ' - Generating '+plotname
+        if verbose: print(' - Generating '+plotname)
         fig = plt.figure(figsize=(10, 3))
         fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
         Fsize  = 10
@@ -4047,9 +4046,9 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
                  label='Layer '+str(plotcubelayer))
 
 
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   mean(gauss/modelimg)   = ',np.mean(ratio)
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss/modelimg) = ',np.median(ratio)
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   std(gauss/modelimg)    = ',np.std(ratio)
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   mean(gauss/modelimg)   = '+str(np.mean(ratio)))
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss/modelimg) = '+str(np.median(ratio)))
+        print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   std(gauss/modelimg)    = '+str(np.std(ratio)))
 
         plt.xlabel('Wavelength [\AA]', fontsize=Fsize)
         plt.ylabel('sum(modelcube): "gauss" / "modelimg"', fontsize=Fsize)
@@ -4067,7 +4066,7 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         plotname = outputdir+'modelcubeSum1DOVERWavescl_'+idstr+'.pdf'
-        if verbose: print ' - Generating '+plotname
+        if verbose: print(' - Generating '+plotname)
         fig = plt.figure(figsize=(10, 3))
         fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.06, right=0.81, bottom=0.15, top=0.95)
         Fsize  = 10
@@ -4103,7 +4102,7 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         plotname = outputdir+'modelcube_gaussMINUSmodelimg_'+idstr+'.pdf'
-        if verbose: print ' - Generating '+plotname
+        if verbose: print(' - Generating '+plotname)
         fig = plt.figure(figsize=(3, 3))
         fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.15, right=0.9, bottom=0.1, top=0.9)
         Fsize  = 10
@@ -4118,8 +4117,8 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
         plt.imshow(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:],interpolation=None,origin='lower',vmin=vmin,vmax=vmax)
         plt.colorbar()
 
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   sum(gauss-modelimg)     = ',np.sum(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:])
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss-modelimg)  = ',np.median(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:])
+        #print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   sum(gauss-modelimg)     = ',np.sum(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:])
+        #print('   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss-modelimg)  = ',np.median(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:])
 
         plt.savefig(plotname)
         plt.clf()
@@ -4127,7 +4126,7 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         plotname = outputdir+'psfcube_gaussMINUSmodelimg_'+idstr+'.pdf'
-        if verbose: print ' - Generating '+plotname
+        if verbose: print(' - Generating '+plotname)
         fig = plt.figure(figsize=(3, 3))
         fig.subplots_adjust(wspace=0.1, hspace=0.1,left=0.15, right=0.9, bottom=0.1, top=0.9)
         Fsize  = 10
@@ -4142,8 +4141,8 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
         plt.imshow(tg_psf[plotcubelayer,:,:]-sc_psf[plotcubelayer,:,:],interpolation=None,origin='lower',vmin=vmin,vmax=vmax)
         plt.colorbar()
 
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   sum(gauss-modelimg)       = ',np.sum(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:])
-        print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss-modelimg)    = ',np.median(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:])
+        #print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   sum(gauss-modelimg)       = ',np.sum(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:])
+        #print '   '+plotname.split('/')[-1].split('.pdf')[0]+':   median(gauss-modelimg)    = ',np.median(tg_model[plotcubelayer,:,:]-sc_model[plotcubelayer,:,:])
 
         plt.savefig(plotname)
         plt.clf()
@@ -4160,8 +4159,8 @@ def test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5,size=10
     """
     theta = angle/180.0*np.pi
 
-    if verbose: print ' - Input: \n   Ieff      =',Ieff,'\n   reff      =',reff,\
-        '\n   n         =',sersicindex,'\n   axisratio =',axisratio,'\n   angle     =',angle,'\n   theta     =',theta
+    if verbose: print(' - Input: \n   Ieff      = '+str(Ieff)+'\n   reff      = '+str(reff)+\
+        '\n   n         = '+str(sersicindex)+'\n   axisratio = '+str(axisratio)+'\n   angle     = '+str(angle)+'\n   theta     = '+str(theta))
 
     x,y = np.meshgrid(np.arange(size), np.arange(size))
 
@@ -4201,30 +4200,30 @@ def test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5,size=10
     Ftot_eff_1D   = np.trapz(s1(r[:ent_eff]),x=r[:ent_eff],dx=0.01)
     Ftot_outer_1D = np.trapz(s1(r[ent_eff:]),x=r[ent_eff:],dx=0.01)
 
-    if verbose: print '\n - np.trapz of 1D profile for r=[0;'+str(size)+']:     Ftot_reff=',Ftot_1D
-    if verbose: print ' - np.trapz of 1D profile for r=[0;r_eff]:    Ftot_reff=',Ftot_eff_1D
-    if verbose: print ' - np.trapz of 1D profile for r=[r_eff;'+str(size)+']: Ftot_outer=',Ftot_outer_1D
+    if verbose: print('\n - np.trapz of 1D profile for r=[0;'+str(size)+']:     Ftot_reff='+str(Ftot_1D))
+    if verbose: print(' - np.trapz of 1D profile for r=[0;r_eff]:    Ftot_reff='+str(Ftot_eff_1D))
+    if verbose: print(' - np.trapz of 1D profile for r=[r_eff;'+str(size)+']: Ftot_outer='+str(Ftot_outer_1D))
 
     Ftot_2D       = integrate.quad(lambda x: x*s1(x),0 ,np.inf)[0] * 2 * np.pi
     Ftot_eff_2D   = integrate.quad(lambda x: x*s1(x),0 ,reff)[0] * 2 * np.pi
     Ftot_outer_2D = integrate.quad(lambda x: x*s1(x),reff,np.inf)[0] * 2 * np.pi
 
-    if verbose: print '\n - scipy.integrate.quad of 2D profile for r=[0;np.inf]:       Ftot_2D       =',Ftot_2D
-    if verbose: print ' - scipy.integrate.quad of 2D profile for r=[0;r_eff]:        Ftot_reff_2D  =',Ftot_eff_2D
-    if verbose: print ' - scipy.integrate.quad of 2D profile for r=[r_eff;np.inf]:   Ftot_2D_outer =',Ftot_outer_2D
+    if verbose: print('\n - scipy.integrate.quad of 2D profile for r=[0;np.inf]:       Ftot_2D       ='+str(Ftot_2D))
+    if verbose: print(' - scipy.integrate.quad of 2D profile for r=[0;r_eff]:        Ftot_reff_2D  ='+str(Ftot_eff_2D))
+    if verbose: print(' - scipy.integrate.quad of 2D profile for r=[r_eff;np.inf]:   Ftot_2D_outer ='+str(Ftot_outer_2D))
 
     Ftot_full = integrate.quad(lambda x: x*s1(x),reff,size/2.)[0] * 2 * np.pi
-    if verbose: print ' - scipy.integrate.quad of 2D profile for r=[0;'+str(int(size/2.))+\
-                      ']:          Ftot_2D_r'+str(int(size/2.))+'  =',Ftot_full
+    if verbose: print(' - scipy.integrate.quad of 2D profile for r=[0;'+str(int(size/2.))+\
+                      ']:          Ftot_2D_r'+str(int(size/2.))+'  ='+str(Ftot_full))
 
     Ftot_calc   = tu.get_2DsersicIeff(Ieff,reff,sersicindex,1.0,returnFtot=True)
-    if verbose: print '\n - tu.get_2DsersicIeff calculation of Ftot:                   Ftot_calc     =',Ftot_calc
+    if verbose: print('\n - tu.get_2DsersicIeff calculation of Ftot:                   Ftot_calc     = '+str(Ftot_calc))
 
     Ieff_calc   = tu.get_2DsersicIeff(Ftot_2D,reff,sersicindex,1.0)
-    if verbose: print ' - tu.get_2DsersicIeff calculation of Ieff from Ftot_2D:      I_eff         =',Ieff_calc
+    if verbose: print(' - tu.get_2DsersicIeff calculation of Ieff from Ftot_2D:      I_eff         = '+str(Ieff_calc))
 
     Ieff_calc   = tu.get_2DsersicIeff(Ftot_eff_2D,reff,sersicindex,1.0)
-    if verbose: print ' - tu.get_2DsersicIeff calculation of Ieff from Ftot_reff_2D: I_eff         =',Ieff_calc
+    if verbose: print(' - tu.get_2DsersicIeff calculation of Ieff from Ftot_reff_2D: I_eff         = '+str(Ieff_calc))
 
     # Summing in circular mask to mimic DS9 "integration"
     r    = reff
@@ -4232,24 +4231,24 @@ def test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5,size=10
     mask = x*x + y*y <= r*r
 
     sum_mask_reff = np.sum(img[mask])
-    if verbose: print '\n - Sum of pixels within r_eff of sersic img array (spherical):    Fsum_reff =',sum_mask_reff
+    if verbose: print('\n - Sum of pixels within r_eff of sersic img array (spherical):    Fsum_reff = '+str(sum_mask_reff))
 
     r    = size/2.0
     y,x  = np.ogrid[-size/2.0:size/2.0, -size/2.0:size/2.0]
     mask = x*x + y*y <= r*r
 
     sum_mask = np.sum(img[mask])
-    if verbose: print ' - Sum of pixels within r_eff of sersic img array (spherical):    Fsum_r'+str(int(size/2.))+' =',sum_mask
+    if verbose: print(' - Sum of pixels within r_eff of sersic img array (spherical):    Fsum_r'+str(int(size/2.))+' = '+str(sum_mask))
 
 
     Ftot_calc   = tu.get_2DsersicIeff(Ieff,reff,sersicindex,axisratio,returnFtot=True)
-    if verbose: print '\n - tu.get_2DsersicIeff calculation of Ftot (axisratio='+str(axisratio)+'):               Ftot_calc  =',Ftot_calc
+    if verbose: print('\n - tu.get_2DsersicIeff calculation of Ftot (axisratio='+str(axisratio)+'):               Ftot_calc  = '+str(Ftot_calc))
 
     Ieff_calc   = tu.get_2DsersicIeff(Ftot_2D,reff,sersicindex,axisratio)
-    if verbose: print ' - tu.get_2DsersicIeff calculation of Ieff from Ftot_2D (axisratio='+str(axisratio)+'):      I_eff  =',Ieff_calc
+    if verbose: print(' - tu.get_2DsersicIeff calculation of Ieff from Ftot_2D (axisratio='+str(axisratio)+'):      I_eff  = '+str(Ieff_calc))
 
     Ieff_calc   = tu.get_2DsersicIeff(Ftot_eff_2D,reff,sersicindex,axisratio)
-    if verbose: print ' - tu.get_2DsersicIeff calculation of Ieff from Ftot_reff_2D (axisratio='+str(axisratio)+'): I_eff  =',Ieff_calc
+    if verbose: print(' - tu.get_2DsersicIeff calculation of Ieff from Ftot_reff_2D (axisratio='+str(axisratio)+'): I_eff  = '+str(Ieff_calc))
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def add_hdrkeys2fitsfile(tdosespectrum,hdrkeydic,newname='default',clobber=False,verbose=True):
     """
@@ -4321,11 +4320,11 @@ def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=
     """
     Nmodels2D = len(models2D)
     modelsext = modelsext.astype(int)
-    if verbose: print ' - Assembling the '+str(Nmodels2D)+' 2D model images into a model cube '
-    if verbose: print '\n'
+    if verbose: print(' - Assembling the '+str(Nmodels2D)+' 2D model images into a model cube ')
+    if verbose: print('\n')
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Setting up output cube based on list of 2D models. Output to be stored in:\n   '+basename
+    if verbose: print(' - Setting up output cube based on list of 2D models. Output to be stored in:\n   '+basename)
     mainmodel  = 0
     primheader = pyfits.open(models2D[mainmodel])[0].header
     baseheader = pyfits.open(models2D[mainmodel])[modelsext[mainmodel]].header
@@ -4347,12 +4346,12 @@ def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=
 
     # - - - - - - - - - - - - - - - - - - Saving Model Cube - - - - - - - - - - - - - - - - - -
     cubename = basename+'_cube.fits'
-    if verbose: print ' - Saving model cube to \n   '+cubename
+    if verbose: print(' - Saving model cube to \n   '+cubename)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     hducube  = pyfits.PrimaryHDU(cube)       # default HDU with default minimal header
 
     if includewcs:
-        if verbose: print ' - Including WCS information from main model header '
+        if verbose: print(' - Including WCS information from main model header ')
         # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
         hducube.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
         hducube.header.append(('CD1_1  ',modelwcs.wcs.cd[0,0]  ,' Coordinate transformation matrix element'),end=True)
@@ -4386,12 +4385,12 @@ def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=
     # - - - - - - - - - - - - - - - - - - Saving Sum Cube Image - - - - - - - - - - - - - - - - - -
     if savecubesumimg:
         imgname = basename+'_cubesum.fits'
-        if verbose: print ' - Saving model cube to \n   '+imgname
+        if verbose: print(' - Saving model cube to \n   '+imgname)
         cubesum = np.sum(cube,axis=0)
 
         hduimg  = pyfits.PrimaryHDU(cubesum)
         if includewcs:
-            if verbose: print ' - Including WCS information from model image extension   '
+            if verbose: print(' - Including WCS information from model image extension   ')
             # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
             hduimg.header.append(('BUNIT   '                       ,'(Ftot/texp)'),end=True)
             hduimg.header.append(('CD1_1   ',modelwcs.wcs.cd[0,0]  ,' Coordinate transformation matrix element'),end=True)
@@ -4410,7 +4409,7 @@ def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=
         hdulist = pyfits.HDUList(hdus)            # turn header into to hdulist
         hdulist.writeto(imgname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print '\n'
+    if verbose: print('\n')
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def strip_extension_from_fitsfile(fitsfile,outputdir,removeextension='SOURCECUBE',overwrite=False,verbose=True):
@@ -4485,7 +4484,7 @@ def vet_tdose_extractions(spectra,outputfile,refimg_key='acs_814w',datacube_key=
     vettingscheme= '#\n' \
                    '# The vetting scheme is: \n' \
                    '#        0 : No decision made (revisit) \n' \
-                   '#        1 : Spectral exraction looks good \n' \
+                   '#        1 : Spectral extraction looks good \n' \
                    '#        2 : Spectrum looks believable; reference image model less so \n' \
                    '#        3 : Reference image model is bad, hence spectral extraction untrustworthy \n' \
                    '#        4 : Reference image model is good but source model scaling problematic so spectral extraction untrustworthy \n' \
@@ -4500,7 +4499,7 @@ def vet_tdose_extractions(spectra,outputfile,refimg_key='acs_814w',datacube_key=
         fout.write('# Result from vetting the '+str(Nspec)+' spectra provided to tdose_utilities.vet_tdose_extractions() \n'+
                    vettingscheme+
                    '# \n'
-                   '# The vetlevel column indiactes whether \n'
+                   '# The vetlevel column indicates whether \n'
                    '#        PDFs (1000)\n'
                    '#        PDFs + interactive spectral plot (100) \n'
                    '#        PDFs + interactive spectral plot + refimgs (10) \n'
