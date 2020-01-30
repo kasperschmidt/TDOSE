@@ -225,12 +225,12 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                         if ss == 0:
                             Atrans = modelravel
                         else:
-                            Atrans = np.vstack([Atrans,modelravel])
+                            Atrans = np.ma.vstack([Atrans,modelravel])
 
                     if Nsource == 1:
                         Atrans = np.atleast_2d(Atrans)
 
-                    A          = np.transpose(Atrans)
+                    A          = np.ma.transpose(Atrans)
                     dataravel  = (datacube_layer/noisecube_layer).ravel()
 
                     #---------------------------------------------------------------------------------------------------
