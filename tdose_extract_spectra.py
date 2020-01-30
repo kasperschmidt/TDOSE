@@ -170,7 +170,7 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
             comb_mask          = (comb_mask | invalid_mask_noise)
             variance_1D_masked = np.ma.array(noise_cube,mask=comb_mask)**2
             noise_1D_masked    = np.sqrt( np.sum( np.sum( variance_1D_masked, axis=1), axis=1) )
-            noise_1D           = noise_1D_masked.filled(fill_value=0.0)
+            noise_1D           = noise_1D_masked.filled(fill_value=np.nan)
 
             if verbose: print '   Generating S/N vector'
             SN_1D         = spec_1D / noise_1D
