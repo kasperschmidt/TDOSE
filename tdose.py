@@ -16,6 +16,7 @@ from astropy.coordinates import SkyCoord
 from astropy import units
 import astropy.convolution
 from astropy.nddata import Cutout2D
+import astropy.io.fits as afits
 from reproject import reproject_interp
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 import tdose
@@ -1163,6 +1164,20 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
                                       generateresidualimage=True,clobber=clobber,outputhdr=img_hdr,
                                       param_initguess=param_initguess,max_centroid_shift=maxcenshift,
                                       centralpointsource=centralpointsource,ignore_radius=ignore_radius_pix)
+
+    if (setupdic['source_model'].lower() == 'gauss') & (len(names) != len(fit[0])/6):
+        if verbose: print('    Correcting region file names as one or more objects were ingnored in the modeling')
+        names_tmp = []
+        if param_initguess is None:
+            sourcecat_dat  = afits.open(sourcecat)[1].data
+            xpos_check     = sourcecat_dat[setupdic['sourcecat_xposcol']]
+        else:
+            xpos_check     = param_initguess[1::6]
+
+        for xpixinit in pinit[1::6]:
+            matchent = np.where(xpos_check == xpixinit)[0]
+            names_tmp.append(names[int(matchent)])
+        names = names_tmp
 
     tu.model_ds9region(modelparam,regionfile,img_wcs,color='cyan',width=2,Nsigma=2,textlist=names,
                        fontsize=12,clobber=clobber)
