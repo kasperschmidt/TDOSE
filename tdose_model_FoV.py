@@ -63,7 +63,8 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
                               (replacing the source model closest to this location) set to true.
                               Adding a point source, all source models within ignore_radius will be ignored
     ignore_radius             Radius (in pixels) around central point source (pointsource=True) where source models
-                              will be ignored, i.e., set to 0 via a fluxscale=0 in the parameterlist
+                              will be ignored by removing them from the fit_output containing the source parameters
+                              achieved by setting fluxscale=NaN and ignoring those when assembling the parameter list.
     verbose                   Toggle verbosity
 
     --- EXAMPLE OF USE ---
@@ -109,7 +110,7 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
                 obj_xpix = fit_output[0][1::6][oo]
                 obj_ypix = fit_output[0][0::6][oo]
                 if ((obj_ypix-ycen)**2.0 < ignore_radius[0]**2.0) & ((obj_xpix-xcen)**2.0 < ignore_radius[1]**2.0):
-                    fit_output[0][2::6][oo] = 0.0
+                    fit_output[0][2::6][oo] = np.nan
 
             r_diffs = np.abs(np.sqrt((fit_output[0][0::6]-ycen)**2.0 + (fit_output[0][1::6]-xcen)**2.0))
             central_source = np.where(r_diffs == np.min(r_diffs))[0]
@@ -119,6 +120,22 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
             fit_output[0][4::6][central_source]  = 1.0  # sigmax
             fit_output[0][3::6][central_source]  = 1.0  # sigmay
             fit_output[0][5::6][central_source]  = 0.0  # angle
+
+            fscales    = fit_output[0][2::6]
+            Nignore    = len(np.where(~np.isfinite(fscales))[0])
+            ent_good   = np.where(np.isfinite(fscales))[0]
+            fo_tmp1    = np.zeros(len(ent_good)*6)
+            pi_tmp     = np.zeros(len(ent_good)*6)
+            if Nignore > 0:
+                if verbose: print('   '+str(Nignore)+' sources within '+str(ignore_radius[0])+
+                                  ' pixels of the central point source were ignored')
+                for ee, egood in enumerate(ent_good):
+                    for ff in [0,1,2,3,4,5]:
+                        fo_tmp1[ff::6][ee]  = fit_output[0][ff::6][egood]
+                        pi_tmp[ff::6][ee]   = param_init[ff::6][egood]
+
+                fit_output = fo_tmp1, 'dummy'#fit_output[1]
+                param_init = pi_tmp
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     elif modeltype.lower() == 'galfit':
