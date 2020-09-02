@@ -191,6 +191,9 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                         if loopverbose: print '   Generating PSFed model convolving model Gaussians numerically with "'+\
                                               psfparamtype+'" kernel'
                         if loopverbose: print '   (Before scaling to flux in layer, model will be normalized, i.e. np.sum(model) = 1)'
+
+                    conv_source_images = np.zeros(sourceparam.shape) # array to store the convolved source images
+
                     for ss in xrange(Nsource):
                         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                         if analytic_conv:
@@ -219,6 +222,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                                                                                  fill_value=0.0,norm_kernel=True,convolveFFT=False,
                                                                                  verbose=loopverbose)
                                 img_model  = img_model_init/np.sum(img_model_init)         # normalizing model (component)
+                                conv_source_images[ss,:,:] = img_model
                         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                         img_model  = img_model/noisecube_layer
                         modelravel = img_model.ravel()
@@ -257,8 +261,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                             else:
                                 output_layerMTX = np.zeros(datacube.shape[1:])
                                 for component in xrange(len(scalesMTX)):
-                                    output_layerMTX = output_layerMTX + sourceparam[component,:,:] * scalesMTX[component]
-
+                                    output_layerMTX = output_layerMTX + conv_source_images[component,:,:] * scalesMTX[component]
                         output_layer   = output_layerMTX
                         output_scales  = scalesMTX
 
