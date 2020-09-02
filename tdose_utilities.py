@@ -3320,8 +3320,14 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
                 modelext     = 2
                 residualext  = 3
             else:
-                modelext     = 0
+                residualimg  = modelimg.replace('.fits','_residual.fits')
                 residualext  = 0
+                modelext     = 0
+                if ~os.path.isfile(residualimg):
+                    if verbose: print(' - Did not find a model residual image (looked for '+residualimg+') so using model image itself')
+                    residualimg = modelimg
+                    residualext = modelext
+
         else:
             modelimg     = setupdic['models_directory']+imagebase.replace('.fits',cutstr+'_'+setupdic['model_image_ext']+
                                                                           '_'+sourcemodel+'.fits')
