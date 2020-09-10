@@ -107,7 +107,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             if setupdic['sources_to_extract'].lower() == 'all':
                 extractids = sourceids_init.astype(float)
             else:
-                extractids = np.genfromtxt(setupdic['sources_to_extract'],dtype=None,comments='#')
+                extractids = np.genfromtxt(setupdic['sources_to_extract'].astype(str),dtype=None,comments='#')
                 extractids = list(extractids.astype(float))
         else:
             extractids = setupdic['sources_to_extract']
@@ -372,7 +372,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                     if (len(FoV_modeldata.shape) == 3):
                         paramCUBE = np.zeros([FoV_modeldata.shape[0],cube_data.shape[1],cube_data.shape[2]])
                         if verbose: print(' - Reprojecting and normalizing individual components in object model cube to use for extraction ')
-                        for component in range(FoV_modeldata.shape[0]):
+                        for component in np.arange(int(FoV_modeldata.shape[0])):
                             projected_comp, footprint_comp = reproject_interp( (FoV_modeldata[component,:,:], img_wcs), cube_wcs2D,
                                                                                shape_out=cube_data.shape[1:])
                             projected_comp[np.isnan(projected_comp)] = 0.0
@@ -675,14 +675,14 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generate
     if Nsessions == 0:
         Nbundle = Nsetups
 
-        for ii in range(Nbundle):
+        for ii in np.arange(int(Nbundle)):
             string          = 'bundleNo'+str(ii+1)
             bundles[string] = [setupfiles[ii]]
     else:
         Nbundle     = int(Nsessions)
         bundlesize  = int(np.ceil(float(Nsetups)/float(Nbundle)))
 
-        for ii in range(Nbundle):
+        for ii in np.arange(int(Nbundle)):
             string = 'bundleNo'+str(ii+1)
             if ii == Nbundle: # Last bundle
                 bundles[string] = setupfiles[ii*bundlesize:]
@@ -699,7 +699,7 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generate
     return_dict = mngr.dict()        # define Manager dictionary to store output from Worker function in
     jobs = []
 
-    for ii in range(Nbundle):
+    for ii in np.arange(int(Nbundle)):
         bundlekey = 'bundleNo'+str(ii+1)
         if len(bundles[bundlekey]) == 1:
             jobname = bundles[bundlekey][0].split('/')[-1]

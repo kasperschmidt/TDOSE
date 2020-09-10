@@ -78,7 +78,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
             if verbose: print(' - Assembling covariance matrixes for '+str(Nsource)+' Gaussian source in parameter list')
             mu_objs   = np.zeros([Nsource,2])
             cov_objs  = np.zeros([Nsource,2,2])
-            for nn in range(Nsource):
+            for nn in np.arange(int(Nsource)):
                 mu_objs[nn,:]    = params[nn][0:2]
                 cov_obj          = tu.build_2D_cov_matrix(params[nn][4],params[nn][3],params[nn][5],verbose=False)
                 cov_objs[nn,:,:] = cov_obj
@@ -135,7 +135,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                 if verbose & (ll==0): print(' - Performing analytic convolution of Gaussian sources; Build convolved covariance matrixes')
                 mu_objs_conv   = np.zeros([Nsource,2])
                 cov_objs_conv  = np.zeros([Nsource,2,2])
-                for nn in range(Nsource):
+                for nn in np.arange(int(Nsource)):
                     muconv, covarconv     = tu.analytic_convolution_gaussian(mu_objs[nn,:],cov_objs[nn,:,:],mu_psf,cov_psf)
                     mu_objs_conv[nn,:]    = muconv
                     cov_objs_conv[nn,:,:] = covarconv
@@ -194,7 +194,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
                     conv_source_images = np.zeros(sourceparam.shape) # array to store the convolved source images
 
-                    for ss in range(Nsource):
+                    for ss in np.arange(int(Nsource)):
                         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                         if analytic_conv:
                             img_model  = tmc.gen_image(datashape[1:],mu_objs_conv[ss],cov_objs_conv[ss],sourcescale=[1.0],
@@ -260,7 +260,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                                 output_layerMTX   = img_model_init/np.sum(img_model_init) * scalesMTX
                             else:
                                 output_layerMTX = np.zeros(datacube.shape[1:])
-                                for component in range(len(scalesMTX)):
+                                for component in np.arange(int(len(scalesMTX))):
                                     output_layerMTX = output_layerMTX + conv_source_images[component,:,:] * scalesMTX[component]
                         output_layer   = output_layerMTX
                         output_scales  = scalesMTX
@@ -278,7 +278,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                                 output_layerNNLS   = img_model_init/np.sum(img_model_init) * scalesNNLS
                             else:
                                 output_layerNNLS = np.zeros(datacube.shape[1:])
-                                for component in range(len(scalesNNLS)):
+                                for component in np.arange(int(len(scalesNNLS))):
                                     output_layerNNLS = output_layerNNLS + sourceparam[component,:,:] * scalesNNLS[component]
 
                         output_layer   = output_layerNNLS
@@ -600,7 +600,7 @@ def gen_image(imagedim,mu_objs,cov_objs,sourcescale='ones',verbose=True):
         if verbose: print(' - Applying user-defined source scalings provided with "sourcescale".')
         scalings = sourcescale
 
-    for oo in range(Nobj):
+    for oo in np.arange(int(Nobj)):
         if Nobj == 1: # only one object
             if len(mu_objs.shape) == 2:
                 muconv = mu_objs[oo,:]
@@ -679,8 +679,8 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
 
         if verbose: print(' - Loop over sources and layers to fill output cube with data ')
         if verbose: print('   ----------- Started on '+tu.get_now_string()+' ----------- ')
-        for ss in range(Nsource):
-            for ll in range(Nlayers):
+        for ss in np.arange(int(Nsource)):
+            for ll in np.arange(int(Nlayers)):
                 if verbose:
                     infostr = '   Generating layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % cubeshape[0])+\
                               ' in source cube '+str("%6.f" % (ss+1))+' / '+str("%6.f" % Nsource)
@@ -709,8 +709,8 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
 
         if verbose: print(' - Loop over sources and layers to fill output cube with data ')
         if verbose: print('   ----------- Started on '+tu.get_now_string()+' ----------- ')
-        for ss in range(Nsource):
-            for ll in range(Nlayers):
+        for ss in np.arange(int(Nsource)):
+            for ll in np.arange(int(Nlayers)):
                 if verbose:
                     infostr = '   Generating layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % cubeshape[0])+\
                               ' in source cube '+str("%6.f" % (ss+1))+' / '+str("%6.f" % Nsource)
@@ -735,8 +735,8 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
 
         if verbose: print(' - Loop over layers to fill output cube with data ')
         if verbose: print('   ----------- Started on '+tu.get_now_string()+' ----------- ')
-        for ss in range(Nsource):
-            for ll in range(Nlayers):
+        for ss in np.arange(int(Nsource)):
+            for ll in np.arange(int(Nlayers)):
                 if verbose:
                     infostr = '   Generating layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % cubeshape[0])+\
                               ' in source cube '+str("%6.f" % (ss+1))+' / '+str("%6.f" % Nsource)

@@ -71,7 +71,7 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
     Nobjects   = len(sourcedat)
     outputcube = np.zeros(cube_dim)
 
-    for oo in range(Nobjects):
+    for oo in np.arange(int(Nobjects)):
         xpos       = sourcedat[xpos_col][oo]
         ypos       = sourcedat[ypos_col][oo]
         fluxscale  = sourcedat[fluxscale_col][oo]

@@ -106,7 +106,7 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
                 ignore_radius = [ignore_radius]*2
 
             Nsources  = int(len(fit_output[0])/6.)
-            for oo in range(Nsources):
+            for oo in np.arange(int(Nsources)):
                 obj_xpix = fit_output[0][1::6][oo]
                 obj_ypix = fit_output[0][0::6][oo]
                 if ((obj_ypix-ycen)**2.0 < ignore_radius[0]**2.0) & ((obj_xpix-xcen)**2.0 < ignore_radius[1]**2.0):
@@ -276,7 +276,7 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
         Nobj   = int(len(paramlist)/Nparam)
         if verbose: print(' - Adding gaussian parameters of '+str(Nobj)+' objects used to generate model to header ')
 
-        for oo in range(Nobj):
+        for oo in np.arange(int(Nobj)):
             objno = str("%.4d" % (oo+1))
             yposition,xposition,fluxscale,sigmay,sigmax,angle = paramlist[oo*Nparam:oo*Nparam+Nparam]
             hduimg.header.append(('xp'+objno, xposition, 'Obj'+objno+': x position'),end=True)
@@ -301,7 +301,7 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
         Nobj   = int(len(paramlist)/Nparam)
         if verbose: print(' - Adding aperture parameters of '+str(Nobj)+' objects used to generate model to header ')
 
-        for oo in range(Nobj):
+        for oo in np.arange(int(Nobj)):
             objno = str("%.4d" % (oo+1))
             yposition,xposition,radius,pixval = paramlist[oo*Nparam:oo*Nparam+Nparam]
             hduimg.header.append(('xp'+objno, xposition, 'Obj'+objno+': x position'),end=True)
@@ -355,7 +355,7 @@ def gen_paramlist(sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=No
     Nobjects   = len(sourcedat)
     if verbose: print(' - Assembling paramter list for '+str(Nobjects)+' sources found in catalog (tmf.gen_paramlist)')
     paramlist = []
-    for oo in range(Nobjects):
+    for oo in np.arange(int(Nobjects)):
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         xpos       = sourcedat[xpos_col][oo]
         ypos       = sourcedat[ypos_col][oo]
@@ -411,7 +411,7 @@ def gen_paramlist_aperture(sourcecatalog,radius_pix,pixval=None,xpos_col='xpos',
     Nobjects   = len(sourcedat)
     if verbose: print(' - Assembling paramter list for '+str(Nobjects)+' sources found in catalog (tmf.gen_paramlist_aperture)')
     paramlist = []
-    for oo in range(Nobjects):
+    for oo in np.arange(int(Nobjects)):
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         xpos       = sourcedat[xpos_col][oo]
         ypos       = sourcedat[ypos_col][oo]

@@ -65,7 +65,7 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='
         if verbose: print(' - Building default source association dictionary ' \
                           '(determining what sources are combined into objects), i.e., one source per object ')
         sourcIDs_dic = collections.OrderedDict()
-        for oo in range(Nsources):
+        for oo in np.arange(int(Nsources)):
             sourcIDs_dic[str(oo)] = [oo]
     else:
         sourcIDs_dic = source_association_dictionary

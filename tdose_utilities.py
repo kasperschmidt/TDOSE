@@ -53,7 +53,7 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
     if verbose: print((' - Loading setup for TDOSE in '+setupfile))
     setup_arr = np.genfromtxt(setupfile,dtype=None,names=None)
     setup_dic = {}
-    for ii in range(setup_arr.shape[0]):
+    for ii in np.arange(int(setup_arr.shape[0])):
         paramname = setup_arr[ii,0].astype(str)
         if paramname in list(setup_dic.keys()):
             sys.exit(' Setup parameter "'+paramname+'" appears multiple times in the setup file\n             '+
@@ -403,7 +403,7 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,infofmt="S250",
     if verbose: print((' - Performing replacements and generating the '+str(Nfiles)+' TDOSE setup templates ' \
                                                                                    'described in \n   '+infofile))
 
-    for setupnumber in range(Nfiles):
+    for setupnumber in np.arange(int(Nfiles)):
         replacements = copen[setupnumber]
         newsetup     = outputdirectory+namebase+'_'+replacements['setupname'].astype(str)+'.txt'
         if os.path.isfile(newsetup) & (clobber == False):
@@ -548,7 +548,7 @@ def gen_psfed_cube(cube,type='gauss',type_param=[0.5,1.0],use_fftconvolution=Fal
                 sys.exit(' ---> The number of wavelength scalings provided ('+str(len(type_param[1]))+
                          ') is different from the number of layers in cube ('+str(Nlayers)+')')
             kernels = []
-            for ll in range(Nlayers):
+            for ll in np.arange(int(Nlayers)):
                 kernel  = ac.Gaussian2DKernel(type_param[0]*type_param[1][ll])
                 kernels.append(kernel)
         else:
@@ -566,7 +566,7 @@ def gen_psfed_cube(cube,type='gauss',type_param=[0.5,1.0],use_fftconvolution=Fal
                          ' and '+str(len(type_param[3]))+
                          ') are different from the number of layers in cube ('+str(Nlayers)+')')
             kernels = []
-            for ll in range(Nlayers):
+            for ll in np.arange(int(Nlayers)):
                 kernel  = ac.Moffat2DKernel(type_param[0]*type_param[2][ll],type_param[1]*type_param[3][ll])
                 kernels.append(kernel)
         else:
@@ -598,7 +598,7 @@ def perform_2Dconvolution(cube,kernels,use_fftconvolution=False,verbose=True):
     csh = cube.shape
     cube_convolved = np.zeros(csh)
 
-    for zz in range(csh[0]): # looping over wavelength layers of cube
+    for zz in np.arange(int(csh[0])): # looping over wavelength layers of cube
         layer = cube[zz,:,:]
         if use_fftconvolution:
             layer_convolved = ac.convolve_fft(layer, kernels[zz], boundary='fill')
@@ -1190,7 +1190,7 @@ def convert_paramarray(paramarray,hdr,hdr_new,type='gauss',verbose=True):
     if type == 'gauss':
         Nparam    = 6
         Nobj      = len(paramarray)/Nparam
-        for oo in range(Nobj):
+        for oo in np.arange(int(Nobj)):
             ypix      = paramarray[oo*Nparam+0]
             xpix      = paramarray[oo*Nparam+1]
             skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcs_in,origin=1)
@@ -1204,7 +1204,7 @@ def convert_paramarray(paramarray,hdr,hdr_new,type='gauss',verbose=True):
     elif type == 'aperture':
         Nparam    = 4
         Nobj      = len(paramarray)/4
-        for oo in range(Nobj):
+        for oo in np.arange(int(Nobj)):
             ypix      = paramarray[oo*Nparam+0]
             xpix      = paramarray[oo*Nparam+1]
             skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcs_in,origin=1)
@@ -1248,7 +1248,7 @@ def build_paramarray(fitstable,returninit=False,verbose=True):
     if paramtype == 'gauss':
         Nparam     = 6
         paramarray = np.zeros([Nobj*Nparam])
-        for oo in range(Nobj):
+        for oo in np.arange(int(Nobj)):
             if returninit:
                 paramarray[oo*Nparam+0] = tabdat['ypos_init'][oo]
                 paramarray[oo*Nparam+1] = tabdat['xpos_init'][oo]
@@ -1266,7 +1266,7 @@ def build_paramarray(fitstable,returninit=False,verbose=True):
     elif paramtype == 'aperture':
         Nparam       = 4
         paramarray = np.zeros([Nobj*Nparam])
-        for oo in range(Nobj):
+        for oo in np.arange(int(Nobj)):
             if returninit:
                 paramarray[oo*Nparam+0] = tabdat['ypos_init'][oo]
                 paramarray[oo*Nparam+1] = tabdat['xpos_init'][oo]
@@ -1386,7 +1386,7 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
         manualcutting = False # always use quick solution (results are identical)
         if manualcutting:
             cutout_cube         = np.zeros([Nlayers,cutout_layer.data.shape[0],cutout_layer.data.shape[1]])
-            for ll in range(Nlayers):
+            for ll in np.arange(int(Nlayers)):
                 if verbose:
                     infostr = '   cutting out from layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % Nlayers)
                     sys.stdout.write("%s\r" % infostr)
@@ -1579,7 +1579,7 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
 
     Nobj       = len(paramarray)/Nparam
     if verbose: print(' - Converting to wcs coordinates')
-    for oo in range(Nobj):
+    for oo in np.arange(int(Nobj)):
         ypix      = paramarray[oo*Nparam+0]
         xpix      = paramarray[oo*Nparam+1]
         skycoord  = wcs.utils.pixel_to_skycoord(xpix,ypix,wcsinfo,origin=1)
@@ -1896,7 +1896,7 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
     if verbose: print((' - Assembling paramter list for '+str(Nobjects_convert)+\
                       ' sources found in catalog (tu.gen_paramlist_from_SExtractorfile)'))
     paramlist = []
-    for oo in range(Nobjects_convert):
+    for oo in np.arange(int(Nobjects_convert)):
         if objects[oo] in sourcedat[idcol]:
             pp = np.where(sourcedat[idcol] == objects[oo])[0][0]
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1944,7 +1944,7 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
             fout = open(ds9region_file,'w')
             fout.write("# Region file format: DS9 version 4.1 \nimage\n")
 
-            for oo in range(Nobjects):
+            for oo in np.arange(int(Nobjects)):
                 if objects != 'all':
                     if sourcedat[idcol][oo] not in objects: continue # skipping objects not in objects list provided
 
@@ -2347,7 +2347,7 @@ P) %s               # Choose: 0=optimize, 1=model, 2=imgblock, 3=subcomps
         if ids is None:
             ids = ['None provided']*Nobj
 
-        for oo in range(Nobj):
+        for oo in np.arange(int(Nobj)):
             if verbose:
                 infostr = '   writing setup for object '+str("%6.f" % (oo+1))+' / '+str("%6.f" % Nobj)
                 sys.stdout.write("%s\r" % infostr)
@@ -2434,7 +2434,7 @@ def galfit_buildinput_multiGaussTemplate(filename,dataimg,Ngauss=4,gaussspacing=
 
     ids    = []
     Nparam = 6
-    for oo in range(Ngauss):
+    for oo in np.arange(int(Ngauss)):
         objno = str("%.4d" % (oo+1))
         ids.append(objno)
 
