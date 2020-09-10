@@ -56,7 +56,7 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Loading source catalog information to build mock data cube for'
+    if verbose: print(' - Loading source catalog information to build mock data cube for')
     try:
         sourcedat = pyfits.open(sourcecatalog)[1].data
     except:
@@ -67,11 +67,11 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
     else:
         outname = outputname
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Generating sources and inserting them into mock cube'
+    if verbose: print(' - Generating sources and inserting them into mock cube')
     Nobjects   = len(sourcedat)
     outputcube = np.zeros(cube_dim)
 
-    for oo in xrange(Nobjects):
+    for oo in range(Nobjects):
         xpos       = sourcedat[xpos_col][oo]
         ypos       = sourcedat[ypos_col][oo]
         fluxscale  = sourcedat[fluxscale_col][oo]
@@ -97,11 +97,11 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
         noisecube   = outputcube - nonoisecube
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Saving generated mock cube to '+outname
-    if verbose: print '   Create primary extension to contain outputcube'
+    if verbose: print(' - Saving generated mock cube to '+outname)
+    if verbose: print('   Create primary extension to contain outputcube')
     hducube = pyfits.PrimaryHDU(outputcube)       # creating default fits header
     if outputhdr == None:
-        if verbose: print '   No header provided so will generate one'
+        if verbose: print('   No header provided so will generate one')
         # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
         hducube.header.append(('BUNIT  '                      ,'(10**(-20)*erg/s/cm**2/Angstrom)**2'),end=True)
         hducube.header.append(('OBJECT '                      ,'mock_cube'),end=True)
@@ -133,29 +133,29 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
 
     hdustolist = [hducube]
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print '   Add clean version of cube to extension               CLEAN'
+    if verbose: print('   Add clean version of cube to extension               CLEAN')
     hduclean        = pyfits.ImageHDU(cleancube)
-    for hdrkey in hducube.header.keys():
-        if not hdrkey in hducube.header.keys():
+    for hdrkey in list(hducube.header.keys()):
+        if not hdrkey in list(hducube.header.keys()):
             hduclean.header.append((hdrkey,hducube.header[hdrkey],hducube.header.comments[hdrkey]),end=True)
     hduclean.header.append(('EXTNAME ','CLEAN'            ,'cube without PSF and NOISE (if applied)'),end=True)
     hdustolist.append(hduclean)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if psf is not None:
-        if verbose: print '   Add clean PSF cube to extension                      CLEANPSF'
+        if verbose: print('   Add clean PSF cube to extension                      CLEANPSF')
         hducleanpsf        = pyfits.ImageHDU(cleanpsfcube)
-        for hdrkey in hducube.header.keys():
-            if not hdrkey in hducube.header.keys():
+        for hdrkey in list(hducube.header.keys()):
+            if not hdrkey in list(hducube.header.keys()):
                 hducleanpsf.header.append((hdrkey,hducube.header[hdrkey],hducube.header.comments[hdrkey]),end=True)
         hducleanpsf.header.append(('EXTNAME ','CLEANPSF'            ,'cube containing noise (sqrt(variance))'),end=True)
         hdustolist.append(hducleanpsf)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if noisetype is not None:
-        if verbose: print '   Add noise cube to extension                          NOISE'
+        if verbose: print('   Add noise cube to extension                          NOISE')
         hdunoise        = pyfits.ImageHDU(noisecube)
-        for hdrkey in hducube.header.keys():
-            if not hdrkey in hducube.header.keys():
+        for hdrkey in list(hducube.header.keys()):
+            if not hdrkey in list(hducube.header.keys()):
                 hdunoise.header.append((hdrkey,hducube.header[hdrkey],hducube.header.comments[hdrkey]),end=True)
         hdunoise.header.append(('EXTNAME ','NOISE'            ,'cube containing noise (sqrt(variance))'),end=True)
         hdustolist.append(hdunoise)
@@ -193,7 +193,7 @@ def gen_source_cube(position,scale,sourcetype,spectype,cube_dim=[10,60,30],verbo
     sourcecube = tbmc.gen_source_cube([30,70],20,'gauss_1.2_2.1_33','linear_-0.01',cube_dim=[100,130,50],verbose=True,showsourceimgs=True)
 
     """
-    if verbose: print ' - Genrating source in spatial dimensions according to sourcetype='+sourcetype
+    if verbose: print(' - Genrating source in spatial dimensions according to sourcetype='+sourcetype)
     if sourcetype.startswith('gauss'):
         stdx            = float(sourcetype.split('_')[1])
         stdy            = float(sourcetype.split('_')[2])
@@ -203,16 +203,16 @@ def gen_source_cube(position,scale,sourcetype,spectype,cube_dim=[10,60,30],verbo
     else:
         sys.exit(' ---> sourcetype="'+sourcetype+'" is not valid in call to mock_cube_sources.gen_source_cube() ')
 
-    if verbose: print ' - Positioning source at requested pixel position (x,y) = ('+\
-                      str(position[1])+','+str(position[0])+') in output cube'
+    if verbose: print(' - Positioning source at requested pixel position (x,y) = ('+\
+                      str(position[1])+','+str(position[0])+') in output cube')
     position = np.asarray(position)
     #source_positioned = tu.roll_2Dprofile(source_centered,position,showprofiles=showsourceimgs)
     source_positioned = tu.shift_2Dprofile(source_centered,position,showprofiles=showsourceimgs,origin=1)
 
-    if verbose: print ' - Assemble flat spectrum cube with z-dimension '+str(cube_dim[0])
+    if verbose: print(' - Assemble flat spectrum cube with z-dimension '+str(cube_dim[0]))
     sourcecube = np.stack([source_positioned]*cube_dim[0])
 
-    if verbose: print ' - Genrate wavelength dimension by scaling source according to spectype='+spectype
+    if verbose: print(' - Genrate wavelength dimension by scaling source according to spectype='+spectype)
     if spectype.startswith('linear'):
         slope           = float(spectype.split('_')[1])
         slopestack      = np.stack([slope*np.arange(cube_dim[0])]*cube_dim[2], axis=1)

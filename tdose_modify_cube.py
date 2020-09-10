@@ -27,22 +27,22 @@ def perform_modification(setupfile='./tdose_setup_template_modify.txt',clobber=F
 
     start_time = time.clock()
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print '=================================================================================================='
-    if verbose: print ' TDOSE: Loading setup                                       '+\
-                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+    if verbose: print('==================================================================================================')
+    if verbose: print(' TDOSE: Loading setup                                       '+\
+                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
 
     setupdic        = tu.load_setup(setupfile,verbose=verbose)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print '=================================================================================================='
-    if verbose: print ' TDOSE: Logging setup                                       '+\
-                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+    if verbose: print('==================================================================================================')
+    if verbose: print(' TDOSE: Logging setup                                       '+\
+                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
 
     setuplog = setupdic['modified_cube_dir']+setupfile.split('/')[-1].replace('.txt','_logged.txt')
     if os.path.isfile(setuplog) & (clobber == False):
-        if verbose: print ' - WARNING Logged setupfile exists and clobber = False. Not storing setup '
+        if verbose: print(' - WARNING Logged setupfile exists and clobber = False. Not storing setup ')
     else:
-        if verbose: print ' - Writing setup and command to spec1D_directory to log extraction setup and command that was run'
+        if verbose: print(' - Writing setup and command to spec1D_directory to log extraction setup and command that was run')
         setupinfo    = open(setupfile,'r')
         setupcontent = setupinfo.read()
         setupinfo.close()
@@ -58,9 +58,9 @@ def perform_modification(setupfile='./tdose_setup_template_modify.txt',clobber=F
         loginfo.close()
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print '=================================================================================================='
-    if verbose: print ' TDOSE: Modifying data cube                                 '+\
-                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+    if verbose: print('==================================================================================================')
+    if verbose: print(' TDOSE: Modifying data cube                                 '+\
+                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
 
     savestring = 'satelitesremoved'
 
@@ -69,7 +69,7 @@ def perform_modification(setupfile='./tdose_setup_template_modify.txt',clobber=F
     elif setupdic['sources_action'].lower() == 'keep':
         removing = False
     else:
-        if verbose: print ' - WARNING "sources_action" keyword in setup ('+setupdic['sources_action']+') is invalid. Removing source.'
+        if verbose: print(' - WARNING "sources_action" keyword in setup ('+setupdic['sources_action']+') is invalid. Removing source.')
         removing = True
 
     modified_cube = tmc.remove_object(setupdic['data_cube'],setupdic['source_model_cube'],
@@ -130,7 +130,7 @@ def remove_object(datacube,sourcemodelcube,objects=[1,3],remove=True,dataext=1,s
     if maxobj >= Nmodels:
         sys.exit(' ---> Object model "'+str(maxobj)+'" is not included in source model cube (models start at 0) ')
     else:
-        if verbose: print('   All object models appear to be included in the '+str(Nmodels)+' source models found in cube')
+        if verbose: print(('   All object models appear to be included in the '+str(Nmodels)+' source models found in cube'))
 
     if verbose: print(' - Determining objects (source models) to remove from data cube ')
     if remove:
@@ -150,7 +150,7 @@ def remove_object(datacube,sourcemodelcube,objects=[1,3],remove=True,dataext=1,s
             outname = datacube.replace('.fits','_'+str(savecube)+'.fits')
         else:
             outname = savedir+datacube.split('/')[-1].replace('.fits','_'+str(savecube)+'.fits')
-        if verbose: print(' - Saving modified cube to \n   '+outname)
+        if verbose: print((' - Saving modified cube to \n   '+outname))
         if verbose: print('   (Using datacube header with modification keywords appended) ')
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         # hducube = fits.PrimaryHDU(modified_cube)       # default HDU with default minimal header

@@ -82,17 +82,17 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if modeltype.lower() == 'gauss':
         if param_initguess is None:
-            if verbose: print ' - Loading source catalog info to build inital guess of parameters for model fit'
-            if verbose: print '   Will use x position, y position,',
+            if verbose: print(' - Loading source catalog info to build inital guess of parameters for model fit')
+            if verbose: print('   Will use x position, y position,')
             if fluxscale is not None:
-                if verbose: print ' fluxscale',
+                if verbose: print('   fluxscale')
             if sigysigxangle is not None:
-                if verbose: print ' sigysigxangle',
-            if verbose: print ' in initial guess'
+                if verbose: print('   sigysigxangle')
+            if verbose: print('   in initial guess')
             param_init   = tmf.gen_paramlist(sourcecatalog,xpos_col=xpos_col,ypos_col=ypos_col,
                                              sigysigxangle=sigysigxangle,fluxscale=fluxscale,verbose=verbose)
         else:
-            if verbose: print ' - Using the intitial guess provided for model fit'
+            if verbose: print(' - Using the intitial guess provided for model fit')
             param_init   = param_initguess
 
         fit_output      = tmf.model_objects_gauss(param_init,dataimg,optimizer=optimizer,max_centroid_shift=max_centroid_shift,
@@ -100,13 +100,13 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if centralpointsource:
-            if verbose: print ' - Requested to insert central point source; modifying parameter list from FoV Gauss model fit'
+            if verbose: print(' - Requested to insert central point source; modifying parameter list from FoV Gauss model fit')
             ycen,xcen     = dataimg.shape[0]/2., dataimg.shape[1]/2.
             if type(ignore_radius) == float:
                 ignore_radius = [ignore_radius]*2
 
             Nsources  = int(len(fit_output[0])/6.)
-            for oo in xrange(Nsources):
+            for oo in range(Nsources):
                 obj_xpix = fit_output[0][1::6][oo]
                 obj_ypix = fit_output[0][0::6][oo]
                 if ((obj_ypix-ycen)**2.0 < ignore_radius[0]**2.0) & ((obj_xpix-xcen)**2.0 < ignore_radius[1]**2.0):
@@ -127,8 +127,8 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
             fo_tmp1    = np.zeros(len(ent_good)*6)
             pi_tmp     = np.zeros(len(ent_good)*6)
             if Nignore > 0:
-                if verbose: print('   '+str(Nignore)+' sources within '+str(ignore_radius[0])+
-                                  ' pixels of the central point source were ignored')
+                if verbose: print(('   '+str(Nignore)+' sources within '+str(ignore_radius[0])+
+                                  ' pixels of the central point source were ignored'))
                 for ee, egood in enumerate(ent_good):
                     for ff in [0,1,2,3,4,5]:
                         fo_tmp1[ff::6][ee]  = fit_output[0][ff::6][egood]
@@ -147,7 +147,7 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
         fit_output      = tmf.model_objects_galfit(dataimg,galfitparamfile,verbose=verbose,show_residualimg=show_residualimg)
 
     elif modeltype.lower() == 'aperture':
-        if verbose: print ' - Building paramter list from provided aperture parameters'
+        if verbose: print(' - Building paramter list from provided aperture parameters')
         paramlist     = tmf.gen_paramlist_aperture(sourcecatalog,sigysigxangle,pixval=fluxscale,
                                                    xpos_col=xpos_col,ypos_col=ypos_col,verbose=verbose)
 
@@ -170,7 +170,7 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
                                 dataresidual=dataimg)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Storing fitted source paramters as fits table and returning output'
+    if verbose: print(' - Storing fitted source paramters as fits table and returning output')
     tablename  = generateimage.replace('.fits','_objparam.fits')
     if modeltype.lower() == 'gauss': # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         objnumbers = np.arange(len(fit_output[0])/6)+1
@@ -229,7 +229,7 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Generate model image from input paramters'
+    if verbose: print(' - Generate model image from input paramters')
 
     if modeltype.lower() == 'gauss':
         xgrid, ygrid = tu.gen_gridcomponents(imgsize)
@@ -247,10 +247,10 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
         modelimg = dataresidual - modelimg
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Saving generated image to '+outname
+    if verbose: print(' - Saving generated image to '+outname)
     if outputhdr is None:
         hduimg = pyfits.PrimaryHDU(modelimg)       # creating default fits header
-        if verbose: print ' - No header provided so will generate one '
+        if verbose: print(' - No header provided so will generate one ')
         # writing hdrkeys:    '---KEY--',                      '----------------MAX LENGTH COMMENT-------------'
         hduimg.header.append(('BUNIT   '                      ,'(10**(-20)*erg/s/cm**2/Angstrom)**2'),end=True)
         hduimg.header.append(('OBJECT  '                      ,'model image'),end=True)
@@ -274,9 +274,9 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
     if modeltype.lower() == 'gauss':
         Nparam = 6
         Nobj   = int(len(paramlist)/Nparam)
-        if verbose: print ' - Adding gaussian parameters of '+str(Nobj)+' objects used to generate model to header '
+        if verbose: print(' - Adding gaussian parameters of '+str(Nobj)+' objects used to generate model to header ')
 
-        for oo in xrange(Nobj):
+        for oo in range(Nobj):
             objno = str("%.4d" % (oo+1))
             yposition,xposition,fluxscale,sigmay,sigmax,angle = paramlist[oo*Nparam:oo*Nparam+Nparam]
             hduimg.header.append(('xp'+objno, xposition, 'Obj'+objno+': x position'),end=True)
@@ -299,9 +299,9 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
     elif modeltype.lower() == 'aperture':
         Nparam = 4
         Nobj   = int(len(paramlist)/Nparam)
-        if verbose: print ' - Adding aperture parameters of '+str(Nobj)+' objects used to generate model to header '
+        if verbose: print(' - Adding aperture parameters of '+str(Nobj)+' objects used to generate model to header ')
 
-        for oo in xrange(Nobj):
+        for oo in range(Nobj):
             objno = str("%.4d" % (oo+1))
             yposition,xposition,radius,pixval = paramlist[oo*Nparam:oo*Nparam+Nparam]
             hduimg.header.append(('xp'+objno, xposition, 'Obj'+objno+': x position'),end=True)
@@ -346,16 +346,16 @@ def gen_paramlist(sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=No
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Loading source catalog information to build mock data cube for'
+    if verbose: print(' - Loading source catalog information to build mock data cube for')
     try:
         sourcedat = pyfits.open(sourcecatalog)[1].data
     except:
         sys.exit(' ---> Problems loading fits source catalog for mock cube')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Nobjects   = len(sourcedat)
-    if verbose: print ' - Assembling paramter list for '+str(Nobjects)+' sources found in catalog (tmf.gen_paramlist)'
+    if verbose: print(' - Assembling paramter list for '+str(Nobjects)+' sources found in catalog (tmf.gen_paramlist)')
     paramlist = []
-    for oo in xrange(Nobjects):
+    for oo in range(Nobjects):
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         xpos       = sourcedat[xpos_col][oo]
         ypos       = sourcedat[ypos_col][oo]
@@ -402,16 +402,16 @@ def gen_paramlist_aperture(sourcecatalog,radius_pix,pixval=None,xpos_col='xpos',
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Loading source catalog information to build parameter list for'
+    if verbose: print(' - Loading source catalog information to build parameter list for')
     try:
         sourcedat = pyfits.open(sourcecatalog)[1].data
     except:
         sys.exit(' ---> Problems loading fits source catalog for mock cube')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     Nobjects   = len(sourcedat)
-    if verbose: print ' - Assembling paramter list for '+str(Nobjects)+' sources found in catalog (tmf.gen_paramlist_aperture)'
+    if verbose: print(' - Assembling paramter list for '+str(Nobjects)+' sources found in catalog (tmf.gen_paramlist_aperture)')
     paramlist = []
-    for oo in xrange(Nobjects):
+    for oo in range(Nobjects):
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         xpos       = sourcedat[xpos_col][oo]
         ypos       = sourcedat[ypos_col][oo]
@@ -460,8 +460,8 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',max_centroid_
     param_optimized, param_cov  = tmf.model_objects_gauss(param_init,dataimg,verbose=True)
 
     """
-    if verbose: print ' - Optimize residual between model (multiple Gaussians) and data with the optimizer "'+optimizer+'"'
-    if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
+    if verbose: print(' - Optimize residual between model (multiple Gaussians) and data with the optimizer "'+optimizer+'"')
+    if verbose: print('   ----------- Started on '+tu.get_now_string()+' ----------- ')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if optimizer == 'leastsq':
         best_param, cov, info, message, succesflag = opt.leastsq(tmf.residual_multigauss,param_init, args=(dataimage),
@@ -485,8 +485,8 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',max_centroid_
         Nnonfinite = len(dataimage[np.where(~np.isfinite(dataimage))])
         if Nnonfinite > 0:
             dataimage[np.where(~np.isfinite(dataimage))] = 0.0
-            if verbose: print(' WARNING: '+str(Nnonfinite)+' Pixels in dataimage that are not finite; '
-                                                           'setting them to 0 to prevent curve_fit crash')
+            if verbose: print((' WARNING: '+str(Nnonfinite)+' Pixels in dataimage that are not finite; '
+                                                           'setting them to 0 to prevent curve_fit crash'))
 
         if max_centroid_shift is not None:
             init_y       = param_init[0::6]
@@ -510,20 +510,20 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',max_centroid_
             output = param_optimized, param_cov
         except:
             print(' WARNING: Curve_fit failed so returning param_init [ypos,xpos,fluxscale,sigmay,sigmax,angle]: ')
-            print('          '+str(param_init))
+            print(('          '+str(param_init)))
             print('          i.e. the intiial guess of the parameters')
-            print('          Likely using "maximum function call" of '+str(maxfctcalls)+')')
+            print(('          Likely using "maximum function call" of '+str(maxfctcalls)+')'))
             output = param_init, None
             #pdb.set_trace()
 
     else:
         sys.exit(' ---> Invalid optimizer ('+optimizer+') chosen in model_objects_gauss()')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
+    if verbose: print('\n   ----------- Finished on '+tu.get_now_string()+' ----------- ')
     #if verbose: print ' - The returned best-fit parameters are \n   ',output[0]
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if show_residualimg:
-        if verbose: print ' - Displaying the residual image between initial guess and optimized parameters'
+        if verbose: print(' - Displaying the residual image between initial guess and optimized parameters')
         init_img = tmf.modelimage_multigauss((xgrid,ygrid), param_init , showmodelimg=False)
         best_img = tmf.modelimage_multigauss((xgrid,ygrid), output[0]  , showmodelimg=False)
         res_img  = init_img-best_img
@@ -540,14 +540,11 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',max_centroid_
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return output
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def curve_fit_function_wrapper((x,y),*args):
+def curve_fit_function_wrapper(xxx_todo_changeme,*args):
     """
     Wrapper for curve_fit optimizer call to be able to provide list of parameters to model_objects_gauss()
     """
-    # infostr = '   curve_fit_function_wrapper call at '+tu.get_now_string(withseconds=True)
-    # sys.stdout.write("%s\r" % infostr)
-    # sys.stdout.flush()
-
+    (x,y) = xxx_todo_changeme
     paramlist = np.asarray(args)
     modelimg  = tmf.modelimage_multigauss((x,y), paramlist, showmodelimg=False, verbose=False)
     #print paramlist
@@ -594,7 +591,7 @@ def residual_multigauss(param, dataimage, nonfinite = 0.0, ravelresidual=True, s
 
     return residualimg
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, useroll=False, verbose=True, verbosefull=False):
+def modelimage_multigauss(xxx_todo_changeme1, param, showmodelimg=False, useroll=False, verbose=True, verbosefull=False):
     """
     Build model image of N Gaussians where param contains the parameters
 
@@ -619,11 +616,12 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, useroll=Fals
     param      = np.asarray([305,515,1,40.1,4.2,21.69,    120,100,200,20.1,15.2,0])
     modelimage = tmf.modelimage_multigauss((xgrid,ygrid), param, showmodelimg=True, verbose=True, verbosefull=True)
     """
+    (xgrid,ygrid) = xxx_todo_changeme1
     Ngauss  = len(param)/6.0
     if Ngauss != np.round(len(param)/6.0):
         sys.exit(' ---> The number of parameters is not a multiple of 6 in modelimage_multigauss()')
 
-    if verbose: print ' - Generating model for multiple ('+str(Ngauss)+') gaussians '
+    if verbose: print(' - Generating model for multiple ('+str(Ngauss)+') gaussians ')
     if xgrid.shape != ygrid.shape:
         sys.exit(' shapes of xgrid and ygrid in modelimage_multigauss do not matach')
     imgsize    = xgrid.shape
@@ -645,12 +643,12 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, useroll=Fals
 
         modelimage         = modelimage + gauss2D_positioned
 
-    if verbose: print '\n   done'
+    if verbose: print('\n   done')
     if showmodelimg:
         centerdot = modelimage*0.0
         center    = [int(modelimage.shape[0]/2.),int(modelimage.shape[1]/2.)]
         centerdot[center[1],center[0]] = 2.0*np.max(modelimage)
-        print ' - Center of image:',center
+        print(' - Center of image:',center)
         plt.imshow(modelimage-centerdot,interpolation=None,origin='lower')#, vmin=1e-5, vmax=np.max(modelimage), norm=mpl.colors.LogNorm())
         plt.colorbar()
         plt.title('Model Image')
@@ -659,7 +657,7 @@ def modelimage_multigauss((xgrid,ygrid), param, showmodelimg=False, useroll=Fals
 
     return modelimage
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def modelimage_aperture((xgrid,ygrid), param, showmodelimg=False, verbose=True, verbosefull=False):
+def modelimage_aperture(xxx_todo_changeme2, param, showmodelimg=False, verbose=True, verbosefull=False):
     """
     Build model image of N apertures where param contains the parameters for each aperture
 
@@ -680,11 +678,12 @@ def modelimage_aperture((xgrid,ygrid), param, showmodelimg=False, verbose=True, 
     modelimage = tmf.modelimage_aperture((xgrid,ygrid), param, showmodelimg=True, verbose=True)
 
     """
+    (xgrid,ygrid) = xxx_todo_changeme2
     Naper  = len(param)/4.0
     if Naper != np.round(len(param)/4.0):
         sys.exit(' ---> The number of parameters is not a multiple of 4 in modelimage_aperture()')
 
-    if verbose: print ' - Generating model for multiple ('+str(Naper)+') apertures '
+    if verbose: print(' - Generating model for multiple ('+str(Naper)+') apertures ')
     if xgrid.shape != ygrid.shape:
         sys.exit(' shapes of xgrid and ygrid in modelimage_aperture do not matach')
     imgsize    = xgrid.shape
@@ -700,7 +699,7 @@ def modelimage_aperture((xgrid,ygrid), param, showmodelimg=False, verbose=True, 
                                       showaperture=False,verbose=verbosefull)
         modelimage  = modelimage + apertureimg
 
-    if verbose: print '\n   done'
+    if verbose: print('\n   done')
     if showmodelimg:
         plt.imshow(modelimage,interpolation='none', vmin=1e-5, vmax=np.max(modelimage), norm=mpl.colors.LogNorm())
         plt.title('Model Image')
@@ -725,9 +724,9 @@ def model_objects_galfit(dataimage,galfitparamfile,show_residualimg=False,verbos
 
 
     """
-    print ' # # # # # # # # # model_objects_galfit() still under development/testing # # # # # # # # #'
-    if verbose: print ' - Use GALFIT model output to obtain model parameters for residual between (GALFIT) model and data'
-    if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
+    print(' # # # # # # # # # model_objects_galfit() still under development/testing # # # # # # # # #')
+    if verbose: print(' - Use GALFIT model output to obtain model parameters for residual between (GALFIT) model and data')
+    if verbose: print('   ----------- Started on '+tu.get_now_string()+' ----------- ')
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     galfitparams = tu.galfit_loadoutput(galfitparamfile)
@@ -750,10 +749,10 @@ def model_objects_galfit(dataimage,galfitparamfile,show_residualimg=False,verbos
         param_optimized  = tu.galfit_results2paramlist(galfitoutput,verbose=verbose)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print '   ----------- Finished on '+tu.get_now_string()+' ----------- '
+    if verbose: print('   ----------- Finished on '+tu.get_now_string()+' ----------- ')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if show_residualimg:
-        if verbose: print ' - Displaying the residual image between data image and galfit model (assuming gaussians)'
+        if verbose: print(' - Displaying the residual image between data image and galfit model (assuming gaussians)')
         galfit_img = tmf.modelimage_multigauss((xgrid,ygrid), output[0]  , showmodelimg=False)
         res_img    = dataimage-galfit_img
         plt.imshow(res_img,interpolation='none', vmin=1e-5, vmax=np.max(res_img), norm=mpl.colors.LogNorm())
@@ -775,8 +774,8 @@ def model_objects_MoGs(param,verbose=True):
 
 
     """
-    if verbose: print ' - Build 2D covariance matrix with varinaces (x,y)=('+str(sigmax)+','+str(sigmay)+\
-                      ') and then rotated '+str(angle)+' degrees'
+    if verbose: print(' - Build 2D covariance matrix with varinaces (x,y)=('+str(sigmax)+','+str(sigmay)+\
+                      ') and then rotated '+str(angle)+' degrees')
     return None
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =

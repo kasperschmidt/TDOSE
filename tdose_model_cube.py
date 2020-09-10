@@ -67,18 +67,18 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Determining parameters and assembling source information'
+    if verbose: print(' - Determining parameters and assembling source information')
     if (paramtype == 'gauss') or (paramtype == 'modelimg'):
-        if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
+        if verbose: print('   ----------- Started on '+tu.get_now_string()+' ----------- ')
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if paramtype == 'gauss':
             Nsource   = int(len(sourceparam)/6.0)
             params    = np.reshape(sourceparam,[Nsource,6])
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            if verbose: print ' - Assembling covariance matrixes for '+str(Nsource)+' Gaussian source in parameter list'
+            if verbose: print(' - Assembling covariance matrixes for '+str(Nsource)+' Gaussian source in parameter list')
             mu_objs   = np.zeros([Nsource,2])
             cov_objs  = np.zeros([Nsource,2,2])
-            for nn in xrange(Nsource):
+            for nn in range(Nsource):
                 mu_objs[nn,:]    = params[nn][0:2]
                 cov_obj          = tu.build_2D_cov_matrix(params[nn][4],params[nn][3],params[nn][5],verbose=False)
                 cov_objs[nn,:,:] = cov_obj
@@ -89,8 +89,8 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                 Nsource = 1
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         datashape = datacube.shape
-        if verbose: print ' - Looping over '+str(datashape[0])+' wavelength layers, convolve sources with'
-        if verbose: print '   Gaussian PSF and optimize flux scaling for each of them.'
+        if verbose: print(' - Looping over '+str(datashape[0])+' wavelength layers, convolve sources with')
+        if verbose: print('   Gaussian PSF and optimize flux scaling for each of them.')
         layer_scales   = np.zeros([Nsource,datashape[0]])
         model_cube_out = np.zeros(datashape)
 
@@ -109,7 +109,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
             optimize_method_list = ['curvefit','matrix','lstsq','nnls']
         else:
             optimize_method_list = [optimize_method]
-        if verbose: print ' - Optimizing flux scales useing the optimizer "'+str(optimize_method)+'"'
+        if verbose: print(' - Optimizing flux scales useing the optimizer "'+str(optimize_method)+'"')
 
         if paramtype == 'gauss':
             analytic_conv = True
@@ -132,24 +132,24 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if analytic_conv:
-                if verbose & (ll==0): print ' - Performing analytic convolution of Gaussian sources; Build convolved covariance matrixes'
+                if verbose & (ll==0): print(' - Performing analytic convolution of Gaussian sources; Build convolved covariance matrixes')
                 mu_objs_conv   = np.zeros([Nsource,2])
                 cov_objs_conv  = np.zeros([Nsource,2,2])
-                for nn in xrange(Nsource):
+                for nn in range(Nsource):
                     muconv, covarconv     = tu.analytic_convolution_gaussian(mu_objs[nn,:],cov_objs[nn,:,:],mu_psf,cov_psf)
                     mu_objs_conv[nn,:]    = muconv
                     cov_objs_conv[nn,:,:] = covarconv
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             else:
-                if verbose & (ll==0): print ' - Performing numerical convolution of sources in-loop'
+                if verbose & (ll==0): print(' - Performing numerical convolution of sources in-loop')
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            if loopverbose: print ' - Build layer image'
+            if loopverbose: print(' - Build layer image')
 
             if fit_source_scales:
-                if loopverbose: print ' - Checking if any pixels need to be masked out '
+                if loopverbose: print(' - Checking if any pixels need to be masked out ')
                 if ( len(np.where(np.isfinite(datacube[ll,:,:].ravel()) == True )[0]) != len(datacube[ll,:,:].ravel()) ) or \
                         ( len(np.where(np.isfinite(noisecube[ll,:,:].ravel()) == True )[0]) != len(noisecube[ll,:,:].ravel()) ):
-                    if loopverbose: print '   Found non-finite values in cubes so generating mask to ignore those in modeling '
+                    if loopverbose: print('   Found non-finite values in cubes so generating mask to ignore those in modeling ')
                     invalid_mask1   = np.ma.masked_invalid(datacube[ll,:,:]).mask
                     invalid_mask2   = np.ma.masked_invalid(noisecube[ll,:,:]).mask
                     comb_mask       = (invalid_mask1 | invalid_mask2)
@@ -160,8 +160,8 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                     if ('curvefit' in optimize_method_list) or ('nnls' in optimize_method_list) or ('lstsq' in optimize_method_list):
                         # filling masked arrays with 0s and 1s as curve_fit and nnls can't handle masked arrays
                         # The np.asarray_chkfinite(datacube_layer) used to check for NaNs returns an error despite the array being masked.
-                        if verbose & (ll==0): print ' - WARNING: NaNs and Infs replaced with 0s (1s) in data (noise) cube, respectively'
-                        if verbose & (ll==0): print '            as masked arrays are not supported by the optimizer "'+str(optimize_method)+'"'
+                        if verbose & (ll==0): print(' - WARNING: NaNs and Infs replaced with 0s (1s) in data (noise) cube, respectively')
+                        if verbose & (ll==0): print('            as masked arrays are not supported by the optimizer "'+str(optimize_method)+'"')
                         datacube_layer  = datacube_layer.filled(fill_value=0.0)
                         noisecube_layer = noisecube_layer.filled(fill_value=1.0)
                 else:
@@ -171,7 +171,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
                 #-------------------------------------------------------------------------------------------------------
                 if ('curvefit' in optimize_method_list) & (analytic_conv == True):
-                    if loopverbose: print ' - Optimize flux scaling of each source in full image numerically '
+                    if loopverbose: print(' - Optimize flux scaling of each source in full image numerically ')
                     scalesCFIT, covsCFIT  = tmc.optimize_source_scale_gauss(datacube_layer,
                                                                             np.ones(datashape[1:]), # noise always ones
                                                                             mu_objs_conv,cov_objs_conv,
@@ -184,17 +184,17 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                     output_scales  = scalesCFIT
                 #-------------------------------------------------------------------------------------------------------
                 if ('matrix' in optimize_method_list) or ('lstsq' in optimize_method_list) or ('nnls' in optimize_method_list):
-                    if loopverbose: print ' - Optimize flux scaling of each source in full image analytically '
+                    if loopverbose: print(' - Optimize flux scaling of each source in full image analytically ')
                     if analytic_conv:
-                        if loopverbose: print '   Generating PSFed model convolving model Gaussians analytically '
+                        if loopverbose: print('   Generating PSFed model convolving model Gaussians analytically ')
                     else:
-                        if loopverbose: print '   Generating PSFed model convolving model Gaussians numerically with "'+\
-                                              psfparamtype+'" kernel'
-                        if loopverbose: print '   (Before scaling to flux in layer, model will be normalized, i.e. np.sum(model) = 1)'
+                        if loopverbose: print('   Generating PSFed model convolving model Gaussians numerically with "'+\
+                                              psfparamtype+'" kernel')
+                        if loopverbose: print('   (Before scaling to flux in layer, model will be normalized, i.e. np.sum(model) = 1)')
 
                     conv_source_images = np.zeros(sourceparam.shape) # array to store the convolved source images
 
-                    for ss in xrange(Nsource):
+                    for ss in range(Nsource):
                         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
                         if analytic_conv:
                             img_model  = tmc.gen_image(datashape[1:],mu_objs_conv[ss],cov_objs_conv[ss],sourcescale=[1.0],
@@ -239,7 +239,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
                     #---------------------------------------------------------------------------------------------------
                     if 'matrix' in optimize_method_list:
-                        if loopverbose: print '   Using matrix algebra for optimization'
+                        if loopverbose: print('   Using matrix algebra for optimization')
                         ATA        = Atrans.dot(A)
                         ATd        = Atrans.dot(dataravel)
 
@@ -260,14 +260,14 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                                 output_layerMTX   = img_model_init/np.sum(img_model_init) * scalesMTX
                             else:
                                 output_layerMTX = np.zeros(datacube.shape[1:])
-                                for component in xrange(len(scalesMTX)):
+                                for component in range(len(scalesMTX)):
                                     output_layerMTX = output_layerMTX + conv_source_images[component,:,:] * scalesMTX[component]
                         output_layer   = output_layerMTX
                         output_scales  = scalesMTX
 
                     #---------------------------------------------------------------------------------------------------
                     if 'nnls' in optimize_method_list:
-                        if loopverbose: print '   Using scipy nnls (non-negative least squares) for optimization'
+                        if loopverbose: print('   Using scipy nnls (non-negative least squares) for optimization')
                         scalesNNLS, residualNNLS = scipy.optimize.nnls(A,dataravel)
 
                         if analytic_conv:
@@ -278,7 +278,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                                 output_layerNNLS   = img_model_init/np.sum(img_model_init) * scalesNNLS
                             else:
                                 output_layerNNLS = np.zeros(datacube.shape[1:])
-                                for component in xrange(len(scalesNNLS)):
+                                for component in range(len(scalesNNLS)):
                                     output_layerNNLS = output_layerNNLS + sourceparam[component,:,:] * scalesNNLS[component]
 
                         output_layer   = output_layerNNLS
@@ -286,7 +286,7 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
                     #---------------------------------------------------------------------------------------------------
                     if 'lstsq' in optimize_method_list:
-                        if loopverbose: print '   Using scipy.linalg.lstsq() for optimization'
+                        if loopverbose: print('   Using scipy.linalg.lstsq() for optimization')
                         LSQout     = scipy.linalg.lstsq(A,dataravel)
                         scalesLSQ  = LSQout[0]
 
@@ -327,10 +327,10 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
                     plt.legend()
                     plt.show()
 
-                    print ' ---> Stopping in gen_fullmodel() for further investigation'
+                    print(' ---> Stopping in gen_fullmodel() for further investigation')
                     pdb.set_trace()
             else:
-                if loopverbose: print ' - Optimize flux scaling of full image numerically '
+                if loopverbose: print(' - Optimize flux scaling of full image numerically ')
                 layer_img      = tmc.gen_image(datashape[1:],mu_objs_conv,cov_objs_conv,
                                                sourcescale=params[:,2],verbose=loopverbose)
                 scale, cov     = tmc.optimize_img_scale(datacube[ll,:,:],noisecube[ll,:,:],layer_img,
@@ -340,16 +340,16 @@ def gen_fullmodel(datacube,sourceparam,psfparam,paramtype='gauss',psfparamtype='
 
             layer_scales[:,ll]     = output_scales
             model_cube_out[ll,:,:] = output_layer
-        if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
+        if verbose: print('\n   ----------- Finished on '+tu.get_now_string()+' ----------- ')
     elif paramtype == 'aperture':
-        if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
+        if verbose: print('   ----------- Started on '+tu.get_now_string()+' ----------- ')
         Nsource        = int(len(sourceparam)/4.0)
         datashape      = datacube.shape
         xgrid, ygrid   = tu.gen_gridcomponents(datashape[1:])
         model_img      = tmf.modelimage_aperture((xgrid,ygrid), sourceparam, showmodelimg=False, verbose=loopverbose)
         layer_scales   = np.ones([Nsource,datashape[0]])
         model_cube_out = np.repeat(model_img[np.newaxis, :, :], datashape[0], axis=0)
-        if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
+        if verbose: print('\n   ----------- Finished on '+tu.get_now_string()+' ----------- ')
     else:
         sys.exit(' ---> Invalid parameter type ('+paramtype+') provided to gen_fullmodel()')
 
@@ -376,11 +376,11 @@ def save_cube(cubename,datacube,layer_scales,outputhdr=None,clobber=False,verbos
     verbose         Toggle verbosity
 
     """
-    if verbose: print ' - Saving model cube to \n   '+cubename
+    if verbose: print(' - Saving model cube to \n   '+cubename)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if outputhdr is None:
         hducube = pyfits.PrimaryHDU(datacube)       # default HDU with default minimal header
-        if verbose: print ' - No header provided so will generate one '
+        if verbose: print(' - No header provided so will generate one ')
         # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
         hducube.header.append(('BUNIT  '                      ,'(10**(-20)*erg/s/cm**2/Angstrom)**2'),end=True)
         hducube.header.append(('OBJECT '                      ,'model_cube'),end=True)
@@ -410,8 +410,8 @@ def save_cube(cubename,datacube,layer_scales,outputhdr=None,clobber=False,verbos
 
         hdus = [hducube]
     else:
-        if verbose: print ' - Using header provided with "outputhdr" for output fits file '
-        if 'XTENSION' in outputhdr.keys():
+        if verbose: print(' - Using header provided with "outputhdr" for output fits file ')
+        if 'XTENSION' in list(outputhdr.keys()):
             hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
             hducube        = pyfits.ImageHDU(datacube,header=outputhdr)
             hdus           = [hduprim,hducube]
@@ -462,10 +462,10 @@ def optimize_source_scale_gauss(img_data,img_std,mu_objs,cov_objs,optimizer='cur
     scale, cov = tmc.optimize_img_scale()
 
     """
-    if verbose: print ' - Optimize residual between model (multiple Gaussians) and data with least squares in 2D'
+    if verbose: print(' - Optimize residual between model (multiple Gaussians) and data with least squares in 2D')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
+    if verbose: print('   ----------- Started on '+tu.get_now_string()+' ----------- ')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if optimizer == 'leastsq':
         sys.exit('optimizer = "leastsq" not enabled')
@@ -476,7 +476,7 @@ def optimize_source_scale_gauss(img_data,img_std,mu_objs,cov_objs,optimizer='cur
         xgrid, ygrid           = tu.gen_gridcomponents(imgsize)
         with warnings.catch_warnings():
             #warnings.simplefilter("ignore")
-            scale_best, scale_cov  = opt.curve_fit(lambda (xgrid, ygrid), *scales:
+            scale_best, scale_cov  = opt.curve_fit(lambda xgrid, ygrid, *scales:
                                                    curve_fit_fct_wrapper_sourcefit((xgrid, ygrid),mu_objs,
                                                                                    cov_objs,*scales),(xgrid, ygrid),
                                                    img_data.ravel(), p0 = scales_initial_guess, sigma=img_std.ravel() )
@@ -484,7 +484,7 @@ def optimize_source_scale_gauss(img_data,img_std,mu_objs,cov_objs,optimizer='cur
     else:
         sys.exit(' ---> Invalid optimizer ('+optimizer+') chosen for optimize_source_scale_gauss()')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print '   ----------- Finished on '+tu.get_now_string()+' ----------- '
+    if verbose: print('   ----------- Finished on '+tu.get_now_string()+' ----------- ')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return output
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -505,8 +505,8 @@ def optimize_img_scale(img_data,img_std,img_model,optimizer='curve_fit',show_res
     scale, cov = tmc.optimize_img_scale()
 
     """
-    if verbose: print ' - Optimize residual between model (multiple Gaussians) and data with least squares in 2D'
-    if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
+    if verbose: print(' - Optimize residual between model (multiple Gaussians) and data with least squares in 2D')
+    if verbose: print('   ----------- Started on '+tu.get_now_string()+' ----------- ')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if optimizer == 'leastsq':
         sys.exit('optimizer = "leastsq" no enabled')
@@ -514,7 +514,7 @@ def optimize_img_scale(img_data,img_std,img_model,optimizer='curve_fit',show_res
     elif optimizer == 'curve_fit':
         imgsize                = img_data.shape
         xgrid, ygrid           = tu.gen_gridcomponents(imgsize)
-        scale_best, scale_cov  = opt.curve_fit(lambda (xgrid, ygrid), scale:
+        scale_best, scale_cov  = opt.curve_fit(lambda xgrid, ygrid, scale:
                                                tmc.curve_fit_fct_wrapper_imgscale((xgrid, ygrid), scale, img_model),
                                                (xgrid, ygrid),
                                                img_data.ravel(), p0 = [1.0], sigma=img_std.ravel() )
@@ -523,10 +523,10 @@ def optimize_img_scale(img_data,img_std,img_model,optimizer='curve_fit',show_res
     else:
         sys.exit(' ---> Invalid optimizer ('+optimizer+') chosen in optimize_img_scale()')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print '   ----------- Finished on '+tu.get_now_string()+' ----------- '
+    if verbose: print('   ----------- Finished on '+tu.get_now_string()+' ----------- ')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if show_residualimg:
-        if verbose: print ' - Displaying the residual image between data and scaled model image '
+        if verbose: print(' - Displaying the residual image between data and scaled model image ')
         res_img  = img_model-img_data
         plt.imshow(res_img,interpolation='none', vmin=1e-5, vmax=np.max(res_img), norm=mpl.colors.LogNorm())
         plt.title('Initial Residual = Initial Model Image - Data Image')
@@ -539,20 +539,22 @@ def optimize_img_scale(img_data,img_std,img_model,optimizer='curve_fit',show_res
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return output
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def curve_fit_fct_wrapper_sourcefit((x,y),mu_objs,cov_objs,*scales):
+def curve_fit_fct_wrapper_sourcefit(xxx_todo_changeme,mu_objs,cov_objs,*scales):
     """
     Wrapper for curve_fit optimizer function
     """
+    (x,y) = xxx_todo_changeme
     imagedim  = x.shape
     scls      = np.asarray(scales)
     img_model = tmc.gen_image(imagedim,mu_objs,cov_objs,sourcescale=scls,verbose=False)
 
     return img_model.ravel()
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def curve_fit_fct_wrapper_imgscale((x,y),scale,img_model):
+def curve_fit_fct_wrapper_imgscale(xxx_todo_changeme1,scale,img_model):
     """
     Wrapper for curve_fit optimizer function
     """
+    (x,y) = xxx_todo_changeme1
     img_scaled = img_model*scale
 
     return img_scaled.ravel()
@@ -592,13 +594,13 @@ def gen_image(imagedim,mu_objs,cov_objs,sourcescale='ones',verbose=True):
         Nobj  = Nmu
 
     if sourcescale == 'ones':
-        if verbose: print ' - Setting all source flux scales to 1.'
+        if verbose: print(' - Setting all source flux scales to 1.')
         scalings = [1]*Nobj
     else:
-        if verbose: print ' - Applying user-defined source scalings provided with "sourcescale".'
+        if verbose: print(' - Applying user-defined source scalings provided with "sourcescale".')
         scalings = sourcescale
 
-    for oo in xrange(Nobj):
+    for oo in range(Nobj):
         if Nobj == 1: # only one object
             if len(mu_objs.shape) == 2:
                 muconv = mu_objs[oo,:]
@@ -612,19 +614,19 @@ def gen_image(imagedim,mu_objs,cov_objs,sourcescale='ones',verbose=True):
         else:
             muconv, covarconv = mu_objs[oo,:], cov_objs[oo,:,:]
 
-        if verbose: print ' - Generating source in spatial dimensions '
+        if verbose: print(' - Generating source in spatial dimensions ')
         try:
             source_centered = tu.gen_2Dgauss(imagedim,covarconv,scalings[oo],show2Dgauss=False,verbose=verbose)
         except:
-            print ' - ERROR: Something went wrong in tdose_model_cube.gen_image(); stopping to further investigate...'
+            print(' - ERROR: Something went wrong in tdose_model_cube.gen_image(); stopping to further investigate...')
             pdb.set_trace()
 
-        if verbose: print ' - Positioning source at position according to mu-vector (x,y) = ('+\
-                      str(muconv[1])+','+str(muconv[0])+') in output image'
+        if verbose: print(' - Positioning source at position according to mu-vector (x,y) = ('+\
+                      str(muconv[1])+','+str(muconv[0])+') in output image')
         #source_positioned = tu.roll_2Dprofile(source_centered,muconv,showprofiles=False)
         source_positioned = tu.shift_2Dprofile(source_centered,muconv,showprofiles=False,origin=1)
 
-        if verbose: print ' - Adding convolved source to output image'
+        if verbose: print(' - Adding convolved source to output image')
         img_out  = img_out + source_positioned
 
     return img_out
@@ -669,16 +671,16 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
     Nlayers = layer_scales.shape[1]
 
     if paramtype == 'gauss':
-        if verbose: print ' - Set up output source model cube based on Gaussian parameters and sub-cube input shape  '
+        if verbose: print(' - Set up output source model cube based on Gaussian parameters and sub-cube input shape  ')
         Nsource   = int(len(sourceparam)/6.0)
         params    = np.reshape(sourceparam,[Nsource,6])
 
         out_cube  = np.zeros([Nsource,cubeshape[0],cubeshape[1],cubeshape[2]])
 
-        if verbose: print ' - Loop over sources and layers to fill output cube with data '
-        if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
-        for ss in xrange(Nsource):
-            for ll in xrange(Nlayers):
+        if verbose: print(' - Loop over sources and layers to fill output cube with data ')
+        if verbose: print('   ----------- Started on '+tu.get_now_string()+' ----------- ')
+        for ss in range(Nsource):
+            for ll in range(Nlayers):
                 if verbose:
                     infostr = '   Generating layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % cubeshape[0])+\
                               ' in source cube '+str("%6.f" % (ss+1))+' / '+str("%6.f" % Nsource)
@@ -697,18 +699,18 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
                 layer_img            = tmc.gen_image(cubeshape[1:],np.asarray([mu_conv]),np.asarray([cov_conv]),
                                                      sourcescale=[1.0],verbose=False)
                 out_cube[ss,ll,:,:]  = layer_img * layer_scales[ss,ll]
-        if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
+        if verbose: print('\n   ----------- Finished on '+tu.get_now_string()+' ----------- ')
     elif paramtype == 'aperture':
-        if verbose: print ' - Set up output source model cube based on aperture parameters and sub-cube input shape  '
+        if verbose: print(' - Set up output source model cube based on aperture parameters and sub-cube input shape  ')
         Nsource      = int(len(sourceparam)/4.0)
         params       = np.reshape(sourceparam,[Nsource,4])
         out_cube     = np.zeros([Nsource,cubeshape[0],cubeshape[1],cubeshape[2]])
         xgrid, ygrid = tu.gen_gridcomponents(cubeshape[1:])
 
-        if verbose: print ' - Loop over sources and layers to fill output cube with data '
-        if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
-        for ss in xrange(Nsource):
-            for ll in xrange(Nlayers):
+        if verbose: print(' - Loop over sources and layers to fill output cube with data ')
+        if verbose: print('   ----------- Started on '+tu.get_now_string()+' ----------- ')
+        for ss in range(Nsource):
+            for ll in range(Nlayers):
                 if verbose:
                     infostr = '   Generating layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % cubeshape[0])+\
                               ' in source cube '+str("%6.f" % (ss+1))+' / '+str("%6.f" % Nsource)
@@ -717,24 +719,24 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
 
                 layer_img           = tmf.modelimage_aperture((xgrid,ygrid), params[ss], showmodelimg=False, verbose=False)
                 out_cube[ss,ll,:,:] = layer_img * layer_scales[ss,ll]
-        if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
+        if verbose: print('\n   ----------- Finished on '+tu.get_now_string()+' ----------- ')
 
     elif paramtype == 'modelimg':
         if len(sourceparam.shape) == 2:
-            if verbose: print ' - Storing single source (object) from model image in source cube (no source disentangling) '
+            if verbose: print(' - Storing single source (object) from model image in source cube (no source disentangling) ')
             Nsource   = 1
         elif len(sourceparam.shape) == 3:
-            if verbose: print ' - Storing model components in source cube (incl. source disentangling) '
+            if verbose: print(' - Storing model components in source cube (incl. source disentangling) ')
             Nsource   = sourceparam.shape[0]
         else:
             sys.exit(' ---> Shape of model data array is not 2 (image) or 3 (cube) ')
 
         out_cube  = np.zeros([Nsource,cubeshape[0],cubeshape[1],cubeshape[2]])
 
-        if verbose: print ' - Loop over layers to fill output cube with data '
-        if verbose: print '   ----------- Started on '+tu.get_now_string()+' ----------- '
-        for ss in xrange(Nsource):
-            for ll in xrange(Nlayers):
+        if verbose: print(' - Loop over layers to fill output cube with data ')
+        if verbose: print('   ----------- Started on '+tu.get_now_string()+' ----------- ')
+        for ss in range(Nsource):
+            for ll in range(Nlayers):
                 if verbose:
                     infostr = '   Generating layer '+str("%6.f" % (ll+1))+' / '+str("%6.f" % cubeshape[0])+\
                               ' in source cube '+str("%6.f" % (ss+1))+' / '+str("%6.f" % Nsource)
@@ -757,15 +759,15 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
                                                                      fill_value=0.0,norm_kernel=True,convolveFFT=False,verbose=False)
                     layer_img            = img_model_init/np.sum(img_model_init)
                 out_cube[ss,ll,:,:]  = layer_img * layer_scales[ss,ll]
-        if verbose: print '\n   ----------- Finished on '+tu.get_now_string()+' ----------- '
+        if verbose: print('\n   ----------- Finished on '+tu.get_now_string()+' ----------- ')
     else:
         sys.exit(' ---> Invalid parameter type ('+paramtype+') provided to gen_source_model_cube()')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if save_modelcube:
-        if verbose: print '\n - Saving source model cube to \n   '+cubename
+        if verbose: print('\n - Saving source model cube to \n   '+cubename)
         hducube = pyfits.PrimaryHDU(out_cube)       # default HDU with default minimal header
         if outputhdr == 'None':
-            if verbose: print ' - No header provided so will generate one '
+            if verbose: print(' - No header provided so will generate one ')
             # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
             hducube.header.append(('BUNIT  '                      ,'(10**(-20)*erg/s/cm**2/Angstrom)**2'),end=True)
             hducube.header.append(('OBJECT '                      ,'mock_cube'),end=True)
@@ -797,8 +799,8 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
 
             hdus = [hducube]
         else:
-            if verbose: print ' - Using header provided with "outputhdr" for output fits file '
-            if 'XTENSION' in outputhdr.keys():
+            if verbose: print(' - Using header provided with "outputhdr" for output fits file ')
+            if 'XTENSION' in list(outputhdr.keys()):
                 hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
                 hducube        = pyfits.ImageHDU(out_cube,header=outputhdr)
                 hdus           = [hduprim,hducube]

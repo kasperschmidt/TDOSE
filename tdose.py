@@ -87,9 +87,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                        plotS2Nspectra,save_init_model_output,clobber,verbose,verbosefull,skipextractedobjects,skipspecificobjects):
         start_time = time.clock()
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbose: print '=================================================================================================='
-        if verbose: print ' TDOSE: Loading setup                                       '+\
-                          '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+        if verbose: print('==================================================================================================')
+        if verbose: print(' TDOSE: Loading setup                                       '+\
+                          '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
         if verbosefull:
             verbose = True
 
@@ -114,16 +114,16 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         Nextractions = len(extractids)
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbose: print '=================================================================================================='
-        if verbose: print ' TDOSE: Logging setup                                       '+\
-                          '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+        if verbose: print('==================================================================================================')
+        if verbose: print(' TDOSE: Logging setup                                       '+\
+                          '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
 
         setuplog = setupdic['spec1D_directory']+setupfile.split('/')[-1].replace('.txt','_logged.txt')
         if os.path.isfile(setuplog) & (clobber == False):
-            if verbose: print ' - WARNING Logged setupfile exists and clobber = False. Not storing setup '
+            if verbose: print(' - WARNING Logged setupfile exists and clobber = False. Not storing setup ')
 
         else:
-            if verbose: print ' - Writing setup and command to spec1D_directory to log extraction setup and command that was run'
+            if verbose: print(' - Writing setup and command to spec1D_directory to log extraction setup and command that was run')
             setupinfo    = open(setupfile,'r')
             setupcontent = setupinfo.read()
             setupinfo.close()
@@ -144,21 +144,21 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             loginfo.close()
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if setupdic['model_cutouts']:
-            if verbose: print '=================================================================================================='
-            if verbose: print ' TDOSE: Generate cutouts around sources to extract          '+\
-                              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+            if verbose: print('==================================================================================================')
+            if verbose: print(' TDOSE: Generate cutouts around sources to extract          '+\
+                              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
             tdose.gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                               performcutout=performcutout,generatesourcecat=generatesourcecat,clobber=clobber,
                               verbose=verbose,verbosefull=verbosefull,start_time=start_time)
         else:
             if verbose: print('==================================================================================================')
-            if verbose: print(' TDOSE: Model full FoV, i.e. no cutouts and incl. full source cat.'+
-                              '( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
+            if verbose: print((' TDOSE: Model full FoV, i.e. no cutouts and incl. full source cat.'+
+                              '( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'))
 
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        if verbose: print '=================================================================================================='
-        if verbose: print ' TDOSE: Defining and loading data for extractions           '+\
-                          '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+        if verbose: print('==================================================================================================')
+        if verbose: print(' TDOSE: Defining and loading data for extractions           '+\
+                          '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
         Nloops    = 1
         loopnames = [-9999] # Default: Extracting objects from full FoV.
                             # If to be done in cutouts, loopnames will be replaced with individual IDs
@@ -207,7 +207,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
             if verbose:
                 if verbosefull:
-                    print infostr
+                    print(infostr)
                 else:
                     sys.stdout.write("%s\r" % infostr)
                     sys.stdout.flush()
@@ -234,11 +234,11 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                             refimg.split('/')[-1].replace('.fits','_'+setupdic['model_image_ext']+'_'+setupdic['source_model']+'.fits')
 
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            if verbosefull: print '--------------------------------------------------------------------------------------------------'
+            if verbosefull: print('--------------------------------------------------------------------------------------------------')
             FoV_modelexists = False
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if setupdic['source_model'] == 'galfit':
-                if verbosefull: print ' Looking for galfit model of source ... ',
+                if verbosefull: print(' Looking for galfit model of source ... ')
                 model_file    = setupdic['galfit_directory']+'galfit_'+\
                                 setupdic['ref_image'].split('/')[-1].replace('.fits','_output.fits')
 
@@ -246,17 +246,17 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                     model_file = model_file.replace('.fits',imgstr+'.fits')
 
                 if os.path.isfile(model_file):
-                    if verbosefull: print 'found it, so it will be used'
+                    if verbosefull: print(' -> found it, so it will be used')
                     FoV_modelexists = True
                     FoV_modelfile   = model_file
                     FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['galfit_model_extension']].data
                 else:
-                    if verbosefull: print 'did not find it, so will generate gaussian TDOSE model'
+                    if verbosefull: print(' -> did not find it, so will generate gaussian TDOSE model')
                 sys.exit(' ---> Loading parameters and building model from galfit output is not enabled yet; sorry. '
                          'If you have the model try the source_model = modelimg setup')
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if setupdic['source_model'] == 'modelimg':
-                if verbosefull: print ' Looking for ref_image model of source in "modelimg_directory"... ',
+                if verbosefull: print(' Looking for ref_image model of source in "modelimg_directory"... ')
                 model_file    = setupdic['modelimg_directory']+'model_'+\
                                 setupdic['ref_image'].split('/')[-1]
                 if setupdic['model_cutouts']:
@@ -264,30 +264,30 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
                 cube_model_file = model_file.replace('.fits','_cube.fits')
                 if os.path.isfile(cube_model_file):
-                    if verbosefull: print 'found a cube model, so will use that (instead of any model files)'
+                    if verbosefull: print(' -> found a cube model, so will use that (instead of any model files)')
                     FoV_modelexists     = True
                     FoV_modelfile       = cube_model_file
                     FoV_modeldata       = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
                 elif os.path.isfile(model_file):
-                    if verbosefull: print 'found it, so it will be used'
+                    if verbosefull: print(' -> found it, so it will be used')
                     FoV_modelexists     = True
                     FoV_modelfile       = model_file
                     FoV_modeldata       = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
                 else:
-                    if verbosefull: print 'did not find any model or cube model:\n    '+model_file+'\n    '+cube_model_file+\
-                                          '\n   so will skip object '+str(extid)
+                    if verbosefull: print(' -> did not find any model or cube model:\n    '+model_file+'\n    '+cube_model_file+\
+                                          '\n   so will skip object '+str(extid))
                     continue
 
                 try:
                     if FoV_modeldata == None:
-                        print('\n WARNING - No model data found in extension '+
-                              str(setupdic['modelimg_extension'])+' of '+FoV_modelfile+'\n')
+                        print(('\n WARNING - No model data found in extension '+
+                              str(setupdic['modelimg_extension'])+' of '+FoV_modelfile+'\n'))
                 except:
                     pass
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if not FoV_modelexists:
-                if verbosefull: print ' TDOSE: Model reference image                               '+\
-                                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+                if verbosefull: print(' TDOSE: Model reference image                               '+\
+                                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
                 regionfile    = setupdic['models_directory']+'/'+\
                                 refimg.split('/')[-1].replace('.fits','_'+setupdic['model_param_reg']+'_'+setupdic['source_model']+'.reg')
                 modelparam    = modelimg.replace('.fits','_objparam.fits') # output from reference image modeling
@@ -318,18 +318,18 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                         centralpointsource = True
 
                 if centralpointsource:
-                    if verbosefull: print ' - Object in list of non-detections. Adjusting model to contain central point source  '
+                    if verbosefull: print(' - Object in list of non-detections. Adjusting model to contain central point source  ')
 
                 if modelrefimage:
                     tdose.model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,
                                          save_init_model_output=save_init_model_output,centralpointsource=centralpointsource,
                                          clobber=clobber,verbose=verbose,verbosefull=verbosefull,objid=extid)
                 else:
-                    if verbose: print ' >>> Skipping modeling reference image (assume models exist)'
+                    if verbose: print(' >>> Skipping modeling reference image (assume models exist)')
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            if verbosefull: print '--------------------------------------------------------------------------------------------------'
-            if verbosefull: print ' TDOSE: Convert ref. image model to cube WCS                '+\
-                                  '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+            if verbosefull: print('--------------------------------------------------------------------------------------------------')
+            if verbosefull: print(' TDOSE: Convert ref. image model to cube WCS                '+\
+                                  '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
             cubewcsimg       = setupdic['models_directory']+'/'+\
                                refimg.split('/')[-1].replace('.fits','_'+setupdic['model_image_cube_ext']+'_'+
                                                              setupdic['source_model']+'.fits')
@@ -371,32 +371,32 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 if FoV_modelexists:
                     if (len(FoV_modeldata.shape) == 3):
                         paramCUBE = np.zeros([FoV_modeldata.shape[0],cube_data.shape[1],cube_data.shape[2]])
-                        if verbose: print ' - Reprojecting and normalizing individual components in object model cube to use for extraction '
-                        for component in xrange(FoV_modeldata.shape[0]):
+                        if verbose: print(' - Reprojecting and normalizing individual components in object model cube to use for extraction ')
+                        for component in range(FoV_modeldata.shape[0]):
                             projected_comp, footprint_comp = reproject_interp( (FoV_modeldata[component,:,:], img_wcs), cube_wcs2D,
                                                                                shape_out=cube_data.shape[1:])
                             projected_comp[np.isnan(projected_comp)] = 0.0
                             paramCUBE[component,:,:] = projected_comp/ np.sum(projected_comp)
             else:
-                if verbose: print ' >>> Skipping converting reference image model to cube WCS frame (assume models exist)'
+                if verbose: print(' >>> Skipping converting reference image model to cube WCS frame (assume models exist)')
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            if verbosefull: print '--------------------------------------------------------------------------------------------------'
-            if verbosefull: print ' TDOSE: Defining PSF as FWHM = p0 + p1(lambda-'+str(setupdic['psf_FWHMp2'])+'A)        '+\
-                                  '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+            if verbosefull: print('--------------------------------------------------------------------------------------------------')
+            if verbosefull: print(' TDOSE: Defining PSF as FWHM = p0 + p1(lambda-'+str(setupdic['psf_FWHMp2'])+'A)        '+\
+                                  '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
             if definePSF or modeldatacube:
                 if setupdic['source_model'] == 'aperture':
-                    if verbose: print ' >>> Skipping defining PSF as source_model = "aperture", i.e., convolution of ref. image model'
+                    if verbose: print(' >>> Skipping defining PSF as source_model = "aperture", i.e., convolution of ref. image model')
                     paramPSF = None
                 else:
                     paramPSF = tdose.define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,
                                                 clobber=clobber,verbose=verbose,verbosefull=verbosefull)
             else:
-                if verbose: print ' >>> Skipping defining PSF of data cube (assume it is defined)'
+                if verbose: print(' >>> Skipping defining PSF of data cube (assume it is defined)')
 
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            if verbosefull: print '--------------------------------------------------------------------------------------------------'
-            if verbosefull: print ' TDOSE: Modelling data cube                                 '+\
-                                  '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+            if verbosefull: print('--------------------------------------------------------------------------------------------------')
+            if verbosefull: print(' TDOSE: Modelling data cube                                 '+\
+                                  '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
             modcubename = setupdic['models_directory']+'/'+\
                           datacube.split('/')[-1].replace('.fits','_'+setupdic['model_cube_ext']+'_'+setupdic['source_model']+'.fits')
             rescubename = setupdic['models_directory']+'/'+\
@@ -408,7 +408,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 tdose.model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_variance,paramCUBE,cube_hdr,paramPSF,
                                      psfcubename=psfcubename,clobber=clobber,verbose=verbose,verbosefull=verbosefull)
             else:
-                if verbose: print ' >>> Skipping modeling of data cube (assume it exists)'
+                if verbose: print(' >>> Skipping modeling of data cube (assume it exists)')
 
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             sourcecubename  = setupdic['models_directory']+'/'+\
@@ -416,9 +416,9 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                                                               setupdic['source_model']+'.fits')
 
             if createsourcecube:
-                if verbosefull: print '--------------------------------------------------------------------------------------------------'
-                if verbosefull: print ' TDOSE: Creating source model cube                          '+\
-                                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+                if verbosefull: print('--------------------------------------------------------------------------------------------------')
+                if verbosefull: print(' TDOSE: Creating source model cube                          '+\
+                                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
                 model_cube        = pyfits.open(modcubename)[setupdic['cube_extension']].data
                 layer_scales      = pyfits.open(modcubename)['WAVESCL'].data
                 if setupdic['source_model'].lower() != 'aperture':
@@ -433,12 +433,12 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                                                               verbose=verbosefull)
 
             else:
-                if verbose: print ' >>> Skipping generating source model cube (assume it exists)'
+                if verbose: print(' >>> Skipping generating source model cube (assume it exists)')
 
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            if verbose: print '=================================================================================================='
-            if verbose: print ' TDOSE: Storing extracted 1D spectra to files               '+\
-                              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+            if verbose: print('==================================================================================================')
+            if verbose: print(' TDOSE: Storing extracted 1D spectra to files               '+\
+                              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
             specoutputdir      = setupdic['spec1D_directory']
             model_cube_file    = modcubename
             variance_cube_file = variancecube
@@ -497,26 +497,26 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                                                  source_model_cube_file=smc_file,source_cube_ext=smc_ext,
                                                  data_cube_file=datacube,verbose=verbosefull)
             else:
-                if verbose: print ' >>> Skipping storing 1D spectra to binary fits tables '
+                if verbose: print(' >>> Skipping storing 1D spectra to binary fits tables ')
 
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            if verbose: print '=================================================================================================='
-            if verbose: print ' TDOSE: Plotting extracted spectra                    '+\
-                              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
+            if verbose: print('==================================================================================================')
+            if verbose: print(' TDOSE: Plotting extracted spectra                    '+\
+                              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
             if setupdic['plot_generate']:
                 tdose.plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=plot1Dspectra,plotS2Nspectra=plotS2Nspectra,
                                    verbose=verbosefull)
 
-                objids    = SAD.keys()
+                objids    = list(SAD.keys())
                 tu.gen_overview_plot(objids,setupfile,verbose=verbosefull)
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             if verbose:
-                print '=================================================================================================='
-                print ' TDOSE: Modeling and extraction done for object '+str(extid)+\
-                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )       '
-                print '                                                       '+\
-                      '   --> Object runtime = '+str("%10.4f" % (time.clock() - start_time_obj))+' seconds <--   '
-                print ' - To open all generated files in DS9 execute the following command '
+                print('==================================================================================================')
+                print(' TDOSE: Modeling and extraction done for object '+str(extid)+\
+                      '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )       ')
+                print('                                                       '+\
+                      '   --> Object runtime = '+str("%10.4f" % (time.clock() - start_time_obj))+' seconds <--   ')
+                print(' - To open all generated files in DS9 execute the following command ')
                 ds9cmd  = ' ds9 '
                 Nframes = 0
                 if os.path.isfile(refimg):
@@ -558,11 +558,11 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                     Nframes = Nframes + 1
 
                 ds9cmd = ds9cmd+'-lock frame wcs -tile grid layout '+str(Nframes)+' 1 &'
-                print ds9cmd
-                print '=================================================================================================='
+                print(ds9cmd)
+                print('==================================================================================================')
 
         if verbose:
-            print """
+            print("""
                                                    .''.
                          .''.             *''*    :_\/_:     .
                         :_\/_:   .    .:.*_\/_*   : /\ :  .'.:.'.
@@ -591,7 +591,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                       |_____//   \_____//   |__|| \__||  |_____||  |__||
 
 ==================================================================================================
- """
+ """)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if logterminaloutput:
         setupdic  = tu.load_setup(setupfile,verbose=False)
@@ -675,31 +675,31 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generate
     if Nsessions == 0:
         Nbundle = Nsetups
 
-        for ii in xrange(Nbundle):
+        for ii in range(Nbundle):
             string          = 'bundleNo'+str(ii+1)
             bundles[string] = [setupfiles[ii]]
     else:
         Nbundle     = int(Nsessions)
         bundlesize  = int(np.ceil(float(Nsetups)/float(Nbundle)))
 
-        for ii in xrange(Nbundle):
+        for ii in range(Nbundle):
             string = 'bundleNo'+str(ii+1)
             if ii == Nbundle: # Last bundle
                 bundles[string] = setupfiles[ii*bundlesize:]
             else:
                 bundles[string] = setupfiles[bundlesize*ii:bundlesize*(ii+1)]
 
-    if verbose: print ' - Found '+str(Nsetups)+' setup files to bundle up and run '+str(Nbundle)+' parallel sessions for'
+    if verbose: print(' - Found '+str(Nsetups)+' setup files to bundle up and run '+str(Nbundle)+' parallel sessions for')
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' ---- Starting multiprocess parallel run of the '+str(Nsetups)+' TDOSE setups ---- '
+    if verbose: print(' ---- Starting multiprocess parallel run of the '+str(Nsetups)+' TDOSE setups ---- ')
     tstart  = tu.get_now_string(withseconds=True)
 
     mngr = multiprocessing.Manager() # initialize Manager too keep track of worker function output
     return_dict = mngr.dict()        # define Manager dictionary to store output from Worker function in
     jobs = []
 
-    for ii in xrange(Nbundle):
+    for ii in range(Nbundle):
         bundlekey = 'bundleNo'+str(ii+1)
         if len(bundles[bundlekey]) == 1:
             jobname = bundles[bundlekey][0].split('/')[-1]
@@ -724,20 +724,20 @@ def perform_extractions_in_parallel(setupfiles,Nsessions=0,verbose=True,generate
     tend = tu.get_now_string(withseconds=True)
 
     if verbose:
-        print '\n ---- The perform_extractions_in_parallel finished running the jobs for all TDOSE setups ----'
-        print '      Start        : '+tstart
-        print '      End          : '+tend
-        print '      Exitcode = 0 : job produced no error '
-        print '      Exitcode > 0 : job had an error, and exited with that code (signal.SIGTERM)'
-        print '      Exitcode < 0 : job was killed with a signal of -1 * exitcode (signal.SIGTERM)'
+        print('\n ---- The perform_extractions_in_parallel finished running the jobs for all TDOSE setups ----')
+        print('      Start        : '+tstart)
+        print('      End          : '+tend)
+        print('      Exitcode = 0 : job produced no error ')
+        print('      Exitcode > 0 : job had an error, and exited with that code (signal.SIGTERM)')
+        print('      Exitcode < 0 : job was killed with a signal of -1 * exitcode (signal.SIGTERM)')
 
         for job in jobs:
-            print ' - The job running field ',job.name,' exited with exitcode: ',job.exitcode
+            print(' - The job running field ',job.name,' exited with exitcode: ',job.exitcode)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Adding output from parallelized run to dictionary'
+    if verbose: print(' - Adding output from parallelized run to dictionary')
     dict = {}
-    for key in return_dict.keys():
+    for key in list(return_dict.keys()):
         dict[key] = return_dict[key]  # filling dictionary
 
     return bundles, dict
@@ -769,7 +769,7 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
             infostr = ' - Cutting out object '+str("%4.f" % (oo+1))+' / '+\
                       str("%4.f" % Nextractions)+' with ID = '+str(cutoutid)+'           '+tu.get_now_string()
             if verbosefull:
-                print infostr
+                print(infostr)
             else:
                 sys.stdout.write("%s\r" % infostr)
                 sys.stdout.flush()
@@ -809,7 +809,7 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                                                cubeext=[setupdic['variance_extension']],clobber=clobber,
                                                imgfiles=None,imgexts=None,imgnames=None,verbose=verbosefull)
         else:
-            if verbose: print ' >>> Skipping cutting out images and cubes (assuming they exist)                                 '
+            if verbose: print(' >>> Skipping cutting out images and cubes (assuming they exist)                                 ')
             cutouts = 'dummy'
 
         # --- SUB-SOURCE CAT ---
@@ -821,7 +821,7 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                         print(' - Looking for source catalogs in the "modelimg_directory" ')
                     checkstring = 'noModelComponent'
                     if checkstring in cut_sourcecat:
-                        print(' - '+checkstring+' source catalog; using (ra,dec) match to "source_catalog" instead')
+                        print((' - '+checkstring+' source catalog; using (ra,dec) match to "source_catalog" instead'))
                     else:
                         model_sourcecat_str = setupdic['modelimg_directory']+'/*'+\
                                               cut_sourcecat.split('_id')[-1].replace('.fits','_sourcecatalog.fits')
@@ -833,8 +833,8 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                             foundmodelcat = True
                         elif len(model_sourcecat) > 1:
                             if not performcutout: # only print if info from cutting out is not printed
-                                print('   Found '+str(len(model_sourcecat))+
-                                      ' matches for the object -> using (ra,dec) match to "source_catalog" instead')
+                                print(('   Found '+str(len(model_sourcecat))+
+                                      ' matches for the object -> using (ra,dec) match to "source_catalog" instead'))
                         else:
                             if not performcutout: # only print if info from cutting out is not printed
                                 print('   Did not find any generating cutout source catalog from (ra,dec) match to "source_catalog" ')
@@ -866,15 +866,15 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
 
                 astropy.io.fits.writeto(cut_sourcecat,storearr,header=None,overwrite=clobber)
         else:
-            if verbose: print ' >>> Skipping generating the cutout source catalog for '+str(cutoutid)+' '
+            if verbose: print(' >>> Skipping generating the cutout source catalog for '+str(cutoutid)+' ')
     if not verbosefull:
-        if verbose: print '\n   done'
+        if verbose: print('\n   done')
 
     if verbose:
-        print '=================================================================================================='
-        print ' TDOSE: Done cutting out sub cubes and postage stamps       '+\
-              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )'
-        print ' - To open resulting images in DS9 execute the following command '
+        print('==================================================================================================')
+        print(' TDOSE: Done cutting out sub cubes and postage stamps       '+\
+              '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
+        print(' - To open resulting images in DS9 execute the following command ')
         ds9string = ' ds9 '+setupdic['ref_image']+' xxregionxx '+\
                     ' '.join(cut_images)+' -lock frame wcs -tile grid layout '+str(len(cut_images)+1)+' 1 &'
         regname   = setupdic['source_catalog'].replace('.fits','.reg')
@@ -882,7 +882,7 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
             ds9string = ds9string.replace('xxregionxx',' -region '+regname+' ')
         else:
             ds9string = ds9string.replace('xxregionxx',' ')
-        print ds9string
+        print(ds9string)
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcube=True,clobber=False,verbose=True):
@@ -907,7 +907,7 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
 
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Loading setup file and getting IDs that were extracted (and hence cutout)'
+    if verbose: print(' - Loading setup file and getting IDs that were extracted (and hence cutout)')
     setupdic        = tu.load_setup(setupfile,verbose=verbose)
 
     sourcecat_init  = setupdic['source_catalog']
@@ -927,9 +927,9 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
     else:
         extractids = setupdic['sources_to_extract']
     Nextractions = len(extractids)
-    if verbose: print '   Will combine models of '+str(Nextractions)+' extracted objects (if models exists) into full FoV cubes '
+    if verbose: print('   Will combine models of '+str(Nextractions)+' extracted objects (if models exists) into full FoV cubes ')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Checking that source model cubes exist in models_directory '
+    if verbose: print(' - Checking that source model cubes exist in models_directory ')
     modeldir = setupdic['models_directory']
     basename = setupdic['data_cube'].split('/')[-1].split('.fit')[0]
 
@@ -938,15 +938,15 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
                                     setupdic['source_model_cube_ext']+'_'+setupdic['psf_type']+'.fits')
 
         if len(sourcemodelcube) == 0:
-            if verbose: print '   WARNING: did not find a source model cube for object '+str(objid)
+            if verbose: print('   WARNING: did not find a source model cube for object '+str(objid))
         elif len(sourcemodelcube) > 1:
-            if verbose: print '   WARNING: found more than one source model cube for object '+str(objid)+\
-                              '\n   Using '+sourcemodelcube[0]
+            if verbose: print('   WARNING: found more than one source model cube for object '+str(objid)+\
+                              '\n   Using '+sourcemodelcube[0])
 
-    if verbose: print '   If no WARNINGs raised, all cubes were found'
+    if verbose: print('   If no WARNINGs raised, all cubes were found')
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Build template full FoV cubes to fill with models'
+    if verbose: print(' - Build template full FoV cubes to fill with models')
     cube_data     = pyfits.open(setupdic['data_cube'])[setupdic['cube_extension']].data
     cube_data_hdr = pyfits.open(setupdic['data_cube'])[setupdic['cube_extension']].header
     striphdr      = tu.strip_header(cube_data_hdr.copy())
@@ -960,7 +960,7 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
         cube_out     = np.zeros([cube_shape[0],cube_shape[1],cube_shape[2]])
         cube_model   = np.zeros([cube_shape[0],cube_shape[1],cube_shape[2]])
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    if verbose: print ' - Adding individual models to full FoV output cubes '
+    if verbose: print(' - Adding individual models to full FoV output cubes ')
     for oo, objid in enumerate(extractids):
         cutstr, cutoutsize, cut_img, cut_cube, cut_variance, cut_sourcecat = tu.get_datinfo(objid,setupdic)
 
@@ -1019,12 +1019,12 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
                                  cutout_layer.bbox_original[1][0]:cutout_layer.bbox_original[1][1]+1] = sourcemodel
                     cube_out = cube_out + cube_model
             sourcemodelhdu.close()
-    if verbose: print '\n   ... done'
+    if verbose: print('\n   ... done')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if store_sourcemodelcube:
         fullfov_smc = modeldir+basename+'_'+setupdic['source_model_cube_ext']+'_'+setupdic['psf_type']+'_fullFoV.fits'
-        if verbose: print ' - Storing final full FoV source model cube to:\n   '+fullfov_smc
-        if 'XTENSION' in cube_data_hdr.keys():
+        if verbose: print(' - Storing final full FoV source model cube to:\n   '+fullfov_smc)
+        if 'XTENSION' in list(cube_data_hdr.keys()):
             hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
             hducube        = pyfits.ImageHDU(smc_out,header=cube_data_hdr)
             hdus           = [hduprim,hducube]
@@ -1040,8 +1040,8 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
         fullfov_cube = modeldir+basename+'_'+setupdic['model_cube_ext']+'_'+setupdic['psf_type']+'_fullFoV.fits'
         if store_sourcemodelcube:
             cube_out = np.sum(smc_out,axis=0)
-        if verbose: print ' - Producing FoV model cube from full FoV source model cube and storing it in:\n   '+fullfov_cube
-        if 'XTENSION' in cube_data_hdr.keys():
+        if verbose: print(' - Producing FoV model cube from full FoV source model cube and storing it in:\n   '+fullfov_cube)
+        if 'XTENSION' in list(cube_data_hdr.keys()):
             hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
             hducube        = pyfits.ImageHDU(cube_out,header=cube_data_hdr)
             hdus           = [hduprim,hducube]
@@ -1297,10 +1297,10 @@ def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobb
     if setupdic['psf_savecube']:
         psfcubename = setupdic['models_directory']+'/'+datacube.split('/')[-1].replace('.fits','_tdose_psfcube_'+
                                                                                        setupdic['source_model']+'.fits')
-        if verbose: print ' - Storing PSF cube to fits file \n   '+psfcubename
+        if verbose: print(' - Storing PSF cube to fits file \n   '+psfcubename)
 
         if os.path.isfile(psfcubename) & (clobber == False):
-            if verbose: print ' ---> TDOSE WARNING: PSF cube already exists and clobber = False so skipping step'
+            if verbose: print(' ---> TDOSE WARNING: PSF cube already exists and clobber = False so skipping step')
         else:
             psfcube = cube_data*0.0
             for ll in np.arange(len(cube_waves)):
@@ -1329,7 +1329,7 @@ def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobb
 
                 psfcube[ll,:,:] = psfimg
 
-            if 'XTENSION' in cube_hdr.keys():
+            if 'XTENSION' in list(cube_hdr.keys()):
                 hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
                 hducube        = pyfits.ImageHDU(psfcube,header=cube_hdr)
                 hducube.header.append(('PSF_P0',    setupdic['psf_FWHMp0'],' '),end=True)
@@ -1362,7 +1362,7 @@ def plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=True,plotS2Nspectra=Tr
     """
     showspec        = False
 
-    for key in SAD.keys():
+    for key in list(SAD.keys()):
         spec = specoutputdir+setupdic['spec1D_name']+'_'+setupdic['source_model']+'_'+key+'.fits'
         id   = spec.split('_')[-1].split('.')[0]
 
@@ -1376,7 +1376,7 @@ def plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=True,plotS2Nspectra=Tr
                              comparisonspecs=None,comp_colors=['dummy'],comp_labels=['dummy'],
                              comp_wavecol='dummy',comp_fluxcol='dummy',comp_errcol='dummy', pubversion=True)
         else:
-            if verbose: print ' >>> Skipping plotting 1D spectra '
+            if verbose: print(' >>> Skipping plotting 1D spectra ')
 
         if plotS2Nspectra:
             xrange = setupdic['plot_S2Nspec_xrange']
@@ -1388,5 +1388,5 @@ def plot_spectra(setupdic,SAD,specoutputdir,plot1Dspectra=True,plotS2Nspectra=Tr
                              comparisonspecs=None,comp_colors=['dummy'],comp_labels=['dummy'],
                              comp_wavecol='dummy',comp_fluxcol='dummy',comp_errcol='dummy', pubversion=True)
         else:
-            if verbose: print ' >>> Skipping plotting S/N spectra '
+            if verbose: print(' >>> Skipping plotting S/N spectra ')
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
