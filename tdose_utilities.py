@@ -54,45 +54,53 @@ def load_setup(setupfile='./tdose_setup_template.txt',verbose=True):
     setup_arr = np.genfromtxt(setupfile,dtype=None,names=None)
     setup_dic = {}
     for ii in range(setup_arr.shape[0]):
-        try:
-            val = float(setup_arr[ii,1])
-        except:
-            val = str(setup_arr[ii,1])
-
-        # - - - treatment of individual paramters - - -
-        if ('extension' in setup_arr[ii,0]) & (type(val) == float): val = int(val)
-        if setup_arr[ii,1].lower() == 'none':  val = None
-        if setup_arr[ii,1].lower() == 'true':  val = True
-        if setup_arr[ii,1].lower() == 'false': val = False
-
-        if setup_arr[ii,0] in list(setup_dic.keys()):
-            sys.exit(' Setup parameter "'+setup_arr[ii,0]+'" appears multiple times in the setup file\n             '+
+        paramname = setup_arr[ii,0].astype(str)
+        if paramname in list(setup_dic.keys()):
+            sys.exit(' Setup parameter "'+paramname+'" appears multiple times in the setup file\n             '+
                      setupfile)
 
-        dirs = ['sources_to_extract','model_cube_layers','cutout_sizes']
-        if (setup_arr[ii,0] in dirs) & ('/' in setup_arr[ii,1]):
-            val = setup_arr[ii,1]
-            setup_dic[setup_arr[ii,0]] = val
-            continue
+        try:
+            val = float(setup_arr[ii,1].astype(str))
+        except:
+            val = setup_arr[ii,1].astype(str)
 
-        lists = ['modify_sources_list','nondetections','model_cube_layers','sources_to_extract','plot_1Dspec_xrange','plot_1Dspec_yrange',
-                 'plot_S2Nspec_xrange','plot_S2Nspec_yrange','cutout_sizes','aperture_size']
-        if (setup_arr[ii,0] in lists) & (setup_arr[ii,1] != 'all') & (setup_arr[ii,1].lower() != 'none') & (setup_arr[ii,1][0] == '['):
-            val = [float(vv) for vv in val.split('[')[-1].split(']')[0].split(',')]
-            setup_dic[setup_arr[ii,0]] = val
-            continue
+        # - - - treatment of individual paramters - - -
+        if ('extension' in paramname) & (type(val) == float): val = int(val)
 
-        if ('psf_sigma' in setup_arr[ii,0]) & (type(val) == str):
-            if  '/' in val:
-                sigmasplit = val.split('/')
-                if len(sigmasplit) != 2:
-                    pass
-                else:
-                    val = float(sigmasplit[0]) / float(sigmasplit[1])
-            setup_dic[setup_arr[ii,0]] = val
-            continue
+        if (type(val) == str) or (type(val) == np.str_):
+            if val.lower() == 'none':
+                val = None
+            elif val.lower() == 'true':
+                val = True
+            elif val.lower() == 'false':
+                val = False
 
-        setup_dic[setup_arr[ii,0]] = val
+        if (type(val) == str) or (type(val) == np.str_):
+            dirs = ['sources_to_extract','model_cube_layers','cutout_sizes']
+            if (paramname in dirs) & ('/' in str(val)):
+                val = val
+                setup_dic[paramname] = val
+                continue
+
+            lists = ['modify_sources_list','nondetections','model_cube_layers','sources_to_extract','plot_1Dspec_xrange','plot_1Dspec_yrange',
+                     'plot_S2Nspec_xrange','plot_S2Nspec_yrange','cutout_sizes','aperture_size']
+
+            if (paramname in lists) & (val != 'all') & (val.lower() != 'none') & (val[0] == '['):
+                val = [float(vv) for vv in val.split('[')[-1].split(']')[0].split(',')]
+                setup_dic[paramname] = val
+                continue
+
+            if ('psf_sigma' in paramname):
+                if  '/' in val:
+                    sigmasplit = val.split('/')
+                    if len(sigmasplit) != 2:
+                        pass
+                    else:
+                        val = float(sigmasplit[0]) / float(sigmasplit[1])
+                setup_dic[paramname] = val
+                continue
+
+        setup_dic[paramname] = val
 
     if verbose: print(' - Checking main keys are available; if not, adding them with None values')
     checkkeys = ['nondetections','gauss_guess']
@@ -387,7 +395,6 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,infofmt="S250",
         infofmt   = ','.join([infofmt]*Ncol)
 
     copen     = np.genfromtxt(infofile,skip_header=infohdr,names=True,dtype=infofmt)
-
     if loopcols == 'all':
         if verbose: print(' - loopcals="all" so will attempt replacement of all columns in infofile')
         loopcols = np.asarray(copen.dtype.names).tolist()
@@ -398,9 +405,9 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,infofmt="S250",
 
     for setupnumber in range(Nfiles):
         replacements = copen[setupnumber]
-        newsetup     = outputdirectory+namebase+'_'+replacements['setupname']+'.txt'
+        newsetup     = outputdirectory+namebase+'_'+replacements['setupname'].astype(str)+'.txt'
         if os.path.isfile(newsetup) & (clobber == False):
-            if verbose: print((' - File '+newsetup+' already exists and clobber = False so moving on to next duplication '))
+            if verbose: print(' - File '+newsetup+' already exists and clobber = False so moving on to next duplication ')
             continue
         else:
             fout = open(newsetup,'w')
@@ -419,7 +426,7 @@ def duplicate_setup_template(outputdirectory,infofile,infohdr=2,infofmt="S250",
                         vals = setupline.split()
 
                         if vals[0] in loopcols:
-                            replaceline = setupline.replace(' '+vals[1]+' ',' '+copen[vals[0]][setupnumber]+' ')
+                            replaceline = setupline.replace(' '+vals[1]+' ',' '+copen[vals[0]][setupnumber].astype(str)+' ')
                         else:
                             replaceline = setupline.replace(' '+vals[1]+' ',' NO_REPLACEMENT ')
 
