@@ -14,7 +14,6 @@ from astropy import units as u
 from astropy.modeling.models import Sersic1D
 from astropy.modeling.models import Sersic2D
 from astropy.nddata import Cutout2D
-import pyfits
 import subprocess
 import glob
 import shutil
@@ -739,10 +738,10 @@ def gen_2Dgauss(size,cov,scale,method='scipy',show2Dgauss=False,savefits=False,v
 
     if savefits:
         fitsname = './Generated2Dgauss.fits'
-        hduimg   = pyfits.PrimaryHDU(gauss2D)
+        hduimg   = afits.PrimaryHDU(gauss2D)
         hdus     = [hduimg]
-        hdulist  = pyfits.HDUList(hdus)           # turn header into to hdulist
-        hdulist.writeto(fitsname,clobber=True)    # write fits file (clobber=True overwrites excisting file)
+        hdulist  = afits.HDUList(hdus)           # turn header into to hdulist
+        hdulist.writeto(fitsname,overwrite=True)    # write fits file
         if verbose: print((' - Saved image of shifted profile to '+fitsname))
     return gauss2D
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -810,10 +809,10 @@ def gen_2Dsersic(size,parameters,normalize=False,show2Dsersic=False,savefits=Fal
 
     if savefits:
         fitsname = './Generated2Dsersic.fits'
-        hduimg   = pyfits.PrimaryHDU(sersic2D)
+        hduimg   = afits.PrimaryHDU(sersic2D)
         hdus     = [hduimg]
-        hdulist  = pyfits.HDUList(hdus)           # turn header into to hdulist
-        hdulist.writeto(fitsname,clobber=True)    # write fits file (clobber=True overwrites excisting file)
+        hdulist  = afits.HDUList(hdus)           # turn header into to hdulist
+        hdulist.writeto(fitsname,overwrite=True)    # write fits file
         if verbose: print((' - Saved image of shifted profile to '+fitsname))
 
     return sersic2D
@@ -847,9 +846,9 @@ def get_2DsersicIeff(value,reff,sersicindex,axisratio,boxiness=0.0,returnFtot=Fa
     x,y = np.meshgrid(np.arange(size), np.arange(size))
     mod = Sersic2D(amplitude = Ieff, r_eff = reff, n=sersicindex, x_0=size/2.0, y_0=size/2.0, ellip=1-axisratio, theta=-1)
     img = mod(x, y)
-    hducube  = pyfits.PrimaryHDU(img)
+    hducube  = afits.PrimaryHDU(img)
     hdus = [hducube]
-    hdulist = pyfits.HDUList(hdus)
+    hdulist = afits.HDUList(hdus)
     hdulist.writeto('/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model_sersic_spherical.fits',clobber=True)
 
     """
@@ -885,9 +884,9 @@ def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False,origin=1,sp
     profile = np.ones([35,35])
     profile[17,17] = 5.0
     fitsname = './Shifted2Dprofile_initial.fits'
-    hduimg   = pyfits.PrimaryHDU(profile)
+    hduimg   = afits.PrimaryHDU(profile)
     hdus     = [hduimg]
-    hdulist  = pyfits.HDUList(hdus)
+    hdulist  = afits.HDUList(hdus)
     hdulist.writeto(fitsname,clobber=True)
 
     profile_shifted = tu.shift_2Dprofile(profile,[20.5,20.5],padvalue=0.0,showprofiles=False,origin=1,splineorder=3,savefits=True)
@@ -923,10 +922,10 @@ def shift_2Dprofile(profile,position,padvalue=0.0,showprofiles=False,origin=1,sp
 
     if savefits:
         fitsname = './Shifted2Dprofile.fits'
-        hduimg   = pyfits.PrimaryHDU(profile_shifted)
+        hduimg   = afits.PrimaryHDU(profile_shifted)
         hdus     = [hduimg]
-        hdulist  = pyfits.HDUList(hdus)           # turn header into to hdulist
-        hdulist.writeto(fitsname,clobber=True)    # write fits file (clobber=True overwrites excisting file)
+        hdulist  = afits.HDUList(hdus)           # turn header into to hdulist
+        hdulist.writeto(fitsname,overwrite=True)    # write fits file
         if verbose: print((' - Saved image of shifted profile to '+fitsname))
 
     return profile_shifted
@@ -1093,8 +1092,8 @@ def numerical_convolution_image(imgarray,kerneltype,saveimg=False,clobber=False,
                                             fill_value=fill_value, normalize_kernel=norm_kernel, mask=imgmask)
 
     if saveimg:
-        hdulist = pyfits.PrimaryHDU(data=img_conv)
-        hdulist.writeto(saveimg,clobber=clobber)
+        hdulist = afits.PrimaryHDU(data=img_conv)
+        hdulist.writeto(saveimg,overwrite=clobber)
 
     return img_conv
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -1235,8 +1234,8 @@ def build_paramarray(fitstable,returninit=False,verbose=True):
     file = 'mock_cube_sourcecat161213_all_tdose_mock_cube_NOISEgauss_v170207_modelimage_nosigma_objparam.fits'
     paramarray = tu.build_paramarray(path+file,verbose=True)
     """
-    tabdat     = pyfits.open(fitstable)[1].data
-    tabhdr     = pyfits.open(fitstable)[1].header
+    tabdat     = afits.open(fitstable)[1].data
+    tabhdr     = afits.open(fitstable)[1].header
     try:
         paramtype = tabhdr['MODTYPE']
     except:
@@ -1360,8 +1359,8 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
     hdrs_all  = []
     for cc, cx in enumerate(cubeext):
         if verbose: print(('\n - Cutting out wavelength layes of cube in extension '+str(cx)))
-        cubedata = pyfits.open(cubefile)[cx].data
-        cubehdr  = pyfits.open(cubefile)[cx].header
+        cubedata = afits.open(cubefile)[cx].data
+        cubehdr  = afits.open(cubefile)[cx].header
         Nlayers  = cubedata.shape[0]
 
         if verbose: print(' - Removing comments and history as well as "section title entries" ' \
@@ -1409,12 +1408,12 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print((' - Saving sub-cubes to '+outname))
-    hducube = pyfits.PrimaryHDU()  # creating default fits header
+    hducube = afits.PrimaryHDU()  # creating default fits header
     hdulist = [hducube]
 
     for cc, cx in enumerate(cubeext):
         if verbose: print(('   Add clean version of cube to extension               '+str(cx)))
-        hducutout        = pyfits.ImageHDU(cutouts[cc])
+        hducutout        = afits.ImageHDU(cutouts[cc])
         for key in hdrs_all[cc]:
             if not key in list(hducutout.header.keys()):
                 keyvalue = hdrs_all[cc][key]
@@ -1426,8 +1425,8 @@ def extract_subcube(cubefile,ra,dec,cutoutsize,outname,cubeext=['DATA','STAT'],
         hducutout.header.append(('EXTNAME ',str(cx)         ,' '),end=True)
         hdulist.append(hducutout)
 
-    hdulist = pyfits.HDUList(hdulist)       # turn header into to hdulist
-    hdulist.writeto(outname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+    hdulist = afits.HDUList(hdulist)       # turn header into to hdulist
+    hdulist.writeto(outname,overwrite=clobber)  # write fits file (clobber=True overwrites excisting file)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if imgfiles is not None:
         Nimg = len(imgfiles)
@@ -1475,8 +1474,8 @@ def extract_subimage(imgfile,ra,dec,cutoutsize,outname=None,clobber=False,imgext
     if verbose: print((' - Will extract '+str(cutoutsize[0])+'X'+str(cutoutsize[1])+\
                       ' arcsec subimage centered on ra,dec='+str(ra)+','+str(dec)+' from:\n   '+imgfile))
 
-    imgdata  = pyfits.open(imgfile)[imgext].data
-    imghdr   = pyfits.open(imgfile)[imgext].header
+    imgdata  = afits.open(imgfile)[imgext].data
+    imghdr   = afits.open(imgfile)[imgext].header
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print(' - Removing comments and history as well as "section title entries" ' \
@@ -1500,14 +1499,14 @@ def extract_subimage(imgfile,ra,dec,cutoutsize,outname=None,clobber=False,imgext
                 imghdr[key] = cuthdr[key]
 
         if imgext == 0:
-            hdulist = pyfits.PrimaryHDU(data=cutout.data,header=imghdr)
-            hdulist.writeto(outname,clobber=clobber)
+            hdulist = afits.PrimaryHDU(data=cutout.data,header=imghdr)
+            hdulist.writeto(outname,overwrite=clobber)
         else:
-            hduprim           = pyfits.PrimaryHDU()  # default HDU with default minimal header
+            hduprim           = afits.PrimaryHDU()  # default HDU with default minimal header
             imghdr['EXTNAME'] = str(imgext)
-            hducube           = pyfits.ImageHDU(cutout.data,header=imghdr)
-            hdulist           = pyfits.HDUList([hduprim,hducube])
-            hdulist.writeto(outname, clobber=clobber)
+            hducube           = afits.ImageHDU(cutout.data,header=imghdr)
+            hdulist           = afits.HDUList([hduprim,hducube])
+            hdulist.writeto(outname, overwrite=clobber)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return cutout
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -1545,7 +1544,7 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
     verbose       Toggle verbosity
 
     """
-    tabhdr = pyfits.open(fitstable)[1].header
+    tabhdr = afits.open(fitstable)[1].header
     try:
         paramtype = tabhdr['MODTYPE']
     except:
@@ -1563,9 +1562,9 @@ def model_ds9region(fitstable,outputfile,wcsinfo,color='red',width=2,Nsigma=2,te
     fout.write("# Region file format: DS9 version 4.1 \nfk5\n")
 
     if textlist is None:
-        textstrings = pyfits.open(fitstable)[1].data['obj'].astype(int).astype(str)
+        textstrings = afits.open(fitstable)[1].data['obj'].astype(int).astype(str)
     else:
-        textstrings_init = pyfits.open(fitstable)[1].data['obj'].astype(int).astype(str)
+        textstrings_init = afits.open(fitstable)[1].data['obj'].astype(int).astype(str)
         textstrings      = ['']*len(textstrings_init)
         for tt, obj in enumerate(textstrings_init):
             textstrings[tt] = obj+': '+textlist[tt]
@@ -1636,7 +1635,7 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
     --- EXAMPLE OF USE ---
     import tdose_utilities as tu
     fitscatalog  = '/path/to/fitscatalog/to/base/sourcecat/on/catalog_photometry_candels-cdfs-02.fits'
-    imgheader    = pyfits.open('/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_cut_v1.0.fits')[0].header
+    imgheader    = afits.open('/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_cut_v1.0.fits')[0].header
     sourcelist   = [ [1,  112022074,  53.10226655738314,  -27.81858267246394,     11],
                      [2,  112027079,  53.10181406006402,  -27.81073930353368,     22],
                      [3,  113005024,  53.10083587948985,  -27.83072022094289,     33],
@@ -1649,7 +1648,7 @@ def gen_sourcecat_from_FitsCat(fitscatalog,idcol,racol,deccol,sourcecatcenter,so
 
     """
     if verbose: print(' - Generating TDOSE source catalog for FoV modeling')
-    catdat      = pyfits.open(fitscatalog)[1].data
+    catdat      = afits.open(fitscatalog)[1].data
     ids_all     = catdat[idcol]
     ras_all     = catdat[racol]
     decs_all    = catdat[deccol]
@@ -1768,7 +1767,7 @@ def gen_sourcecat_from_SExtractorfile(sextractorfile,outname='./tdose_sourcecat.
     """
     if verbose: print(' - Generating TDOSE source catalog for FoV modeling')
     if sextractorfile.endswith('.fits'):
-        sexdat  = pyfits.open(sextractorfile)[1].data
+        sexdat  = afits.open(sextractorfile)[1].data
         ids     = sexdat[idcol]
         ras     = sexdat[racol]
         decs    = sexdat[deccol]
@@ -1869,13 +1868,13 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
     --- EXAMPLE OF USE ---
     import tdose_utilities as tu
     sexfile   = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/catalog_photometry_candels-cdfs-02.fits'
-    imgheader = pyfits.open('/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_cut_v1.0.fits')[0].header
+    imgheader = afits.open('/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_cut_v1.0.fits')[0].header
     paramlist = tu.gen_paramlist_from_SExtractorfile(sexfile,imgheader=imgheader,Nsigma=8,savefitsimage=False,objects=[10195])
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print(' - Loading SExtractor catalog')
     try:
-        sourcedat = pyfits.open(sextractorfile)[1].data
+        sourcedat = afits.open(sextractorfile)[1].data
     except:
         sys.exit(' ---> Problems loading fits catalog')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1989,20 +1988,20 @@ def gen_paramlist_from_SExtractorfile(sextractorfile,pixscale=0.06,imgheader=Non
             tablename = fitstablename
 
         objnumbers = np.arange(Nobj)+1
-        c01 = pyfits.Column(name='obj',            format='D', unit='',       array=objnumbers)
-        c02 = pyfits.Column(name='xpos',           format='D', unit='PIXELS', array=paramlist_arr[1::6])
-        c03 = pyfits.Column(name='ypos',           format='D', unit='PIXELS', array=paramlist_arr[0::6])
-        c04 = pyfits.Column(name='fluxscale',      format='D', unit='',       array=paramlist_arr[2::6])
-        c05 = pyfits.Column(name='xsigma',         format='D', unit='PIXELS', array=paramlist_arr[4::6])
-        c06 = pyfits.Column(name='ysigma',         format='D', unit='PIXELS', array=paramlist_arr[3::6])
-        c07 = pyfits.Column(name='angle',          format='D', unit='DEGREES',array=paramlist_arr[5::6])
+        c01 = afits.Column(name='obj',            format='D', unit='',       array=objnumbers)
+        c02 = afits.Column(name='xpos',           format='D', unit='PIXELS', array=paramlist_arr[1::6])
+        c03 = afits.Column(name='ypos',           format='D', unit='PIXELS', array=paramlist_arr[0::6])
+        c04 = afits.Column(name='fluxscale',      format='D', unit='',       array=paramlist_arr[2::6])
+        c05 = afits.Column(name='xsigma',         format='D', unit='PIXELS', array=paramlist_arr[4::6])
+        c06 = afits.Column(name='ysigma',         format='D', unit='PIXELS', array=paramlist_arr[3::6])
+        c07 = afits.Column(name='angle',          format='D', unit='DEGREES',array=paramlist_arr[5::6])
 
-        coldefs = pyfits.ColDefs([c01,c02,c03,c04,c05,c06,c07])
+        coldefs = afits.ColDefs([c01,c02,c03,c04,c05,c06,c07])
 
-        th = pyfits.new_table(coldefs) # creating default header
+        th = afits.BinTableHDU.from_columns(coldefs) # creating default header
 
-        tbHDU  = pyfits.new_table(coldefs, header=th.header)
-        tbHDU.writeto(tablename, clobber=clobber)
+        tbHDU  = afits.BinTableHDU.from_columns(coldefs, header=th.header)
+        tbHDU.writeto(tablename, overwrite=clobber)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     return paramlist_arr
@@ -2056,15 +2055,15 @@ def ascii2fits(asciifile,asciinames=True,skip_header=0,outpath=None,fitsformat='
     columndefs = []
     for kk, key in enumerate(keys):
         try:
-            columndefs.append(pyfits.Column(name=key  , format=fitsformat[kk], array=datadic[key]))
+            columndefs.append(afits.Column(name=key  , format=fitsformat[kk], array=datadic[key]))
         except:
             sys.exit(' ---> ERROR in defining columns for fits file '+outputfile+' in call to tdose_utilities.ascii2fits()')
 
-    cols     = pyfits.ColDefs(columndefs)
-    tbhdu    = pyfits.new_table(cols)          # creating table header
-    hdu      = pyfits.PrimaryHDU()             # creating primary (minimal) header
-    thdulist = pyfits.HDUList([hdu, tbhdu])    # combine primary and table header to hdulist
-    thdulist.writeto(outputfile,clobber=True)  # write fits file (clobber=True overwrites excisting file)
+    cols     = afits.ColDefs(columndefs)
+    tbhdu    = afits.BinTableHDU.from_columns(cols)          # creating table header
+    hdu      = afits.PrimaryHDU()             # creating primary (minimal) header
+    thdulist = afits.HDUList([hdu, tbhdu])    # combine primary and table header to hdulist
+    thdulist.writeto(outputfile,overwrite=True)  # write fits file
     #-------------------------------------------------------------------------------------------------------------
     if verbose: print((' - Wrote the data to: '+str(outputfile)))
     return outputfile
@@ -2165,7 +2164,7 @@ def extract_fitsextension(fitsfile,extension,outputname='default',conversion='No
 
 
     """
-    dataarr = pyfits.open(fitsfile)[extension].data
+    dataarr = afits.open(fitsfile)[extension].data
 
     if outputname.lower() == 'default':
         outputname = fitsfile.replace('.fits','_extension'+str(extension)+'.fits')
@@ -2177,7 +2176,7 @@ def extract_fitsextension(fitsfile,extension,outputname='default',conversion='No
 
     if useheader4output:
         if verbose: print(' - Using header of input image for output')
-        hdr = pyfits.open(fitsfile)[extension].header
+        hdr = afits.open(fitsfile)[extension].header
     else:
         hdr = None
 
@@ -2185,7 +2184,7 @@ def extract_fitsextension(fitsfile,extension,outputname='default',conversion='No
     if os.path.isfile(outputname) & (clobber == False):
         sys.exit(' ----> Output file '+outputname+' already exists and clobber=False')
     else:
-        pyfits.writeto(outputname,dataarr,header=hdr)
+        afits.writeto(outputname,dataarr,header=hdr)
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def galfit_buildinput_fromssextractoroutput(filename,sexcatalog,image,imgext=0,sigmaimg='none',objecttype='gaussian',
                                             Nsigma=3,fluxfactor=100.,saveDS9region=True,savefitsimage=False,
@@ -2216,7 +2215,7 @@ def galfit_buildinput_fromssextractoroutput(filename,sexcatalog,image,imgext=0,s
 
     --- EXAMPLE OF USE ---
     import tdose_utilities as tu
-    import pyfits
+    import astropy.io.fits as afits
     image       = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_cut_v2.0.fits'
     sigmaimg    = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/acs_814w_candels-cdfs-02_wht_cut_v2.0_extension0_ivar2sigma.fits'
     psfimg      = '/Volumes/DATABCKUP3/MUSE/candels-cdfs-02/imgblock_6475_acs_814w_extension2.fits'
@@ -2226,7 +2225,7 @@ def galfit_buildinput_fromssextractoroutput(filename,sexcatalog,image,imgext=0,s
 
     """
 
-    imgheader   = pyfits.open(image)[imgext].header
+    imgheader   = afits.open(image)[imgext].header
 
     param_sex = tu.gen_paramlist_from_SExtractorfile(sexcatalog,imgheader=imgheader,Nsigma=Nsigma,
                                                      fluxfactor=fluxfactor,saveDS9region=saveDS9region,
@@ -2279,7 +2278,7 @@ def galfit_buildinput_fromparamlist(filename,paramlist,dataimg,sigmaimg='none',p
         paramconstraints = 'none'
 
         if imgregion.lower() == 'full':
-            imgshape         = pyfits.open(dataimg)[imgext].data.shape
+            imgshape         = afits.open(dataimg)[imgext].data.shape
             imageregion      = ' '.join([str(l) for l in [1,imgshape[1],1,imgshape[0]]])
         else:
             imageregion      = ' '.join([str(l) for l in imgregion])
@@ -2423,7 +2422,7 @@ def galfit_buildinput_multiGaussTemplate(filename,dataimg,Ngauss=4,gaussspacing=
     """
     if verbose: print((' - Building parameter list for '+str(Ngauss)+' gaussian components '))
     paramlist      = np.ones(Ngauss*6)
-    imgshape       = pyfits.open(dataimg)[imgext].data.shape
+    imgshape       = afits.open(dataimg)[imgext].data.shape
 
     Ngaussperrow   = np.ceil(np.sqrt(Ngauss))
     positiongrid   = gen_gridcomponents([Ngaussperrow*gaussspacing,Ngaussperrow*gaussspacing])
@@ -2685,13 +2684,13 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
 
     --- EXAMPLE OF USE ---
     import tdose_utilities as tu
-    import pyfits
+    import astropy.io.fits as afits
 
     fileG   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model8685multicomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id8685_cutout7p0x7p0arcsec.fits' # Gauss components
     fileS   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model9262GALFITdoublecomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id9262_cutout2p0x2p0arcsec.fits' # Sersic components
     fileS   = '/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/model9262GALFITsinglecomponent/model_acs_814w_candels-cdfs-02_cut_v1.0_id9262_cutout2p0x2p0arcsec.fits' # Sersic components
 
-    PSFmodel = pyfits.open('/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/F814Wpsfmodel_imgblock_6475.fits')[2].data
+    PSFmodel = afits.open('/Volumes/DATABCKUP2/TDOSEextractions/models_cutouts/F814Wpsfmodel_imgblock_6475.fits')[2].data
 
     tu.galfit_convertmodel2cube([fileS,fileG],savecubesumimg=True,includewcs=True,convkernels=[PSFmodel,None],normalizecomponents=False)
 
@@ -2720,9 +2719,9 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
 
     for gg, galfitmodel in enumerate(galfitmodelfiles):
         if verbose: print((' - Extracting number of components from model extenstion (ext=2) of GALFIT model:\n   '+galfitmodel))
-        headerinfo = pyfits.open(galfitmodel)[2].header
-        modelarr   = pyfits.open(galfitmodel)[2].data
-        refimg_hdr = pyfits.open(galfitmodel)[1].header
+        headerinfo = afits.open(galfitmodel)[2].header
+        modelarr   = afits.open(galfitmodel)[2].data
+        refimg_hdr = afits.open(galfitmodel)[1].header
         modelwcs   = wcs.WCS(tu.strip_header(refimg_hdr.copy()))
 
         if sourcecat_compinfo is not None:
@@ -2825,9 +2824,9 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                 img_shift   = tu.shift_2Dprofile(sersic2Dimg,[yc,xc],padvalue=0.0,showprofiles=False,origin=1,splineorder=1)
 
                 # Check images and total flux
-                # hduimg  = pyfits.PrimaryHDU(sersic2Dimg)       # default HDU with default minimal header
+                # hduimg  = afits.PrimaryHDU(sersic2Dimg)       # default HDU with default minimal header
                 # hduimg.writeto('/Users/kschmidt/Desktop/sersic2Dimg.fits',clobber=True)
-                # hduimg  = pyfits.PrimaryHDU(img_shift)       # default HDU with default minimal header
+                # hduimg  = afits.PrimaryHDU(img_shift)       # default HDU with default minimal header
                 # hduimg.writeto('/Users/kschmidt/Desktop/img_shift.fits',clobber=True)
                 # print(' SUM(sersic2Dimg) = '+str(np.sum(sersic2Dimg)))
                 # print(' SUM(img_shift)   = '+str(np.sum(img_shift)))
@@ -2916,11 +2915,11 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
         cubename = galfitmodel.replace('.fits','_cube')+'.fits'
         if verbose: print((' - Saving model cube to \n   '+cubename))
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        hducube  = pyfits.PrimaryHDU(cube)       # default HDU with default minimal header
+        hducube  = afits.PrimaryHDU(cube)       # default HDU with default minimal header
 
         if includewcs:
             if verbose: print(' - Including WCS information from GALFIT reference image extension   ')
-            wcsheader = pyfits.open(galfitmodel)[1].header
+            wcsheader = afits.open(galfitmodel)[1].header
             # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
             hducube.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
             try:
@@ -2974,8 +2973,8 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
 
         hdus = [hducube]
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        hdulist = pyfits.HDUList(hdus)             # turn header into to hdulist
-        hdulist.writeto(cubename,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+        hdulist = afits.HDUList(hdus)             # turn header into to hdulist
+        hdulist.writeto(cubename,overwrite=clobber)  # write fits file
 
         # - - - - - - - - - - - - - - - - - - Saving Sum Cube Image - - - - - - - - - - - - - - - - - -
         if savecubesumimg:
@@ -2994,11 +2993,11 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
                 cubesum    = cubesum * scalfactor
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-            hduimg  = pyfits.PrimaryHDU(cubesum)
+            hduimg  = afits.PrimaryHDU(cubesum)
 
             if includewcs:
                 if verbose: print(' - Including WCS information from GALFIT reference image extension   ')
-                wcsheader = pyfits.open(galfitmodel)[1].header
+                wcsheader = afits.open(galfitmodel)[1].header
                 # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
                 hduimg.header.append(('BUNIT  '                      ,'(Ftot/texp)'),end=True)
                 hduimg.header.append(('CD1_1  ',hdrCD1_1  ,' Coordinate transformation matrix element'),end=True)
@@ -3028,8 +3027,8 @@ def galfit_convertmodel2cube(galfitmodelfiles,includewcs=True,savecubesumimg=Fal
 
                 hdus = [hduimg]
             # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            hdulist = pyfits.HDUList(hdus)            # turn header into to hdulist
-            hdulist.writeto(imgname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+            hdulist = afits.HDUList(hdus)            # turn header into to hdulist
+            hdulist.writeto(imgname,overwrite=clobber)  # write fits file
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if verbose: print('\n')
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -3053,7 +3052,7 @@ def galfit_model_ds9region(models,regionfileextension='ds9region',regcolor='red'
     Nmodels = len(models)
     if verbose: print((' - Generating DS9 region files for '+str(Nmodels)+' GALFIT models provided '))
     for model in models:
-        modelhdr   = pyfits.open(model)[2].header
+        modelhdr   = afits.open(model)[2].header
         comkeys    = []
         regionfile = model.replace('.fits','_'+regionfileextension+'.reg')
         for key in list(modelhdr.keys()):
@@ -3129,8 +3128,8 @@ def galfit_getcentralcoordinate(modelfile,coordorigin=1,verbose=True):
 
     """
     if verbose: print((' - Will extract central coordinates from '+modelfile))
-    refimg_hdr     = pyfits.open(modelfile)[1].header
-    model_hdr      = pyfits.open(modelfile)[2].header
+    refimg_hdr     = afits.open(modelfile)[1].header
+    model_hdr      = afits.open(modelfile)[2].header
     imgwcs         = wcs.WCS(tu.strip_header(refimg_hdr.copy()))
 
     fit_region     = model_hdr['FITSECT']
@@ -3320,7 +3319,7 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
 
         if setupdic['source_model'].lower() == 'modelimg':
             modelimg     = setupdic['modelimg_directory']+'model_'+refimg.split('/')[-1]
-            modelhdu     = pyfits.open(modelimg)
+            modelhdu     = afits.open(modelimg)
             if len(modelhdu) == 4:
                 print(' - Found 4 extensions in fits model so assuming it is on the GALFIT format (priamry, ref img, model, residual)')
                 residualimg  = modelimg
@@ -3355,7 +3354,7 @@ def gen_overview_plot(objids,setupfile,skipobj=False,outputdir='spec1D_directory
         wavefix      = 5500
 
         if os.path.isfile(spec1D):
-            specdat = pyfits.open(spec1D)[1].data
+            specdat = afits.open(spec1D)[1].data
             try: # handle spectra with all nans or infs
                 maxs2n  = np.max(specdat['s2n'][ np.isfinite(specdat['s2n']) ])
                 maxent  = np.where(specdat['s2n'] == maxs2n)[0][0]
@@ -3573,7 +3572,7 @@ def gen_overview_plot_image(ax,imagefile,imgext=0,cubelayer=1,title='Img Title?'
 
     ax.set_title(title,fontsize=fontsize)
     if os.path.isfile(imagefile):
-        imgdata = pyfits.open(imagefile)[imgext].data
+        imgdata = afits.open(imagefile)[imgext].data
 
         if len(imgdata.shape) == 3: # it is a cube
             imgdata = imgdata[cubelayer,:,:]
@@ -3608,24 +3607,24 @@ def gen_overview_plot_hist(ax,data,model,dataext=0,modelext=0,layer=None,normali
     ax.set_title(title,fontsize=fontsize, loc='left')
     if os.path.isfile(data) & os.path.isfile(model):
         if layer is None:
-            datavec   = pyfits.open(data)[dataext].data[:,:].ravel()
-            modelvec  = pyfits.open(model)[modelext].data[:,:].ravel()
+            datavec   = afits.open(data)[dataext].data[:,:].ravel()
+            modelvec  = afits.open(model)[modelext].data[:,:].ravel()
         else:
-            datavec   = pyfits.open(data)[dataext].data[layer,:,:].ravel()
-            modelvec  = pyfits.open(model)[modelext].data[layer,:,:].ravel()
+            datavec   = afits.open(data)[dataext].data[layer,:,:].ravel()
+            modelvec  = afits.open(model)[modelext].data[layer,:,:].ravel()
 
         if len(datavec) != len(modelvec):
-            print((' - Warning: Data ['+str(pyfits.open(data)[dataext].data.shape)+'] and Model ['+str(pyfits.open(model)[modelext].data.shape)+'] do not have the same dimensions '))
+            print((' - Warning: Data ['+str(afits.open(data)[dataext].data.shape)+'] and Model ['+str(afits.open(model)[modelext].data.shape)+'] do not have the same dimensions '))
             print('   Generating histogram by limiting smalles FoV')
 
-            y_data, x_data   = pyfits.open(data)[dataext].data.shape
-            y_model, x_model = pyfits.open(model)[modelext].data.shape
+            y_data, x_data   = afits.open(data)[dataext].data.shape
+            y_model, x_model = afits.open(model)[modelext].data.shape
             if layer is None:
-                datavec   = pyfits.open(data)[dataext].data[0:np.min([y_data,y_model]),0:np.min([x_data,x_model])].ravel()
-                modelvec  = pyfits.open(model)[modelext].data[0:np.min([y_data,y_model]),0:np.min([x_data,x_model])].ravel()
+                datavec   = afits.open(data)[dataext].data[0:np.min([y_data,y_model]),0:np.min([x_data,x_model])].ravel()
+                modelvec  = afits.open(model)[modelext].data[0:np.min([y_data,y_model]),0:np.min([x_data,x_model])].ravel()
             else:
-                datavec   = pyfits.open(data)[dataext].data[layer,0:np.min([y_data,y_model]),0:np.min([x_data,x_model])].ravel()
-                modelvec  = pyfits.open(model)[modelext].data[layer,0:np.min([y_data,y_model]),0:np.min([x_data,x_model])].ravel()
+                datavec   = afits.open(data)[dataext].data[layer,0:np.min([y_data,y_model]),0:np.min([x_data,x_model])].ravel()
+                modelvec  = afits.open(model)[modelext].data[layer,0:np.min([y_data,y_model]),0:np.min([x_data,x_model])].ravel()
 
         residualvec  = datavec-modelvec
 
@@ -3670,7 +3669,7 @@ def gen_overview_plot_spec(ax,spec1Dfile,title='Spec Title?',xrange=[4800,9300],
     """
     ax.set_title(title,fontsize=fontsize, loc='left')
     if os.path.isfile(spec1Dfile):
-        specdat = pyfits.open(spec1Dfile)[1].data
+        specdat = afits.open(spec1Dfile)[1].data
         goodent = np.where((specdat['wave'] > xrange[0]) & (specdat['wave'] < xrange[1]))[0]
 
         wave    = specdat['wave'][goodent]
@@ -3775,25 +3774,25 @@ def test_analyticVSnumerical(setupfile,outputdir,plotcubelayer,xrange=[6000,6500
         aperturespec = specdir+setupdic['spec1D_name']+'_aperture_'+idstr+'.fits'
         if os.path.isfile(aperturespec):
             aperture  = True
-            ta_spec   = pyfits.open(aperturespec)[1].data
+            ta_spec   = afits.open(aperturespec)[1].data
         else:
             aperture  = False
 
-        tg_spec   = pyfits.open(specdir+setupdic['spec1D_name']+'_gauss_'+idstr+'.fits')[1].data
-        tg_smc    = pyfits.open(moddir+base_cube+'_'+smce+'_gauss.fits')['DATA_DCBGC'].data
-        tg_model  = pyfits.open(moddir+base_cube+'_'+mce+'_gauss.fits')['DATA_DCBGC'].data
-        tg_psf    = pyfits.open(moddir+base_cube+'_tdose_psfcube_gauss.fits')['DATA_DCBGC'].data
-        tg_scales = pyfits.open(moddir+base_cube+'_'+mce+'_gauss.fits')['WAVESCL'].data
-        tg_acsmod = pyfits.open(moddir+base_ref+'_'+mie+'_gauss.fits')[0].data
-        tg_cubWCS = pyfits.open(moddir+base_ref+'_'+mie+'_cubeWCS_gauss.fits')[0].data
+        tg_spec   = afits.open(specdir+setupdic['spec1D_name']+'_gauss_'+idstr+'.fits')[1].data
+        tg_smc    = afits.open(moddir+base_cube+'_'+smce+'_gauss.fits')['DATA_DCBGC'].data
+        tg_model  = afits.open(moddir+base_cube+'_'+mce+'_gauss.fits')['DATA_DCBGC'].data
+        tg_psf    = afits.open(moddir+base_cube+'_tdose_psfcube_gauss.fits')['DATA_DCBGC'].data
+        tg_scales = afits.open(moddir+base_cube+'_'+mce+'_gauss.fits')['WAVESCL'].data
+        tg_acsmod = afits.open(moddir+base_ref+'_'+mie+'_gauss.fits')[0].data
+        tg_cubWCS = afits.open(moddir+base_ref+'_'+mie+'_cubeWCS_gauss.fits')[0].data
 
-        sc_spec   = pyfits.open(specdir+setupdic['spec1D_name']+'_modelimg_'+idstr+'.fits')[1].data
-        sc_smc    = pyfits.open(moddir+base_cube+'_'+smce+'_modelimg.fits')['DATA_DCBGC'].data
-        sc_model  = pyfits.open(moddir+base_cube+'_'+mce+'_modelimg.fits')['DATA_DCBGC'].data
-        sc_psf    = pyfits.open(moddir+base_cube+'_tdose_psfcube_modelimg.fits')['DATA_DCBGC'].data
-        sc_scales = pyfits.open(moddir+base_cube+'_'+mce+'_modelimg.fits')['WAVESCL'].data
-        sc_acsmod = pyfits.open(modimgdir+'model_'+base_ref+'.fits')[0].data
-        sc_cubWCS = pyfits.open(moddir+base_ref+'_'+mie+'_cubeWCS_modelimg.fits')[0].data
+        sc_spec   = afits.open(specdir+setupdic['spec1D_name']+'_modelimg_'+idstr+'.fits')[1].data
+        sc_smc    = afits.open(moddir+base_cube+'_'+smce+'_modelimg.fits')['DATA_DCBGC'].data
+        sc_model  = afits.open(moddir+base_cube+'_'+mce+'_modelimg.fits')['DATA_DCBGC'].data
+        sc_psf    = afits.open(moddir+base_cube+'_tdose_psfcube_modelimg.fits')['DATA_DCBGC'].data
+        sc_scales = afits.open(moddir+base_cube+'_'+mce+'_modelimg.fits')['WAVESCL'].data
+        sc_acsmod = afits.open(modimgdir+'model_'+base_ref+'.fits')[0].data
+        sc_cubWCS = afits.open(moddir+base_ref+'_'+mie+'_cubeWCS_modelimg.fits')[0].data
 
         rangestr = '_wavelength'+str(xrange[0]).replace('.','p')+'to'+str(xrange[1]).replace('.','p')
 
@@ -4179,17 +4178,17 @@ def test_sersicprofiles(Ieff=1.0,reff=25.0,sersicindex=4.0,axisratio=0.5,size=10
 
     mod = Sersic2D(amplitude = Ieff, r_eff = reff, n=sersicindex, x_0=size/2.0, y_0=size/2.0, ellip=1-axisratio, theta=theta)
     img = mod(x, y)
-    hducube  = pyfits.PrimaryHDU(img)
+    hducube  = afits.PrimaryHDU(img)
     hdus = [hducube]
-    hdulist = pyfits.HDUList(hdus)
-    hdulist.writeto(outputdir+'model_sersic.fits',clobber=True)
+    hdulist = afits.HDUList(hdus)
+    hdulist.writeto(outputdir+'model_sersic.fits',overwrite=True)
 
     mod = Sersic2D(amplitude = Ieff, r_eff = reff, n=sersicindex, x_0=size/2.0, y_0=size/2.0, ellip=0, theta=theta)
     img = mod(x, y)
-    hducube  = pyfits.PrimaryHDU(img)
+    hducube  = afits.PrimaryHDU(img)
     hdus = [hducube]
-    hdulist = pyfits.HDUList(hdus)
-    hdulist.writeto(outputdir+'model_sersic_spherical.fits',clobber=True)
+    hdulist = afits.HDUList(hdus)
+    hdulist.writeto(outputdir+'model_sersic_spherical.fits',overwrite=True)
 
     # integrate.nquad(mod, [[-np.inf, np.inf],[-np.inf, np.inf]])
     # integrate.nquad(mod, [[size/2.0-reff, size/2.0+reff],[size/2.0-reff, size/2.0+reff]])
@@ -4285,7 +4284,7 @@ def add_hdrkeys2fitsfile(tdosespectrum,hdrkeydic,newname='default',clobber=False
 
     """
     if verbose: print((' - Adding (updating) header keywords in \n   '+tdosespectrum))
-    tdosehdu = pyfits.open(tdosespectrum)
+    tdosehdu = afits.open(tdosespectrum)
 
     for ee, extension in enumerate(tdosehdu):
         if verbose: print(('   Updating extension '+str(ee)))
@@ -4299,7 +4298,7 @@ def add_hdrkeys2fitsfile(tdosespectrum,hdrkeydic,newname='default',clobber=False
     else:
         outname = newname
 
-    tdosehdu.writeto(outname,clobber=clobber)
+    tdosehdu.writeto(outname,overwrite=clobber)
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=False,
@@ -4339,16 +4338,16 @@ def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print((' - Setting up output cube based on list of 2D models. Output to be stored in:\n   '+basename))
     mainmodel  = 0
-    primheader = pyfits.open(models2D[mainmodel])[0].header
-    baseheader = pyfits.open(models2D[mainmodel])[modelsext[mainmodel]].header
-    modelimg   = pyfits.open(models2D[mainmodel])[modelsext[mainmodel]].data
+    primheader = afits.open(models2D[mainmodel])[0].header
+    baseheader = afits.open(models2D[mainmodel])[modelsext[mainmodel]].header
+    modelimg   = afits.open(models2D[mainmodel])[modelsext[mainmodel]].data
 
     modelwcs   = wcs.WCS(tu.strip_header(baseheader.copy()))
     cube       = np.zeros([Nmodels2D,modelimg.shape[0],modelimg.shape[1]])
 
     for mm, m2D in enumerate(models2D):
         compnumber   = mm+1
-        m2Ddata      = pyfits.open(m2D)[modelsext[mm]].data
+        m2Ddata      = afits.open(m2D)[modelsext[mm]].data
         cubelayer    = m2Ddata
 
         if normalizecomponents:
@@ -4361,7 +4360,7 @@ def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=
     cubename = basename+'_cube.fits'
     if verbose: print((' - Saving model cube to \n   '+cubename))
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    hducube  = pyfits.PrimaryHDU(cube)       # default HDU with default minimal header
+    hducube  = afits.PrimaryHDU(cube)       # default HDU with default minimal header
 
     if includewcs:
         if verbose: print(' - Including WCS information from main model header ')
@@ -4392,8 +4391,8 @@ def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=
 
     hdus = [hducube]
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    hdulist = pyfits.HDUList(hdus)             # turn header into to hdulist
-    hdulist.writeto(cubename,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+    hdulist = afits.HDUList(hdus)             # turn header into to hdulist
+    hdulist.writeto(cubename,overwrite=clobber)  # write fits file
 
     # - - - - - - - - - - - - - - - - - - Saving Sum Cube Image - - - - - - - - - - - - - - - - - -
     if savecubesumimg:
@@ -4401,7 +4400,7 @@ def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=
         if verbose: print((' - Saving model cube to \n   '+imgname))
         cubesum = np.sum(cube,axis=0)
 
-        hduimg  = pyfits.PrimaryHDU(cubesum)
+        hduimg  = afits.PrimaryHDU(cubesum)
         if includewcs:
             if verbose: print(' - Including WCS information from model image extension   ')
             # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
@@ -4419,8 +4418,8 @@ def build_modelcube_from_modelimages(models2D,modelsext,basename,savecubesumimg=
 
             hdus = [hduimg]
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-        hdulist = pyfits.HDUList(hdus)            # turn header into to hdulist
-        hdulist.writeto(imgname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+        hdulist = afits.HDUList(hdus)            # turn header into to hdulist
+        hdulist.writeto(imgname,overwrite=clobber)  # write fits file
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print('\n')
 
