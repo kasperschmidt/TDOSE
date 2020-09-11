@@ -862,7 +862,7 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                     cut_sourcedat[ii][setupdic['sourcecat_xposcol']] = pixcoord[0]
                     cut_sourcedat[ii][setupdic['sourcecat_yposcol']] = pixcoord[1]
 
-                    storearr[ii] = np.vstack(cut_sourcedat)[ii,:]
+                    storearr[ii] = np.vstack(np.asarray(cut_sourcedat))[ii,:]
 
                 astropy.io.fits.writeto(cut_sourcecat,storearr,header=None,overwrite=clobber)
         else:
