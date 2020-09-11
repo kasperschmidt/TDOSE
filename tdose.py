@@ -1,12 +1,10 @@
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-import pyfits
 import pdb
 import time
 import os
 import sys
 import glob
 import numpy as np
-import collections
 import astropy
 import shutil
 import collections
@@ -96,8 +94,8 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
         setupdic        = tu.load_setup(setupfile,verbose=verbose)
 
         sourcecat_init  = setupdic['source_catalog']
-        sourcedat_init  = pyfits.open(sourcecat_init)[1].data
-        sourcehdr_init  = pyfits.open(sourcecat_init)[1].header
+        sourcedat_init  = afits.open(sourcecat_init)[1].data
+        sourcehdr_init  = afits.open(sourcecat_init)[1].header
         sourceids_init  = sourcedat_init[setupdic['sourcecat_IDcol']]
 
         Nsources        = len(sourceids_init)
@@ -184,7 +182,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 infostr = infostr+'  -> skipping as datacube to extract from not found '
                 skipthisobj = True
             else:
-                if np.isfinite(pyfits.open(datacube)[setupdic['cube_extension']].data).any():
+                if np.isfinite(afits.open(datacube)[setupdic['cube_extension']].data).any():
                     skipthisobj = False
                 else:
                     infostr = infostr+'  -> skipping as no pixels in datacube are finite (all NaNs or Infs) '
@@ -218,15 +216,15 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             if setupdic['wht_image'] is not None:
                 refimg    = refimg[0]
 
-            cube_data     = pyfits.open(datacube)[setupdic['cube_extension']].data
-            cube_variance = pyfits.open(variancecube)[setupdic['variance_extension']].data
-            cube_hdr      = pyfits.open(datacube)[setupdic['cube_extension']].header
+            cube_data     = afits.open(datacube)[setupdic['cube_extension']].data
+            cube_variance = afits.open(variancecube)[setupdic['variance_extension']].data
+            cube_hdr      = afits.open(datacube)[setupdic['cube_extension']].header
             cube_wcs2D    = tu.WCS3DtoWCS2D(wcs.WCS(tu.strip_header(cube_hdr.copy())))
             cube_scales   = wcs.utils.proj_plane_pixel_scales(cube_wcs2D)*3600.0
             cube_waves    = np.arange(cube_hdr['NAXIS3'])*cube_hdr['CD3_3']+cube_hdr['CRVAL3']
 
-            img_data      = pyfits.open(refimg)[setupdic['img_extension']].data
-            img_hdr       = pyfits.open(refimg)[setupdic['img_extension']].header
+            img_data      = afits.open(refimg)[setupdic['img_extension']].data
+            img_hdr       = afits.open(refimg)[setupdic['img_extension']].header
             img_wcs       = wcs.WCS(tu.strip_header(img_hdr.copy()))
             img_scales    = wcs.utils.proj_plane_pixel_scales(img_wcs)*3600.0
 
@@ -249,7 +247,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                     if verbosefull: print(' -> found it, so it will be used')
                     FoV_modelexists = True
                     FoV_modelfile   = model_file
-                    FoV_modeldata   = pyfits.open(FoV_modelfile)[setupdic['galfit_model_extension']].data
+                    FoV_modeldata   = afits.open(FoV_modelfile)[setupdic['galfit_model_extension']].data
                 else:
                     if verbosefull: print(' -> did not find it, so will generate gaussian TDOSE model')
                 sys.exit(' ---> Loading parameters and building model from galfit output is not enabled yet; sorry. '
@@ -267,12 +265,12 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                     if verbosefull: print(' -> found a cube model, so will use that (instead of any model files)')
                     FoV_modelexists     = True
                     FoV_modelfile       = cube_model_file
-                    FoV_modeldata       = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
+                    FoV_modeldata       = afits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
                 elif os.path.isfile(model_file):
                     if verbosefull: print(' -> found it, so it will be used')
                     FoV_modelexists     = True
                     FoV_modelfile       = model_file
-                    FoV_modeldata       = pyfits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
+                    FoV_modeldata       = afits.open(FoV_modelfile)[setupdic['modelimg_extension']].data
                 else:
                     if verbosefull: print(' -> did not find any model or cube model:\n    '+model_file+'\n    '+cube_model_file+\
                                           '\n   so will skip object '+str(extid))
@@ -293,10 +291,10 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 modelparam    = modelimg.replace('.fits','_objparam.fits') # output from reference image modeling
 
                 names         = []
-                sourceids     = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']]
+                sourceids     = afits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']]
                 for ii, sid in enumerate(sourceids):
                     if setupdic['sourcecat_parentIDcol'] is not None:
-                        parentid = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']][ii]
+                        parentid = afits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']][ii]
                         namestr  = str(parentid)+'>>'+str(sid)
                     else:
                         namestr  = str(sid)
@@ -340,7 +338,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 modelimgsize = model_file
 
             if refimagemodel2cubewcs:
-                cubehdu       = pyfits.PrimaryHDU(cube_data[0,:,:])
+                cubehdu       = afits.PrimaryHDU(cube_data[0,:,:])
                 cubewcshdr    = cube_wcs2D.to_header()
                 for key in cubewcshdr:
                     if key == 'PC1_1':
@@ -419,10 +417,10 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                 if verbosefull: print('--------------------------------------------------------------------------------------------------')
                 if verbosefull: print(' TDOSE: Creating source model cube                          '+\
                                       '      ( Total runtime = '+str("%10.4f" % (time.clock() - start_time))+' seconds )')
-                model_cube        = pyfits.open(modcubename)[setupdic['cube_extension']].data
-                layer_scales      = pyfits.open(modcubename)['WAVESCL'].data
+                model_cube        = afits.open(modcubename)[setupdic['cube_extension']].data
+                layer_scales      = afits.open(modcubename)['WAVESCL'].data
                 if setupdic['source_model'].lower() != 'aperture':
-                    psfcube       = pyfits.open(psfcubename)[setupdic['cube_extension']].data
+                    psfcube       = afits.open(psfcubename)[setupdic['cube_extension']].data
                 else:
                     psfcube       = None
 
@@ -450,7 +448,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
             SAD    = collections.OrderedDict()
 
             if FoV_modelexists:
-                sourceids = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']]
+                sourceids = afits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']]
 
             if extid == -9999: # If full FoV is modeled
                 if setupdic['sources_to_extract'] == 'all':
@@ -458,7 +456,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
                         SAD[str("%.10d" % int(sid))] = [ss]
                 else:
                     if setupdic['sourcecat_parentIDcol'] is not None:
-                        parentids = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']]
+                        parentids = afits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']]
 
                         for ee, eid in enumerate(extractids):
                             sourceent = np.where(sourceids == eid)[0]
@@ -475,7 +473,7 @@ def perform_extraction(setupfile='./tdose_setup_template.txt',
 
             else:  # If cutouts are modeled instead of full FoV
                 if setupdic['sourcecat_parentIDcol'] is not None:
-                    parentids = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']]
+                    parentids = afits.open(sourcecat)[1].data[setupdic['sourcecat_parentIDcol']]
                     sourceent = np.where(sourceids == extid)[0]
                     parent    = parentids[sourceent][0]
                     if float(parent) < 0: # ignoring parents with negative IDs. Looking for object IDs in parent list instead
@@ -850,7 +848,7 @@ def gen_cutouts(setupdic,extractids,sourceids_init,sourcedat_init,
                                            (sourcedat_init[setupdic['sourcecat_deccol']] > (dec - cutoutsize[1]/2./3600.)) )[0]
 
                 Ngoodobj      = len(obj_in_cut_fov)
-                cutout_hdr    = pyfits.open(cut_images[oo])[setupdic['img_extension']].header
+                cutout_hdr    = afits.open(cut_images[oo])[setupdic['img_extension']].header
                 cut_sourcedat = sourcedat_init[obj_in_cut_fov].copy()
                 storearr      = np.zeros(Ngoodobj,dtype=cut_sourcedat.columns) # define structure array to store to fits file
                 for ii in np.arange(Ngoodobj):
@@ -911,8 +909,8 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
     setupdic        = tu.load_setup(setupfile,verbose=verbose)
 
     sourcecat_init  = setupdic['source_catalog']
-    sourcedat_init  = pyfits.open(sourcecat_init)[1].data
-    sourcehdr_init  = pyfits.open(sourcecat_init)[1].header
+    sourcedat_init  = afits.open(sourcecat_init)[1].data
+    sourcehdr_init  = afits.open(sourcecat_init)[1].header
     sourceids_init  = sourcedat_init[setupdic['sourcecat_IDcol']]
 
     Nsources        = len(sourceids_init)
@@ -947,8 +945,8 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print(' - Build template full FoV cubes to fill with models')
-    cube_data     = pyfits.open(setupdic['data_cube'])[setupdic['cube_extension']].data
-    cube_data_hdr = pyfits.open(setupdic['data_cube'])[setupdic['cube_extension']].header
+    cube_data     = afits.open(setupdic['data_cube'])[setupdic['cube_extension']].data
+    cube_data_hdr = afits.open(setupdic['data_cube'])[setupdic['cube_extension']].header
     striphdr      = tu.strip_header(cube_data_hdr.copy())
     cubewcs       = wcs.WCS(striphdr)
     cubewcs_2D    = tu.WCS3DtoWCS2D(cubewcs.copy())
@@ -972,7 +970,7 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
             if not os.path.isfile(subsourcecat_file):
                 sys.exit(' ---> did not find the source catalog \n                  '+subsourcecat_file+
                          '\n                  need it to locate model and define region of insertion in full FoV cube. ')
-            subsourcecat    = pyfits.open(subsourcecat_file)[1].data
+            subsourcecat    = afits.open(subsourcecat_file)[1].data
             objid_modelent  = np.where(subsourcecat['id'] == objid)[0][0]
 
             if setupdic['sourcecat_parentIDcol'] is None:
@@ -984,7 +982,7 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
                 source_ids      = subsourcecat['id'][parent_ent]
                 Nparent         = len(parent_ent)
 
-            sourcemodelhdu = pyfits.open(sourcemodelcube[0])
+            sourcemodelhdu = afits.open(sourcemodelcube[0])
             if Nparent == 1:
                 infostr = '   > Getting object model for '+str(int(objid))+' (source model no. '+str(int(objid_modelent))+')'+\
                           '   (obj '+str("%.5d" % (oo+1))+' / '+str("%.5d" % (Nextractions))+')       '
@@ -1025,15 +1023,15 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
         fullfov_smc = modeldir+basename+'_'+setupdic['source_model_cube_ext']+'_'+setupdic['psf_type']+'_fullFoV.fits'
         if verbose: print(' - Storing final full FoV source model cube to:\n   '+fullfov_smc)
         if 'XTENSION' in list(cube_data_hdr.keys()):
-            hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
-            hducube        = pyfits.ImageHDU(smc_out,header=cube_data_hdr)
+            hduprim        = afits.PrimaryHDU()  # default HDU with default minimal header
+            hducube        = afits.ImageHDU(smc_out,header=cube_data_hdr)
             hdus           = [hduprim,hducube]
         else:
-            hducube = pyfits.PrimaryHDU(smc_out,header=cube_data_hdr)
+            hducube = afits.PrimaryHDU(smc_out,header=cube_data_hdr)
             hdus           = [hducube]
 
-        hdulist = pyfits.HDUList(hdus)       # turn header into to hdulist
-        hdulist.writeto(fullfov_smc,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+        hdulist = afits.HDUList(hdus)       # turn header into to hdulist
+        hdulist.writeto(fullfov_smc,overwrite=clobber)  # write fits file
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if store_modelcube:
@@ -1042,15 +1040,15 @@ def gen_fullFoV_from_cutouts(setupfile,store_sourcemodelcube=False,store_modelcu
             cube_out = np.sum(smc_out,axis=0)
         if verbose: print(' - Producing FoV model cube from full FoV source model cube and storing it in:\n   '+fullfov_cube)
         if 'XTENSION' in list(cube_data_hdr.keys()):
-            hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
-            hducube        = pyfits.ImageHDU(cube_out,header=cube_data_hdr)
+            hduprim        = afits.PrimaryHDU()  # default HDU with default minimal header
+            hducube        = afits.ImageHDU(cube_out,header=cube_data_hdr)
             hdus           = [hduprim,hducube]
         else:
-            hducube = pyfits.PrimaryHDU(cube_out,header=cube_data_hdr)
+            hducube = afits.PrimaryHDU(cube_out,header=cube_data_hdr)
             hdus           = [hducube]
 
-        hdulist = pyfits.HDUList(hdus)       # turn header into to hdulist
-        hdulist.writeto(fullfov_cube,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+        hdulist = afits.HDUList(hdus)       # turn header into to hdulist
+        hdulist.writeto(fullfov_cube,overwrite=clobber)  # write fits file
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionfile,img_wcs,img_data,names,objid=None,
@@ -1084,9 +1082,9 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
         if setupdic['gauss_guess'] is None:
             param_initguess = None
         else:
-            objects   = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']].tolist()
-            objxpos   = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_xposcol']].tolist()
-            objypos   = pyfits.open(sourcecat)[1].data[setupdic['sourcecat_yposcol']].tolist()
+            objects   = afits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']].tolist()
+            objxpos   = afits.open(sourcecat)[1].data[setupdic['sourcecat_xposcol']].tolist()
+            objypos   = afits.open(sourcecat)[1].data[setupdic['sourcecat_yposcol']].tolist()
 
             if save_init_model_output:
                 saveDS9region = True
@@ -1138,7 +1136,7 @@ def model_refimage(setupdic,refimg,img_hdr,sourcecat,modelimg,modelparam,regionf
             else:
                 apsize       = setupdic['aperture_size']
             sigysigxangle =  apsize / pixscaleunique          # radius in pixels
-            fluxscale     =  pyfits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']].astype(float)  # pixel values
+            fluxscale     =  afits.open(sourcecat)[1].data[setupdic['sourcecat_IDcol']].astype(float)  # pixel values
     else:
         sys.exit(' ---> Setting source_model == '+setupdic['source_model']+' is not a valid entry')
 
@@ -1239,7 +1237,7 @@ def model_datacube(setupdic,extid,modcubename,rescubename,cube_data,cube_varianc
     paramtype    = setupdic['source_model']
     psfparamtype = setupdic['psf_type']
     if paramtype.lower() != 'aperture':
-        psfcube  = pyfits.open(psfcubename)[setupdic['cube_extension']].data
+        psfcube  = afits.open(psfcubename)[setupdic['cube_extension']].data
     else:
         psfcube  = None
 
@@ -1330,19 +1328,19 @@ def define_psf(setupdic,datacube,cube_data,cube_scales,cube_hdr,cube_waves,clobb
                 psfcube[ll,:,:] = psfimg
 
             if 'XTENSION' in list(cube_hdr.keys()):
-                hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
-                hducube        = pyfits.ImageHDU(psfcube,header=cube_hdr)
+                hduprim        = afits.PrimaryHDU()  # default HDU with default minimal header
+                hducube        = afits.ImageHDU(psfcube,header=cube_hdr)
                 hducube.header.append(('PSF_P0',    setupdic['psf_FWHMp0'],' '),end=True)
                 hducube.header.append(('PSF_P1',    setupdic['psf_FWHMp1'],' '),end=True)
                 hdus           = [hduprim,hducube]
             else:
-                hducube = pyfits.PrimaryHDU(psfcube,header=cube_hdr)
+                hducube = afits.PrimaryHDU(psfcube,header=cube_hdr)
                 hducube.header.append(('PSF_P0',    setupdic['psf_FWHMp0'],' '),end=True)
                 hducube.header.append(('PSF_P1',    setupdic['psf_FWHMp1'],' '),end=True)
                 hdus           = [hducube]
 
-            hdulist = pyfits.HDUList(hdus)
-            hdulist.writeto(psfcubename,clobber=clobber)
+            hdulist = afits.HDUList(hdus)
+            hdulist.writeto(psfcubename,overwrite=clobber)
 
     return paramPSF
 

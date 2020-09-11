@@ -2,7 +2,7 @@
 import numpy as np
 import os
 import sys
-import pyfits
+import astropy.io.fits as afits
 import scipy
 import scipy.ndimage
 import scipy.optimize as opt
@@ -379,7 +379,7 @@ def save_cube(cubename,datacube,layer_scales,outputhdr=None,clobber=False,verbos
     if verbose: print(' - Saving model cube to \n   '+cubename)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if outputhdr is None:
-        hducube = pyfits.PrimaryHDU(datacube)       # default HDU with default minimal header
+        hducube = afits.PrimaryHDU(datacube)       # default HDU with default minimal header
         if verbose: print(' - No header provided so will generate one ')
         # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
         hducube.header.append(('BUNIT  '                      ,'(10**(-20)*erg/s/cm**2/Angstrom)**2'),end=True)
@@ -412,14 +412,14 @@ def save_cube(cubename,datacube,layer_scales,outputhdr=None,clobber=False,verbos
     else:
         if verbose: print(' - Using header provided with "outputhdr" for output fits file ')
         if 'XTENSION' in list(outputhdr.keys()):
-            hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
-            hducube        = pyfits.ImageHDU(datacube,header=outputhdr)
+            hduprim        = afits.PrimaryHDU()  # default HDU with default minimal header
+            hducube        = afits.ImageHDU(datacube,header=outputhdr)
             hdus           = [hduprim,hducube]
         else:
-            hducube = pyfits.PrimaryHDU(datacube,header=outputhdr)
+            hducube = afits.PrimaryHDU(datacube,header=outputhdr)
             hdus           = [hducube]
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    hduscales = pyfits.ImageHDU(layer_scales)       # default HDU with default minimal header
+    hduscales = afits.ImageHDU(layer_scales)       # default HDU with default minimal header
     # writing hdrkeys:       '---KEY--',                      '----------------MAX LENGTH COMMENT-------------'
     hduscales.header.append(('EXTNAME ','WAVESCL'            ,' None'),end=True)
     hduscales.header.append(('BUNIT   '                      ,' None'),end=True)
@@ -440,8 +440,8 @@ def save_cube(cubename,datacube,layer_scales,outputhdr=None,clobber=False,verbos
     hduscales.header['CDELT1'] = hducube.header['CD3_3']
     hdus.append(hduscales)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    hdulist = pyfits.HDUList(hdus)       # turn header into to hdulist
-    hdulist.writeto(cubename,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+    hdulist = afits.HDUList(hdus)       # turn header into to hdulist
+    hdulist.writeto(cubename,overwrite=clobber)  # write fits file
 
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def optimize_source_scale_gauss(img_data,img_std,mu_objs,cov_objs,optimizer='curve_fit',verbose=True):
@@ -765,7 +765,7 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if save_modelcube:
         if verbose: print('\n - Saving source model cube to \n   '+cubename)
-        hducube = pyfits.PrimaryHDU(out_cube)       # default HDU with default minimal header
+        hducube = afits.PrimaryHDU(out_cube)       # default HDU with default minimal header
         if outputhdr == 'None':
             if verbose: print(' - No header provided so will generate one ')
             # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
@@ -801,18 +801,18 @@ def gen_source_model_cube(layer_scales,cubeshape,sourceparam,psfparam,paramtype=
         else:
             if verbose: print(' - Using header provided with "outputhdr" for output fits file ')
             if 'XTENSION' in list(outputhdr.keys()):
-                hduprim        = pyfits.PrimaryHDU()  # default HDU with default minimal header
-                hducube        = pyfits.ImageHDU(out_cube,header=outputhdr)
+                hduprim        = afits.PrimaryHDU()  # default HDU with default minimal header
+                hducube        = afits.ImageHDU(out_cube,header=outputhdr)
                 hdus           = [hduprim,hducube]
             else:
-                hducube = pyfits.PrimaryHDU(out_cube,header=outputhdr)
+                hducube = afits.PrimaryHDU(out_cube,header=outputhdr)
                 hdus           = [hducube]
 
             # if verbose: print ' - Using header provided with "outputhdr" for output fits file '
             # hducube.header = outputhdr
 
-        hdulist = pyfits.HDUList(hdus)       # turn header into to hdulist
-        hdulist.writeto(cubename,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+        hdulist = afits.HDUList(hdus)       # turn header into to hdulist
+        hdulist.writeto(cubename,overwrite=clobber)  # write fits file
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     return out_cube

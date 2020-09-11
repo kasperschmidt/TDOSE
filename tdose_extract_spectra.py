@@ -1,7 +1,6 @@
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 import numpy as np
 import sys
-import pyfits
 import astropy.io.fits as afits
 import collections
 import tdose_utilities as tu
@@ -42,12 +41,12 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='
     """
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print(' - Loading data needed for spectral assembly')
-    model_cube        = pyfits.open(model_cube_file)[model_cube_ext].data
-    model_cube_hdr    = pyfits.open(model_cube_file)[model_cube_ext].header
-    layer_scale_arr   = pyfits.open(model_cube_file)[layer_scale_ext].data
+    model_cube        = afits.open(model_cube_file)[model_cube_ext].data
+    model_cube_hdr    = afits.open(model_cube_file)[model_cube_ext].header
+    layer_scale_arr   = afits.open(model_cube_file)[layer_scale_ext].data
     if variance_cube_file is not None:
-        stddev_cube       = np.sqrt(pyfits.open(variance_cube_file)[variance_cube_ext].data) # turn varinace into standard deviation
-        source_model_cube = pyfits.open(source_model_cube_file)[source_cube_ext].data
+        stddev_cube       = np.sqrt(afits.open(variance_cube_file)[variance_cube_ext].data) # turn varinace into standard deviation
+        source_model_cube = afits.open(source_model_cube_file)[source_cube_ext].data
     else:
         stddev_cube       = None
         source_model_cube = None
@@ -56,7 +55,7 @@ def extract_spectra(model_cube_file,source_association_dictionary=None,nameext='
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if data_cube_file is not None:
         if verbose: print(' - Loading data cube ')
-        data_cube  = pyfits.open(data_cube_file)[model_cube_ext].data
+        data_cube  = afits.open(data_cube_file)[model_cube_ext].data
     else:
         data_cube  = None
 
@@ -222,24 +221,24 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print(' - Saving extracted 1D spectrum and source cube to \n   '+specname)
-    mainHDU = pyfits.PrimaryHDU()       # primary HDU
+    mainHDU = afits.PrimaryHDU()       # primary HDU
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    c1 = pyfits.Column(name='wave',      format='D', unit='ANGSTROMS', array=wavelengths)
-    c2 = pyfits.Column(name='flux',      format='D', unit='', array=spec_1D)
-    c3 = pyfits.Column(name='fluxerror', format='D', unit='', array=noise_1D)
-    c4 = pyfits.Column(name='s2n',       format='D', unit='', array=SN_1D)
+    c1 = afits.Column(name='wave',      format='D', unit='ANGSTROMS', array=wavelengths)
+    c2 = afits.Column(name='flux',      format='D', unit='', array=spec_1D)
+    c3 = afits.Column(name='fluxerror', format='D', unit='', array=noise_1D)
+    c4 = afits.Column(name='s2n',       format='D', unit='', array=SN_1D)
 
-    coldefs = pyfits.ColDefs([c1,c2,c3,c4])
-    th = pyfits.new_table(coldefs) # creating default header
+    coldefs = afits.ColDefs([c1,c2,c3,c4])
+    th = afits.BinTableHDU.from_columns(coldefs) # creating default header
 
     # writing hdrkeys:'---KEY--',                             '----------------MAX LENGTH COMMENT-------------'
     th.header.append(('EXTNAME ','SPEC1D'                     ,'cube containing source'),end=True)
     head    = th.header
 
-    tbHDU  = pyfits.new_table(coldefs, header=head)
+    tbHDU  = afits.BinTableHDU.from_columns(coldefs, header=head)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if obj_cube_hdr is not None:
-        objHDU        = pyfits.ImageHDU(object_cube)
+        objHDU        = afits.ImageHDU(object_cube)
         for hdrkey in list(obj_cube_hdr.keys()):
             if not hdrkey in list(objHDU.header.keys()):
                 objHDU.header.append((hdrkey,obj_cube_hdr[hdrkey],obj_cube_hdr.comments[hdrkey]),end=True)
@@ -252,11 +251,11 @@ def extract_spectrum(sourceIDs,layer_scale_arr,wavelengths,noise_cube=None,sourc
 
         objHDU.header.append(('EXTNAME ','SOURCECUBE'            ,'cube containing source'),end=True)
 
-        hdulist = pyfits.HDUList([mainHDU,tbHDU,objHDU])
+        hdulist = afits.HDUList([mainHDU,tbHDU,objHDU])
     else:
-        hdulist = pyfits.HDUList([mainHDU,tbHDU])
+        hdulist = afits.HDUList([mainHDU,tbHDU])
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    hdulist.writeto(specname, clobber=clobber)
+    hdulist.writeto(specname, overwrite=clobber)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return wavelengths, spec_1D, noise_1D, object_cube
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -383,37 +382,37 @@ def extract_spectrum_viasourcemodelcube(datacube,sourceweights,wavelengths,
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print(' - Saving extracted 1D spectrum and source cube to \n   '+specname)
-    mainHDU = pyfits.PrimaryHDU()       # primary HDU
+    mainHDU = afits.PrimaryHDU()       # primary HDU
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    c1 = pyfits.Column(name='wave', format='D', unit='ANGSTROMS', array=spec_wave)
-    c2 = pyfits.Column(name='flux', format='D', unit='', array=spec_flux)
-    c3 = pyfits.Column(name='fluxerror', format='D', unit='', array=spec_err)
+    c1 = afits.Column(name='wave', format='D', unit='ANGSTROMS', array=spec_wave)
+    c2 = afits.Column(name='flux', format='D', unit='', array=spec_flux)
+    c3 = afits.Column(name='fluxerror', format='D', unit='', array=spec_err)
 
-    coldefs = pyfits.ColDefs([c1,c2,c3])
-    th = pyfits.new_table(coldefs) # creating default header
+    coldefs = afits.ColDefs([c1,c2,c3])
+    th = afits.BinTableHDU.from_columns(coldefs) # creating default header
 
     # writing hdrkeys:'---KEY--',                             '----------------MAX LENGTH COMMENT-------------'
     th.header.append(('EXTNAME ','SPEC1D'                     ,'cube containing source'),end=True)
     th.header.append(('SPECMETH' , spec1Dmethod               ,'Method used for spectral extraction'),end=True)
     head    = th.header
 
-    tbHDU  = pyfits.new_table(coldefs, header=head)
+    tbHDU  = afits.BinTableHDU.from_columns(coldefs, header=head)
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if sourcecube_hdr != 'None':
-        sourceHDU        = pyfits.ImageHDU(sourcecube)       # default HDU with default minimal header
+        sourceHDU        = afits.ImageHDU(sourcecube)       # default HDU with default minimal header
         for hdrkey in list(sourcecube_hdr.keys()):
             if not hdrkey in list(sourceHDU.header.keys()):
                 sourceHDU.header.append((hdrkey,sourcecube_hdr[hdrkey],sourcecube_hdr.comments[hdrkey]),end=True)
 
         sourceHDU.header.append(('EXTNAME ','SOURCECUBE'            ,'cube containing source'),end=True)
 
-        hdulist = pyfits.HDUList([mainHDU,tbHDU,sourceHDU])
+        hdulist = afits.HDUList([mainHDU,tbHDU,sourceHDU])
     else:
-        hdulist = pyfits.HDUList([mainHDU,tbHDU])
+        hdulist = afits.HDUList([mainHDU,tbHDU])
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-    hdulist.writeto(specname, clobber=True)
+    hdulist.writeto(specname, overwrite=True)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return sourcecube, sourcecube_err, spec_wave, spec_flux, spec_err
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -519,7 +518,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     #plt.title(plotname.split('TDOSE 1D spectra'),fontsize=Fsize)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     for ff, specfile in enumerate(filelist):
-        specdat = pyfits.open(specfile)[1].data
+        specdat = afits.open(specfile)[1].data
 
         if colors is None:
             spec_color = None
@@ -585,7 +584,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     if simsources is not None:
         sim_total = np.zeros(len(specdat[tdose_wavecol]))
         for sourcenumber in simsources:
-            sourcedat = pyfits.open(simsourcefile)[1].data
+            sourcedat = afits.open(simsourcefile)[1].data
             xpos       = sourcedat['xpos'][sourcenumber]
             ypos       = sourcedat['ypos'][sourcenumber]
             fluxscale  = sourcedat['fluxscale'][sourcenumber]
@@ -607,7 +606,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if comparisonspecs is not None:
         for cc, comparisonspec in enumerate(comparisonspecs):
-            compdat = pyfits.open(comparisonspec)[1].data
+            compdat = afits.open(comparisonspec)[1].data
 
             if xrange is not None:
                 goodent = np.where((compdat[comp_wavecol] > xrange[0]) & (compdat[comp_wavecol] < xrange[1]))[0]
@@ -665,7 +664,7 @@ def plot_1Dspecs(filelist,plotname='./tdose_1Dspectra.pdf',colors=None,labels=No
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if skyspecs is not None:
         for ss, skyspec in enumerate(skyspecs):
-            skydat = pyfits.open(skyspec)[1].data
+            skydat = afits.open(skyspec)[1].data
 
             if xrange is not None:
                 goodent = np.where((skydat[sky_wavecol] > xrange[0]) & (skydat[sky_wavecol] < xrange[1]))[0]
