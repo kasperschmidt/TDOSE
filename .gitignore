@@ -7,3 +7,5 @@
 
 *.pyc
 
+tdose_examples/github_examples_dir_results
+tdose_examples/examples_scripts/.ipynb_checkpoints/tdose_perform_spectral_extraction-checkpoint.ipynb
