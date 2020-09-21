@@ -539,22 +539,22 @@ def optimize_img_scale(img_data,img_std,img_model,optimizer='curve_fit',show_res
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return output
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def curve_fit_fct_wrapper_sourcefit(xxx_todo_changeme,mu_objs,cov_objs,*scales):
+def curve_fit_fct_wrapper_sourcefit(xygrid,mu_objs,cov_objs,*scales):
     """
     Wrapper for curve_fit optimizer function
     """
-    (x,y) = xxx_todo_changeme
+    (x,y) = xygrid
     imagedim  = x.shape
     scls      = np.asarray(scales)
     img_model = tmc.gen_image(imagedim,mu_objs,cov_objs,sourcescale=scls,verbose=False)
 
     return img_model.ravel()
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def curve_fit_fct_wrapper_imgscale(xxx_todo_changeme1,scale,img_model):
+def curve_fit_fct_wrapper_imgscale(xygrid,scale,img_model):
     """
     Wrapper for curve_fit optimizer function
     """
-    (x,y) = xxx_todo_changeme1
+    (x,y) = xygrid
     img_scaled = img_model*scale
 
     return img_scaled.ravel()

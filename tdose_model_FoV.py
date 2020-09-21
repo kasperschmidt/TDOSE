@@ -538,11 +538,11 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',max_centroid_
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return output
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def curve_fit_function_wrapper(xxx_todo_changeme,*args):
+def curve_fit_function_wrapper(xygrid,*args):
     """
     Wrapper for curve_fit optimizer call to be able to provide list of parameters to model_objects_gauss()
     """
-    (x,y) = xxx_todo_changeme
+    (x,y) = xygrid
     paramlist = np.asarray(args)
     modelimg  = tmf.modelimage_multigauss((x,y), paramlist, showmodelimg=False, verbose=False)
     #print paramlist
@@ -589,7 +589,7 @@ def residual_multigauss(param, dataimage, nonfinite = 0.0, ravelresidual=True, s
 
     return residualimg
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def modelimage_multigauss(xxx_todo_changeme1, param, showmodelimg=False, useroll=False, verbose=True, verbosefull=False):
+def modelimage_multigauss(xygrid, param, showmodelimg=False, useroll=False, verbose=True, verbosefull=False):
     """
     Build model image of N Gaussians where param contains the parameters
 
@@ -614,7 +614,7 @@ def modelimage_multigauss(xxx_todo_changeme1, param, showmodelimg=False, useroll
     param      = np.asarray([305,515,1,40.1,4.2,21.69,    120,100,200,20.1,15.2,0])
     modelimage = tmf.modelimage_multigauss((xgrid,ygrid), param, showmodelimg=True, verbose=True, verbosefull=True)
     """
-    (xgrid,ygrid) = xxx_todo_changeme1
+    (xgrid,ygrid) = xygrid
     Ngauss  = len(param)/6.0
     if Ngauss != np.round(len(param)/6.0):
         sys.exit(' ---> The number of parameters is not a multiple of 6 in modelimage_multigauss()')
@@ -655,7 +655,7 @@ def modelimage_multigauss(xxx_todo_changeme1, param, showmodelimg=False, useroll
 
     return modelimage
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def modelimage_aperture(xxx_todo_changeme2, param, showmodelimg=False, verbose=True, verbosefull=False):
+def modelimage_aperture(xygrid, param, showmodelimg=False, verbose=True, verbosefull=False):
     """
     Build model image of N apertures where param contains the parameters for each aperture
 
@@ -676,7 +676,7 @@ def modelimage_aperture(xxx_todo_changeme2, param, showmodelimg=False, verbose=T
     modelimage = tmf.modelimage_aperture((xgrid,ygrid), param, showmodelimg=True, verbose=True)
 
     """
-    (xgrid,ygrid) = xxx_todo_changeme2
+    (xgrid,ygrid) = xygrid
     Naper  = len(param)/4.0
     if Naper != np.round(len(param)/4.0):
         sys.exit(' ---> The number of parameters is not a multiple of 4 in modelimage_aperture()')
