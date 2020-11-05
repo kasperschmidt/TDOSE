@@ -415,7 +415,7 @@ def gen_paramlist_aperture(sourcecatalog,radius_pix,pixval=None,xpos_col='xpos',
         ypos       = sourcedat[ypos_col][oo]
 
         if len(radius_pix) == 1:
-            radius     = radius_pix
+            radius     = radius_pix[0]
         else:
             radius     = radius_pix[oo]
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
