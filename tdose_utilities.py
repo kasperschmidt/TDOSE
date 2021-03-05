@@ -3642,7 +3642,7 @@ def gen_overview_plot_hist(ax,data,model,dataext=0,modelext=0,layer=None,normali
         ax.set_xlabel('', fontsize=fontsize)
         ax.set_ylabel(ylabel,fontsize=fontsize)
 
-        ax.set_yscale('log')
+        ax.set_yscale('log', nonposy='clip')
 
         leg = plt.legend(fancybox=True, loc='upper left',prop={'size':fontsize},ncol=1,numpoints=1)#,
                          #bbox_to_anchor=(1.25, 1.03))  # add the legend
