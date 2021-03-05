@@ -1,0 +1,1 @@
+Directory containing example scripts (and corresponding Jupyter notebooks generated with [`p2j`](https://github.com/remykarem/python2jupyter)) that can be used to test TDOSE installations and/or modifications.

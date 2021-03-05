@@ -1,0 +1,6 @@
+# Region file format: DS9 version 4.1 
+fk5
+circle(53.169798840000006,-27.785803759999997,1.1244897906904068")  # color=cyan width=2 font="times 12 bold roman" text={1: 6561.0} 
+circle(53.17081755999999,-27.78477673,1.1244897906904068")  # color=cyan width=2 font="times 12 bold roman" text={2: 6715.0} 
+circle(53.17032735000001,-27.785264339999983,1.1244897906904068")  # color=cyan width=2 font="times 12 bold roman" text={3: 6729.0} 
+circle(53.17005221,-27.78473616999999,1.1244897906904068")  # color=cyan width=2 font="times 12 bold roman" text={4: 10344.0} 
