@@ -11,7 +11,7 @@ python tdose_perform_spectral_extraction.py
 ```
 from the command line or by going through the corresponding Jupyter notebook. In a similar way, other examples can be run/executed when they become available.
 
-As of 210305 the full run of `tdose_perform_spectral_extraction.py` extracting both an `aperture`, `modelimg`, and `gauss` based TDOSE spectrum of the two objects with provided data cube cutouts takes just roughly 10 minutes on an old Mac from 2015 in non-parallel mode. 
+As of 210305 the full run of `tdose_perform_spectral_extraction.py` extracting an `aperture`-, `modelimg`-, and `gauss`-based TDOSE spectrum of the two objects with provided data cube cutouts takes just roughly 10 minutes on an old Mac from 2015 in non-parallel. The extractions ran succesfully with both Python 2.7.5 and Python 3.6.3.
 
 Hopefully these examples can help people test new installations, updates or modifications to TDOSE made locally. With this in mind and for comparison purposes the sub-directory [`output_210305`](https://github.com/kasperschmidt/TDOSE/tdose_examples/output_210305/) contains the spectra from a full extraction performed by @kasperschmidt on September 3rd 2020 using the most recent (development) version of the TDOSE software. This version is essentially the same as version 3.0 released with and described by [Schmidt et al. (2019)](http://ui.adsabs.harvard.edu/abs/2019arXiv190605891S). The examples of this directory therefore compliments the appendices of [Schmidt et al. (2019)](http://ui.adsabs.harvard.edu/abs/2019arXiv190605891S) and the header of the individual TDOSE functions and scripts, which provide useful commands and approaches for using TDOSE.
 
