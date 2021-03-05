@@ -45,7 +45,6 @@ After adding the TDOSE directory to the `PYTHONPATH` or changing location to the
 import tdose
 ```
 If the import does not generate any errors, i.e., if the TDOSE dependencies and requirements listed in the following section are met, TDOSE is ready for use. 
-Note that TDOSE does not run on Python 3 yet (sorry).
 
 ## Dependencies and Requirements
 
