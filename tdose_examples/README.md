@@ -2,7 +2,7 @@
 
 This directory contains the data, directory structure, and scripts to demonstrate TDOSE functionality and to perform a series of extractions. Spectra are extracted for two objects with original data taken from the MXDF presented for the first time by [Bacon et al. (2021)](https://ui.adsabs.harvard.edu/abs/2021arXiv210205516B).
 
-Jupyter python notebooks (as well as the corresponding `*.py` files) of the examples are available in the sub-directory [`examples_scripts`]()https://github.com/kasperschmidt/TDOSE/tdose_examples/examples_scripts)
+Jupyter python notebooks (as well as the corresponding `*.py` files) of the examples are available in the sub-directory [`examples_scripts`](https://github.com/kasperschmidt/TDOSE/tdose_examples/examples_scripts)
 The Jupyter notebooks were generated with [`p2j`](https://github.com/remykarem/python2jupyter).
 
 Hence, after installing and setting up TDOSE a test extraction of an `aperture`, `modelimg`, and `gauss` based run can be executed on the test data by simply running
