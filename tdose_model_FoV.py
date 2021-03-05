@@ -1,9 +1,7 @@
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 import numpy as np
-import os
 import sys
-import pyfits
-import scipy.ndimage
+import astropy.io.fits as afits
 import scipy.optimize as opt
 import tdose_utilities as tu
 import matplotlib as mpl
@@ -70,11 +68,11 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
     --- EXAMPLE OF USE ---
     import tdose_model_FoV as tmf
     path       = '/Users/kschmidt/work/TDOSE/'
-    dataimg    = pyfits.open(path+'mock_cube_sourcecat161213_oneobj_tdose_mock_cube.fits')[0].data[0,:,:]
+    dataimg    = afits.open(path+'mock_cube_sourcecat161213_oneobj_tdose_mock_cube.fits')[0].data[0,:,:]
     sourcecat  = path+'mock_cube_sourcecat161213_oneobj.fits'
     param_init, fit_output = tmf.gen_fullmodel(dataimg,sourcecat,xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,fluxscale='fluxscale',generateimage=path+'mock_cube_sourcecat161213_oneobj_modelimage.fits')
 
-    dataimg    = pyfits.open(path+'mock_cube_sourcecat161213_all_tdose_mock_cube.fits')[0].data[0,:,:]
+    dataimg    = afits.open(path+'mock_cube_sourcecat161213_all_tdose_mock_cube.fits')[0].data[0,:,:]
     sourcecat  = path+'mock_cube_sourcecat161213_all.fits'
     param_init, fit_output = tmf.gen_fullmodel(dataimg,sourcecat,xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,fluxscale='fluxscale',generateimage=path+'mock_cube_sourcecat161213_all_modelimage.fits')
 
@@ -174,39 +172,39 @@ def gen_fullmodel(dataimg,sourcecatalog,modeltype='gauss',xpos_col='xpos',ypos_c
     tablename  = generateimage.replace('.fits','_objparam.fits')
     if modeltype.lower() == 'gauss': # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         objnumbers = np.arange(len(fit_output[0])/6)+1
-        c01 = pyfits.Column(name='obj',            format='D', unit='',       array=objnumbers)
-        c02 = pyfits.Column(name='xpos',           format='D', unit='PIXELS', array=fit_output[0][1::6])
-        c03 = pyfits.Column(name='ypos',           format='D', unit='PIXELS', array=fit_output[0][0::6])
-        c04 = pyfits.Column(name='fluxscale',      format='D', unit='',       array=fit_output[0][2::6])
-        c05 = pyfits.Column(name='xsigma',         format='D', unit='PIXELS', array=fit_output[0][4::6])
-        c06 = pyfits.Column(name='ysigma',         format='D', unit='PIXELS', array=fit_output[0][3::6])
-        c07 = pyfits.Column(name='angle',          format='D', unit='DEGREES',array=fit_output[0][5::6])
-        c08 = pyfits.Column(name='xpos_init',      format='D', unit='PIXELS', array=param_init[1::6])
-        c09 = pyfits.Column(name='ypos_init',      format='D', unit='PIXELS', array=param_init[0::6])
-        c10 = pyfits.Column(name='fluxscale_init', format='D', unit='',       array=param_init[2::6])
-        c11 = pyfits.Column(name='xsigma_init',    format='D', unit='PIXELS', array=param_init[4::6])
-        c12 = pyfits.Column(name='ysigma_init',    format='D', unit='PIXELS', array=param_init[3::6])
-        c13 = pyfits.Column(name='angle_init',     format='D', unit='DEGREES',array=param_init[5::6])
-        coldefs = pyfits.ColDefs([c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11,c12,c13])
+        c01 = afits.Column(name='obj',            format='D', unit='',       array=objnumbers)
+        c02 = afits.Column(name='xpos',           format='D', unit='PIXELS', array=fit_output[0][1::6])
+        c03 = afits.Column(name='ypos',           format='D', unit='PIXELS', array=fit_output[0][0::6])
+        c04 = afits.Column(name='fluxscale',      format='D', unit='',       array=fit_output[0][2::6])
+        c05 = afits.Column(name='xsigma',         format='D', unit='PIXELS', array=fit_output[0][4::6])
+        c06 = afits.Column(name='ysigma',         format='D', unit='PIXELS', array=fit_output[0][3::6])
+        c07 = afits.Column(name='angle',          format='D', unit='DEGREES',array=fit_output[0][5::6])
+        c08 = afits.Column(name='xpos_init',      format='D', unit='PIXELS', array=param_init[1::6])
+        c09 = afits.Column(name='ypos_init',      format='D', unit='PIXELS', array=param_init[0::6])
+        c10 = afits.Column(name='fluxscale_init', format='D', unit='',       array=param_init[2::6])
+        c11 = afits.Column(name='xsigma_init',    format='D', unit='PIXELS', array=param_init[4::6])
+        c12 = afits.Column(name='ysigma_init',    format='D', unit='PIXELS', array=param_init[3::6])
+        c13 = afits.Column(name='angle_init',     format='D', unit='DEGREES',array=param_init[5::6])
+        coldefs = afits.ColDefs([c01,c02,c03,c04,c05,c06,c07,c08,c09,c10,c11,c12,c13])
     elif modeltype.lower() == 'aperture': # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         objnumbers = np.arange(len(fit_output[0])/4)+1
-        c01 = pyfits.Column(name='obj',            format='D', unit='',       array=objnumbers)
-        c02 = pyfits.Column(name='xpos',           format='D', unit='PIXELS', array=fit_output[0][1::4])
-        c03 = pyfits.Column(name='ypos',           format='D', unit='PIXELS', array=fit_output[0][0::4])
-        c04 = pyfits.Column(name='radius',         format='D', unit='PIXELS', array=fit_output[0][2::4])
-        c05 = pyfits.Column(name='pixvalue',       format='D', unit='',       array=fit_output[0][3::4])
-        c06 = pyfits.Column(name='xpos_init',      format='D', unit='PIXELS', array=param_init[1::4])
-        c07 = pyfits.Column(name='ypos_init',      format='D', unit='PIXELS', array=param_init[0::4])
-        c08 = pyfits.Column(name='radius_init',    format='D', unit='PIXELS', array=param_init[2::4])
-        c09 = pyfits.Column(name='pixvalue_init',  format='D', unit='',       array=param_init[3::4])
-        coldefs = pyfits.ColDefs([c01,c02,c03,c04,c05,c06,c07,c08,c09])
+        c01 = afits.Column(name='obj',            format='D', unit='',       array=objnumbers)
+        c02 = afits.Column(name='xpos',           format='D', unit='PIXELS', array=fit_output[0][1::4])
+        c03 = afits.Column(name='ypos',           format='D', unit='PIXELS', array=fit_output[0][0::4])
+        c04 = afits.Column(name='radius',         format='D', unit='PIXELS', array=fit_output[0][2::4])
+        c05 = afits.Column(name='pixvalue',       format='D', unit='',       array=fit_output[0][3::4])
+        c06 = afits.Column(name='xpos_init',      format='D', unit='PIXELS', array=param_init[1::4])
+        c07 = afits.Column(name='ypos_init',      format='D', unit='PIXELS', array=param_init[0::4])
+        c08 = afits.Column(name='radius_init',    format='D', unit='PIXELS', array=param_init[2::4])
+        c09 = afits.Column(name='pixvalue_init',  format='D', unit='',       array=param_init[3::4])
+        coldefs = afits.ColDefs([c01,c02,c03,c04,c05,c06,c07,c08,c09])
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    th = pyfits.new_table(coldefs) # creating default header
+    th = afits.BinTableHDU.from_columns(coldefs) # creating default header
     # writing hdrkeys:'---KEY--',                             '----------------MAX LENGTH COMMENT-------------'
     th.header.append(('MODTYPE ', modeltype.lower()          ,'The model type the parameters correspond to    '),end=True)
 
-    tbHDU  = pyfits.new_table(coldefs, header=th.header)
-    tbHDU.writeto(tablename, clobber=clobber)
+    tbHDU  = afits.BinTableHDU.from_columns(coldefs, header=th.header)
+    tbHDU.writeto(tablename, overwrite=clobber)
 
     return param_init, fit_output
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -249,7 +247,7 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print(' - Saving generated image to '+outname)
     if outputhdr is None:
-        hduimg = pyfits.PrimaryHDU(modelimg)       # creating default fits header
+        hduimg = afits.PrimaryHDU(modelimg)       # creating default fits header
         if verbose: print(' - No header provided so will generate one ')
         # writing hdrkeys:    '---KEY--',                      '----------------MAX LENGTH COMMENT-------------'
         hduimg.header.append(('BUNIT   '                      ,'(10**(-20)*erg/s/cm**2/Angstrom)**2'),end=True)
@@ -269,7 +267,7 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
         hduimg.header.append(('CRVAL1  ',          53.1078417 ,' '),end=True)
         hduimg.header.append(('CRVAL2  ',         -27.8267356 ,' '),end=True)
     else:
-        hduimg = pyfits.PrimaryHDU(modelimg,header=outputhdr)       # creating default fits header
+        hduimg = afits.PrimaryHDU(modelimg,header=outputhdr)       # creating default fits header
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if modeltype.lower() == 'gauss':
         Nparam = 6
@@ -320,8 +318,8 @@ def save_modelimage(outname,paramlist,imgsize,modeltype='gauss',param_init=False
 
 
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    hdulist = pyfits.HDUList([hduimg])       # turn header into to hdulist
-    hdulist.writeto(outname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+    hdulist = afits.HDUList([hduimg])       # turn header into to hdulist
+    hdulist.writeto(outname,overwrite=clobber)  # write fits file
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
 def gen_paramlist(sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=None,fluxscale=None,verbose=True):
@@ -348,7 +346,7 @@ def gen_paramlist(sourcecatalog,xpos_col='xpos',ypos_col='ypos',sigysigxangle=No
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print(' - Loading source catalog information to build mock data cube for')
     try:
-        sourcedat = pyfits.open(sourcecatalog)[1].data
+        sourcedat = afits.open(sourcecatalog)[1].data
     except:
         sys.exit(' ---> Problems loading fits source catalog for mock cube')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -404,7 +402,7 @@ def gen_paramlist_aperture(sourcecatalog,radius_pix,pixval=None,xpos_col='xpos',
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print(' - Loading source catalog information to build parameter list for')
     try:
-        sourcedat = pyfits.open(sourcecatalog)[1].data
+        sourcedat = afits.open(sourcecatalog)[1].data
     except:
         sys.exit(' ---> Problems loading fits source catalog for mock cube')
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -417,7 +415,7 @@ def gen_paramlist_aperture(sourcecatalog,radius_pix,pixval=None,xpos_col='xpos',
         ypos       = sourcedat[ypos_col][oo]
 
         if len(radius_pix) == 1:
-            radius     = radius_pix
+            radius     = radius_pix[0]
         else:
             radius     = radius_pix[oo]
         # - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -456,7 +454,7 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',max_centroid_
     --- EXAMPLE OF USE ---
     import tdose_model_FoV as tmf
     param_init = [18,31,1*0.3,2.1*0.3,1.2*0.3,30*0.3,    110,90,200*0.5,20.1*0.5,15.2*0.5,0*0.5]
-    dataimg    = pyfits.open('/Users/kschmidt/work/TDOSE/mock_cube_sourcecat161213_tdose_mock_cube.fits')[0].data[0,:,:]
+    dataimg    = afits.open('/Users/kschmidt/work/TDOSE/mock_cube_sourcecat161213_tdose_mock_cube.fits')[0].data[0,:,:]
     param_optimized, param_cov  = tmf.model_objects_gauss(param_init,dataimg,verbose=True)
 
     """
@@ -540,11 +538,11 @@ def model_objects_gauss(param_init,dataimage,optimizer='curve_fit',max_centroid_
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return output
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def curve_fit_function_wrapper(xxx_todo_changeme,*args):
+def curve_fit_function_wrapper(xygrid,*args):
     """
     Wrapper for curve_fit optimizer call to be able to provide list of parameters to model_objects_gauss()
     """
-    (x,y) = xxx_todo_changeme
+    (x,y) = xygrid
     paramlist = np.asarray(args)
     modelimg  = tmf.modelimage_multigauss((x,y), paramlist, showmodelimg=False, verbose=False)
     #print paramlist
@@ -567,7 +565,7 @@ def residual_multigauss(param, dataimage, nonfinite = 0.0, ravelresidual=True, s
     --- EXAMPLE OF USE ---
     import tdose_model_FoV as tmf
     param      = [18,31,1*0.3,2.1*0.3,1.2*0.3,30*0.3,    110,90,200*0.5,20.1*0.5,15.2*0.5,0*0.5]
-    dataimg    = pyfits.open('/Users/kschmidt/work/TDOSE/mock_cube_sourcecat161213_tdose_mock_cube.fits')[0].data[0,:,:]
+    dataimg    = afits.open('/Users/kschmidt/work/TDOSE/mock_cube_sourcecat161213_tdose_mock_cube.fits')[0].data[0,:,:]
     residual   = tmf.residual_multigauss(param, dataimg, showimages=True)
 
     """
@@ -591,7 +589,7 @@ def residual_multigauss(param, dataimage, nonfinite = 0.0, ravelresidual=True, s
 
     return residualimg
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def modelimage_multigauss(xxx_todo_changeme1, param, showmodelimg=False, useroll=False, verbose=True, verbosefull=False):
+def modelimage_multigauss(xygrid, param, showmodelimg=False, useroll=False, verbose=True, verbosefull=False):
     """
     Build model image of N Gaussians where param contains the parameters
 
@@ -616,7 +614,7 @@ def modelimage_multigauss(xxx_todo_changeme1, param, showmodelimg=False, useroll
     param      = np.asarray([305,515,1,40.1,4.2,21.69,    120,100,200,20.1,15.2,0])
     modelimage = tmf.modelimage_multigauss((xgrid,ygrid), param, showmodelimg=True, verbose=True, verbosefull=True)
     """
-    (xgrid,ygrid) = xxx_todo_changeme1
+    (xgrid,ygrid) = xygrid
     Ngauss  = len(param)/6.0
     if Ngauss != np.round(len(param)/6.0):
         sys.exit(' ---> The number of parameters is not a multiple of 6 in modelimage_multigauss()')
@@ -657,7 +655,7 @@ def modelimage_multigauss(xxx_todo_changeme1, param, showmodelimg=False, useroll
 
     return modelimage
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
-def modelimage_aperture(xxx_todo_changeme2, param, showmodelimg=False, verbose=True, verbosefull=False):
+def modelimage_aperture(xygrid, param, showmodelimg=False, verbose=True, verbosefull=False):
     """
     Build model image of N apertures where param contains the parameters for each aperture
 
@@ -678,7 +676,7 @@ def modelimage_aperture(xxx_todo_changeme2, param, showmodelimg=False, verbose=T
     modelimage = tmf.modelimage_aperture((xgrid,ygrid), param, showmodelimg=True, verbose=True)
 
     """
-    (xgrid,ygrid) = xxx_todo_changeme2
+    (xgrid,ygrid) = xygrid
     Naper  = len(param)/4.0
     if Naper != np.round(len(param)/4.0):
         sys.exit(' ---> The number of parameters is not a multiple of 4 in modelimage_aperture()')

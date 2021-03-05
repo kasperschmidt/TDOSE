@@ -2,7 +2,7 @@
 import numpy as np
 import os
 import sys
-import pyfits
+import astropy.io.fits as afits
 import matplotlib as mpl
 mpl.use('Agg') # prevent pyplot from opening window; enables closing ssh session with detached screen running TDOSE
 import matplotlib.pylab as plt
@@ -58,7 +58,7 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print(' - Loading source catalog information to build mock data cube for')
     try:
-        sourcedat = pyfits.open(sourcecatalog)[1].data
+        sourcedat = afits.open(sourcecatalog)[1].data
     except:
         sys.exit(' ---> Problems loading fits source catalog for mock cube')
 
@@ -99,7 +99,7 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print(' - Saving generated mock cube to '+outname)
     if verbose: print('   Create primary extension to contain outputcube')
-    hducube = pyfits.PrimaryHDU(outputcube)       # creating default fits header
+    hducube = afits.PrimaryHDU(outputcube)       # creating default fits header
     if outputhdr == None:
         if verbose: print('   No header provided so will generate one')
         # writing hdrkeys:    '---KEY--',                       '----------------MAX LENGTH COMMENT-------------'
@@ -134,7 +134,7 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
     hdustolist = [hducube]
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if verbose: print('   Add clean version of cube to extension               CLEAN')
-    hduclean        = pyfits.ImageHDU(cleancube)
+    hduclean        = afits.ImageHDU(cleancube)
     for hdrkey in list(hducube.header.keys()):
         if not hdrkey in list(hducube.header.keys()):
             hduclean.header.append((hdrkey,hducube.header[hdrkey],hducube.header.comments[hdrkey]),end=True)
@@ -143,7 +143,7 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if psf is not None:
         if verbose: print('   Add clean PSF cube to extension                      CLEANPSF')
-        hducleanpsf        = pyfits.ImageHDU(cleanpsfcube)
+        hducleanpsf        = afits.ImageHDU(cleanpsfcube)
         for hdrkey in list(hducube.header.keys()):
             if not hdrkey in list(hducube.header.keys()):
                 hducleanpsf.header.append((hdrkey,hducube.header[hdrkey],hducube.header.comments[hdrkey]),end=True)
@@ -153,15 +153,15 @@ def build_cube(sourcecatalog,cube_dim=[10,60,30],outputname='default',
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     if noisetype is not None:
         if verbose: print('   Add noise cube to extension                          NOISE')
-        hdunoise        = pyfits.ImageHDU(noisecube)
+        hdunoise        = afits.ImageHDU(noisecube)
         for hdrkey in list(hducube.header.keys()):
             if not hdrkey in list(hducube.header.keys()):
                 hdunoise.header.append((hdrkey,hducube.header[hdrkey],hducube.header.comments[hdrkey]),end=True)
         hdunoise.header.append(('EXTNAME ','NOISE'            ,'cube containing noise (sqrt(variance))'),end=True)
         hdustolist.append(hdunoise)
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-    hdulist = pyfits.HDUList(hdustolist)       # turn header into to hdulist
-    hdulist.writeto(outname,clobber=clobber)  # write fits file (clobber=True overwrites excisting file)
+    hdulist = afits.HDUList(hdustolist)       # turn header into to hdulist
+    hdulist.writeto(outname,overwrite=clobber)  # write fits file
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     return outname
 # = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
