@@ -48,7 +48,7 @@ setup_modelimg      = setupdir+'tdose_setupfile_'+setupname+'_modelimg.txt'
 
 # -------------------------------------------------------------------------------
 # Performing the actual TDOSE extractions
-for tdose_setup in [setup_modelimg,setup_gauss,setup_aperture]: #
+for tdose_setup in [setup_aperture,setup_modelimg,setup_gauss]: #
     tdose.perform_extraction(setupfile=tdose_setup,performcutout=performcutout,generatesourcecat=True,
                              verbose=True,verbosefull=True,clobber=True,store1Dspectra=True,plot1Dspectra=True,
                              skipextractedobjects=False,logterminaloutput=False)
