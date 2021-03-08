@@ -18,6 +18,7 @@ TDOSE (version 3.0) is presented in [Schmidt et al. (2019)](#references). Please
 - [Script Overview](#script-overview)
 - [TDOSE Output Overview](#tdose-output-overview) 
 - [Running TDOSE](#running-tdose)
+  - [Testing TDOSE](#testing-tdose) 
 - [References](#references)
 - [Flowchart of TDOSE](#flowchart-of-tdose)
 
@@ -89,6 +90,10 @@ also presents an overview and description of the main outputs generated with TDO
 ## Running TDOSE
 
 Appendix B of [Schmidt et al. (2019)](#references) provides a range of useful examples of how to produce outputs with TDOSE. For examples of how to run individual pieces of code, please refer to the individual code headers.
+
+### Testing TDOSE
+
+To fasciliate testing of local installations and further user development of TDOSE in general, with the upgrade to Python 3, the directory [`tdose_examples`](https://github.com/kasperschmidt/TDOSE/tree/master/tdose_examples) was added to the TDOSE repository. This directory contains data on a few test objects and a script that can be run to test that the `aperture `, `gauss`, and `modelimg` extractions run as expected. To enable checks the complete set of output data produced by TDOSE running the script on these test data are also provided.
 
 ## References 
 
